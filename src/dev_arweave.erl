@@ -1459,7 +1459,7 @@ tx_raw_fetch_error_round_trips_test() ->
     TXID = maps:get(<<"id">>, hb_json:decode(HeaderBody)),
     Opts =
         ClientOpts#{
-            routes => [
+            <<"routes">> => [
                 #{
                     <<"template">> =>
                         #{
@@ -1471,7 +1471,7 @@ tx_raw_fetch_error_round_trips_test() ->
                             #{
                                 <<"match">> => <<"^/arweave">>,
                                 <<"with">> => MockNode,
-                                <<"opts">> => #{ http_client => httpc }
+                                <<"opts">> => #{ <<"http-client">> => httpc }
                             }
                         ],
                     <<"parallel">> => 1,
