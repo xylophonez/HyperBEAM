@@ -8,7 +8,7 @@ flow. A node should reference the published device spec ID in its message or
 configuration, then load a trusted implementation message tagged
 `implements-device=<spec-id>`.
 
-The representative eunit test in `hb_ao_test_vectors` compiles
-`dev_metering.erl` from this directory, writes a local `Device-Spec` message and
-an implementation message, then resolves the device by the spec ID through the
-gateway client path.
+Use this directory to stage implementations for devices that are not part of the
+core HyperBEAM application. Each implementation should have a corresponding
+`Device-Spec` message and an implementation message tagged
+`implements-device=<spec-id>` before it is loaded by a node.
