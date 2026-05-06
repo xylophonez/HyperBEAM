@@ -216,11 +216,21 @@ bundler_completion_payment_hook() ->
             Store,
             #{ UploaderAddress => InitialBalance }
         ),
+    Port = 12000 + rand:uniform(40000),
+    ExternalDeviceOpts =
+        GatewayOpts#{
+            <<"priv-wallet">> => HostWallet,
+            <<"store">> => Store
+        },
+    ExternalDevices = bundle_payment_external_devices(ExternalDeviceOpts),
+    ProcessLedger = maps:get(process_ledger, ExternalDevices),
+    PricingRouter = maps:get(pricing_router, ExternalDevices),
+    BundlerSettlement = maps:get(bundler_settlement, ExternalDevices),
     ProcessorMsg =
         #{
             <<"device">> => <<"p4@1.0">>,
-            <<"ledger-device">> => <<"process-ledger@1.0">>,
-            <<"pricing-device">> => <<"pricing-router@1.0">>,
+            <<"ledger-device">> => ProcessLedger,
+            <<"pricing-device">> => PricingRouter,
             <<"default-pricing-device">> => <<"simple-pay@1.0">>,
             <<"ledger-path">> => LedgerPath,
             <<"pricing-routes">> => [
@@ -232,8 +242,8 @@ bundler_completion_payment_hook() ->
         },
     SettlementHook =
         #{
-            <<"device">> => <<"bundler-settlement@1.0">>,
-            <<"ledger-device">> => <<"process-ledger@1.0">>,
+            <<"device">> => BundlerSettlement,
+            <<"ledger-device">> => ProcessLedger,
             <<"pricing-device">> => <<"metering@1.0">>,
             <<"ledger-path">> => LedgerPath,
             <<"settlement-account">> => OperatorAddress,
@@ -242,8 +252,33 @@ bundler_completion_payment_hook() ->
         },
     Opts =
         GatewayOpts#{
+            port => Port,
+            <<"port">> => Port,
             <<"priv-wallet">> => HostWallet,
             <<"store">> => Store,
+            <<"load-remote-devices">> => true,
+            <<"trusted-device-signers">> => [OperatorAddress],
+            <<"routes">> => [
+                #{
+                    <<"template">> => <<"/graphql">>,
+                    <<"node">> => #{
+                        <<"uri">> =>
+                            <<"http://localhost:",
+                                (integer_to_binary(Port))/binary,
+                                "/~query@1.0/graphql">>
+                    }
+                },
+                #{
+                    <<"template">> => <<"^/arweave/raw">>,
+                    <<"node">> => #{
+                        <<"match">> => <<"^/arweave/raw/(.*)$">>,
+                        <<"with">> =>
+                            <<"http://localhost:",
+                                (integer_to_binary(Port))/binary,
+                                "/\\1/body">>
+                    }
+                }
+            ],
             <<"bundler-max-items">> => 1,
             <<"simple-pay-price">> => 0,
             <<"operator">> => OperatorAddress,
@@ -286,6 +321,67 @@ bundler_completion_payment_hook() ->
         hb_mock_server:stop(ServerHandle),
         dev_bundler:stop_server(Opts)
     end.
+
+%% @doc Publish external payment devices into the test store and return their
+%% spec IDs. This exercises remote device loading by `implements-device' rather
+%% than relying on the modules being preloaded by name.
+bundle_payment_external_devices(Opts) ->
+    #{
+        process_ledger =>
+            bundle_payment_publish_device(
+                <<"process-ledger@1.0">>,
+                "external_devices/dev_process_ledger.erl",
+                dev_process_ledger,
+                Opts
+            ),
+        pricing_router =>
+            bundle_payment_publish_device(
+                <<"pricing-router@1.0">>,
+                "external_devices/dev_pricing_router.erl",
+                dev_pricing_router,
+                Opts
+            ),
+        bundler_settlement =>
+            bundle_payment_publish_device(
+                <<"bundler-settlement@1.0">>,
+                "external_devices/dev_bundler_settlement.erl",
+                dev_bundler_settlement,
+                Opts
+            )
+    }.
+
+bundle_payment_publish_device(Name, Source, Module, Opts) ->
+    SpecMsg =
+        hb_message:commit(
+            #{
+                <<"data-protocol">> => <<"ao">>,
+                <<"type">> => <<"Device-Spec">>,
+                <<"name">> => Name
+            },
+            Opts
+        ),
+    {ok, _SpecCacheID} = hb_cache:write(SpecMsg, Opts),
+    SpecID = hb_message:id(SpecMsg, signed, Opts),
+    {ok, Module, Beam} = compile:file(Source, [binary, {i, "src"}]),
+    ImplMsg =
+        hb_message:commit(
+            hb_ao:normalize_keys(
+                #{
+                    <<"data-protocol">> => <<"ao">>,
+                    <<"variant">> => <<"ao.N.1">>,
+                    <<"content-type">> => <<"application/beam">>,
+                    <<"implements-device">> => SpecID,
+                    <<"module-name">> => Module,
+                    <<"requires-otp-release">> =>
+                        hb_util:bin(erlang:system_info(otp_release)),
+                    <<"body">> => Beam
+                },
+                Opts
+            ),
+            Opts
+        ),
+    {ok, _ImplCacheID} = hb_cache:write(ImplMsg, Opts),
+    SpecID.
 
 %% @doc Create a process-backed AO token ledger for bundler payment examples.
 bundle_payment_process_ledger(HostWallet, Store, Balances) ->

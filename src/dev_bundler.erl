@@ -52,7 +52,11 @@ item(_Base, Req, Opts) ->
             case cache_item(Item, Opts) of
                 ok ->
                     BundledSize = bundled_item_size(Item, Opts),
-                    meter_bundled_size(BundledSize, Opts),
+                    dev_metering:consume(
+                        <<"arweave-bytes">>,
+                        BundledSize,
+                        Opts
+                    ),
                     % Queue the item for bundling
                     % (fire-and-forget, ignore errors)
                     ServerPID ! {enqueue_item, Item, BundledSize},
@@ -80,37 +84,6 @@ item(_Base, Req, Opts) ->
                 <<"error">> => <<"invalid-item">>,
                 <<"details">> => error_to_bin(Reason)
             }}
-    end.
-
-meter_bundled_size(BundledSize, Opts) ->
-    case hb_opts:get(<<"bundler-metering-device">>, undefined, Opts) of
-        undefined ->
-            ok;
-        false ->
-            ok;
-        <<>> ->
-            ok;
-        Device ->
-            case hb_ao:resolve(
-                #{ <<"device">> => Device },
-                #{
-                    <<"path">> => <<"consume">>,
-                    <<"resource">> => <<"arweave-bytes">>,
-                    <<"amount">> => BundledSize
-                },
-                Opts
-            ) of
-                ok ->
-                    ok;
-                {ok, _} ->
-                    ok;
-                {error, Reason} ->
-                    ?event(bundler, {metering_consume_failed, {reason, Reason}}),
-                    ok;
-                Other ->
-                    ?event(bundler, {metering_consume_unexpected, {result, Other}}),
-                    ok
-            end
     end.
 
 %% @doc Verify the subject by extracting committed fields and checking signatures.
@@ -817,6 +790,43 @@ unsigned_dataitem_test_parallel() ->
     after
         %% Always cleanup, even if test fails
         stop_test_servers(ServerHandle, NodeOpts)
+    end.
+
+optimistic_raw_cache_test_parallel() ->
+    Data = <<"optimistic-cache-data">>,
+    Item =
+        ar_bundles:sign_item(
+            #tx{
+                data = Data,
+                tags = [{<<"content-type">>, <<"text/plain">>}]
+            },
+            ar_wallet:new()
+        ),
+    Opts = #{
+        <<"priv-wallet">> => ar_wallet:new(),
+        <<"store">> => hb_test_utils:test_store(),
+        <<"bundler-max-items">> => 1000
+    },
+    try
+        StructuredItem =
+            hb_message:convert(
+                Item,
+                <<"structured@1.0">>,
+                <<"ans104@1.0">>,
+                Opts
+            ),
+        ItemID = hb_util:encode(ar_bundles:id(Item, signed)),
+        ?assertMatch({ok, _}, item(#{}, StructuredItem, Opts)),
+        {ok, Raw} =
+            dev_arweave:raw(
+                #{},
+                #{ <<"raw">> => ItemID },
+                Opts
+            ),
+        ?assertEqual(Data, maps:get(<<"body">>, Raw)),
+        ?assertEqual(<<"text/plain">>, maps:get(<<"content-type">>, Raw))
+    after
+        stop_server(Opts)
     end.
 
 idle_test() ->

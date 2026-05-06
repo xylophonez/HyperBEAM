@@ -176,14 +176,38 @@ head_raw(Base, Request, Opts) ->
                             end,
                         CodecFun(TXID, StartOffset, Length, Opts);
                 not_found ->
-                    ?event(
-                        arweave,
-                        {raw_head_offset_failed, {id, TXID}},
-                        Opts
-                    ),
-                    {error, not_found}
+                    head_raw_cached(TXID, Opts)
             end;
         _ -> 
+            {error, not_found}
+    end.
+
+%% @doc Fall back to locally cached ANS-104 data items. This lets a bundler node
+%% serve raw payloads immediately after accepting an upload, before copycat has
+%% indexed the pending bundle transaction.
+head_raw_cached(TXID, Opts) ->
+    case cached_ans104_tx(TXID, Opts) of
+        {ok, TX} ->
+            {ok, #{
+                <<"raw-id">> => TXID,
+                <<"offset">> => <<"local-cache">>,
+                <<"data-offset">> => <<"local-cache">>,
+                <<"content-type">> =>
+                    list_find(
+                        <<"content-type">>,
+                        TX#tx.tags,
+                        <<"application/octet-stream">>
+                    ),
+                <<"header-length">> => 0,
+                <<"content-length">> => byte_size(TX#tx.data),
+                <<"accept-ranges">> => <<"none">>
+            }};
+        not_found ->
+            ?event(
+                arweave,
+                {raw_head_offset_failed, {id, TXID}},
+                Opts
+            ),
             {error, not_found}
     end.
 
@@ -283,6 +307,16 @@ get_raw(Base, Request, Opts) ->
         Err = {error, _} -> Err;
         {ok,
             Header = #{
+                <<"raw-id">> := TXID,
+                <<"data-offset">> := <<"local-cache">>
+            }
+        } ->
+            case cached_ans104_tx(TXID, Opts) of
+                {ok, TX} -> {ok, Header#{ <<"body">> => TX#tx.data }};
+                not_found -> {error, not_found}
+            end;
+        {ok,
+            Header = #{
                 <<"data-offset">> := DataOffset,
                 <<"content-length">> := ContentLength
             }
@@ -365,6 +399,36 @@ list_find(Key, [{XKey, Value} | Rest], Default) ->
     NormalizedKey = hb_util:to_lower(hb_ao:normalize_key(XKey)),
     if NormalizedKey =:= Key -> Value;
     true -> list_find(Key, Rest, Default)
+    end.
+
+cached_ans104_tx(TXID, Opts) ->
+    case dev_bundler_cache:get_item_bundle(TXID, Opts) of
+        not_found ->
+            not_found;
+        _ ->
+            read_cached_ans104_tx(TXID, Opts)
+    end.
+
+read_cached_ans104_tx(TXID, Opts) ->
+    case hb_cache:read(TXID, Opts) of
+        {ok, Cached} ->
+            try
+                TX =
+                    hb_message:convert(
+                        Cached,
+                        <<"ans104@1.0">>,
+                        <<"structured@1.0">>,
+                        Opts
+                    ),
+                case is_record(TX, tx) of
+                    true -> {ok, TX};
+                    false -> not_found
+                end
+            catch
+                _:_ -> not_found
+            end;
+        _ ->
+            not_found
     end.
 
 %% @doc Retrieve a chunk or range of bytes from an Arweave node, or post a 
