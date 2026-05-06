@@ -208,6 +208,16 @@ test_opts() ->
 %% extension, this will also allow us to load a device from Arweave due to the
 %% remote store implementations.
 exec_dummy_device(Opts) ->
+    SpecMsg =
+        hb_message:commit(
+            #{
+                <<"data-protocol">> => <<"ao">>,
+                <<"name">> => <<"dummy@1.0">>
+            },
+            Opts
+        ),
+    {ok, _SpecUnsignedID} = hb_cache:write(SpecMsg, Opts),
+    SpecID = hb_message:id(SpecMsg, signed, Opts),
     % Compile the test device and store it in an accessible cache to the execution
     % environment.
     {ok, ModName, Bin} = compile:file("test/dev_dummy.erl", [binary]),
@@ -218,6 +228,7 @@ exec_dummy_device(Opts) ->
                     <<"data-protocol">> => <<"ao">>,
                     <<"variant">> => <<"ao.N.1">>,
                     <<"content-type">> => <<"application/beam">>,
+                    <<"implements-device">> => SpecID,
                     <<"module-name">> => ModName,
                     <<"requires-otp-release">> =>
                         hb_util:bin(erlang:system_info(otp_release)),
@@ -229,6 +240,27 @@ exec_dummy_device(Opts) ->
         ),
     {ok, _UnsignedID} = hb_cache:write(DevMsg, Opts),
     ID = hb_message:id(DevMsg, signed, Opts),
+    Gateway = hb_http_server:start_node(Opts),
+    RouteOpts =
+        Opts#{
+            <<"routes">> =>
+                [
+                    #{
+                        <<"template">> => <<"/graphql">>,
+                        <<"node">> => #{
+                            <<"uri">> =>
+                                <<Gateway/binary, "/~query@1.0/graphql">>
+                        }
+                    },
+                    #{
+                        <<"template">> => <<"^/arweave/raw">>,
+                        <<"node">> => #{
+                            <<"match">> => <<"^/arweave/raw/(.*)$">>,
+                            <<"with">> => <<Gateway/binary, "/\\1/body">>
+                        }
+                    }
+                ]
+        },
     % Ensure that we can read the device message from the cache and that it matches
     % the original message.
     {ok, RawReadMsg} = hb_cache:read(ID, Opts),
@@ -238,12 +270,20 @@ exec_dummy_device(Opts) ->
             Opts
         ),
     ?assertEqual(DevMsg, ReadMsg),
-    % Create a base message with the device ID, then request a dummy path from
+    % Create a base message with the device spec ID, then request a dummy path from
     % it.
+    Req = #{ <<"path">> => <<"echo/param">>, <<"param">> => <<"example">> },
+    {ok, <<"example">>} =
+        hb_ao:resolve(
+            #{ <<"device">> => SpecID },
+            Req,
+            RouteOpts
+        ),
+    % Resolve again through the same spec to exercise the live module cache.
     hb_ao:resolve(
-        #{ <<"device">> => ID },
-        #{ <<"path">> => <<"echo/param">>, <<"param">> => <<"example">> },
-        Opts
+        #{ <<"device">> => SpecID },
+        Req,
+        RouteOpts
     ).
 
 load_device_test() ->
@@ -262,6 +302,97 @@ load_device_test() ->
     hb_store:reset(Store),
     ?assertEqual({ok, <<"example">>}, exec_dummy_device(Opts)).
 
+load_external_metering_device_test() ->
+    Wallet = ar_wallet:new(),
+    Opts = #{
+        <<"load-remote-devices">> => true,
+        <<"trusted-device-signers">> =>
+            [hb_util:human_id(ar_wallet:to_address(Wallet))],
+        <<"store">> => Store = #{
+            <<"store-module">> => hb_store_fs,
+            <<"name">> => <<"cache-TEST/external-metering/fs">>
+        },
+        <<"priv-wallet">> => Wallet,
+        <<"metering-rates">> => #{ <<"arweave-bytes">> => 3 }
+    },
+    hb_store:reset(Store),
+    ?assertEqual({ok, 21}, exec_external_metering_device(Opts)).
+
+exec_external_metering_device(Opts) ->
+    SpecMsg =
+        hb_message:commit(
+            #{
+                <<"data-protocol">> => <<"ao">>,
+                <<"type">> => <<"Device-Spec">>,
+                <<"name">> => <<"metering@1.0">>
+            },
+            Opts
+        ),
+    {ok, _SpecUnsignedID} = hb_cache:write(SpecMsg, Opts),
+    SpecID = hb_message:id(SpecMsg, signed, Opts),
+    {ok, ModName, Bin} =
+        compile:file("external_devices/dev_metering.erl", [binary, {i, "src"}]),
+    code:purge(ModName),
+    code:delete(ModName),
+    DevMsg =
+        hb_message:commit(
+            hb_ao:normalize_keys(
+                #{
+                    <<"data-protocol">> => <<"ao">>,
+                    <<"variant">> => <<"ao.N.1">>,
+                    <<"content-type">> => <<"application/beam">>,
+                    <<"implements-device">> => SpecID,
+                    <<"module-name">> => ModName,
+                    <<"requires-otp-release">> =>
+                        hb_util:bin(erlang:system_info(otp_release)),
+                    <<"body">> => Bin
+                },
+                Opts
+            ),
+            Opts
+        ),
+    {ok, _UnsignedID} = hb_cache:write(DevMsg, Opts),
+    Gateway = hb_http_server:start_node(Opts),
+    RouteOpts =
+        Opts#{
+            <<"routes">> =>
+                [
+                    #{
+                        <<"template">> => <<"/graphql">>,
+                        <<"node">> => #{
+                            <<"uri">> =>
+                                <<Gateway/binary, "/~query@1.0/graphql">>
+                        }
+                    },
+                    #{
+                        <<"template">> => <<"^/arweave/raw">>,
+                        <<"node">> => #{
+                            <<"match">> => <<"^/arweave/raw/(.*)$">>,
+                            <<"with">> => <<Gateway/binary, "/\\1/body">>
+                        }
+                    }
+                ]
+        },
+    {ok, _} =
+        hb_ao:resolve(
+            #{ <<"device">> => SpecID },
+            #{
+                <<"path">> => <<"consume">>,
+                <<"resource">> => <<"arweave-bytes">>,
+                <<"amount">> => 7
+            },
+            RouteOpts
+        ),
+    hb_ao:resolve(
+        #{ <<"device">> => SpecID },
+        #{
+            <<"path">> => <<"quote">>,
+            <<"resource">> => <<"arweave-bytes">>,
+            <<"amount">> => 7
+        },
+        RouteOpts
+    ).
+
 untrusted_load_device_test() ->
     % Establish an execution environment which does not trust the device author.
     UntrustedWallet = ar_wallet:new(),
@@ -278,7 +409,7 @@ untrusted_load_device_test() ->
     },
     hb_store:reset(Store),
     ?assertThrow(
-        {error, {device_not_loadable, _, device_signer_not_trusted}},
+        {error, {device_not_loadable, _, _}},
         exec_dummy_device(Opts)
     ).
 

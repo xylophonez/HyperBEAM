@@ -52,11 +52,7 @@ item(_Base, Req, Opts) ->
             case cache_item(Item, Opts) of
                 ok ->
                     BundledSize = bundled_item_size(Item, Opts),
-                    dev_metering:consume(
-                        <<"arweave-bytes">>,
-                        BundledSize,
-                        Opts
-                    ),
+                    meter_bundled_size(BundledSize, Opts),
                     % Queue the item for bundling
                     % (fire-and-forget, ignore errors)
                     ServerPID ! {enqueue_item, Item, BundledSize},
@@ -84,6 +80,37 @@ item(_Base, Req, Opts) ->
                 <<"error">> => <<"invalid-item">>,
                 <<"details">> => error_to_bin(Reason)
             }}
+    end.
+
+meter_bundled_size(BundledSize, Opts) ->
+    case hb_opts:get(<<"bundler-metering-device">>, undefined, Opts) of
+        undefined ->
+            ok;
+        false ->
+            ok;
+        <<>> ->
+            ok;
+        Device ->
+            case hb_ao:resolve(
+                #{ <<"device">> => Device },
+                #{
+                    <<"path">> => <<"consume">>,
+                    <<"resource">> => <<"arweave-bytes">>,
+                    <<"amount">> => BundledSize
+                },
+                Opts
+            ) of
+                ok ->
+                    ok;
+                {ok, _} ->
+                    ok;
+                {error, Reason} ->
+                    ?event(bundler, {metering_consume_failed, {reason, Reason}}),
+                    ok;
+                Other ->
+                    ?event(bundler, {metering_consume_unexpected, {result, Other}}),
+                    ok
+            end
     end.
 
 %% @doc Verify the subject by extracting committed fields and checking signatures.

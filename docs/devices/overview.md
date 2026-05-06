@@ -16,6 +16,11 @@ Below is a list of documented built-in devices. Each page details the device's p
 *   **[`~lua@5.3a`](./lua-at-5-3a.md):** Lua script execution engine.
 *   **[`~relay@1.0`](./relay-at-1-0.md):** Relaying messages to other nodes or HTTP endpoints.
 *   **[`~json@1.0`](./json-at-1-0.md):** Provides access to JSON data structures using HyperPATHs.
+*   **[`~ao-payment@1.0`](./ao-payment-at-1-0.md):** External payment ingestion device spec.
+*   **[`~bundler-settlement@1.0`](./bundler-settlement-at-1-0.md):** External bundler completion settlement hook spec.
+*   **[`~metering@1.0`](./metering-at-1-0.md):** External dynamic resource pricing device spec.
+*   **[`~pricing-router@1.0`](./pricing-router-at-1-0.md):** External P4 pricing-device router spec.
+*   **[`~process-ledger@1.0`](./process-ledger-at-1-0.md):** External AO process ledger adapter spec.
 
 *(More devices will be documented here as specifications are finalized and reviewed.)*
 

@@ -29,7 +29,8 @@ info(_) ->
             [
                 <<"estimate">>,
                 <<"price">>,
-                <<"quote">>
+                <<"quote">>,
+                <<"consume">>
             ]
     }.
 
@@ -74,8 +75,18 @@ quote(_Base, Req, Opts) ->
 is_active() ->
     erlang:get(?METERING_KEY) =/= undefined.
 
-%% @doc Helper API for other devices.
-consume(Resource, Amount, _Opts) ->
+%% @doc Device API and helper API for other devices.
+consume(_Base, Req, Opts) when is_map(Req) ->
+    consume_resource(
+        hb_maps:get(<<"resource">>, Req, <<>>, Opts),
+        hb_maps:get(<<"amount">>, Req, 0, Opts),
+        Opts
+    ),
+    {ok, Req};
+consume(Resource, Amount, Opts) ->
+    consume_resource(Resource, Amount, Opts).
+
+consume_resource(Resource, Amount, _Opts) ->
     case erlang:get(?METERING_KEY) of
         undefined ->
             ok;
