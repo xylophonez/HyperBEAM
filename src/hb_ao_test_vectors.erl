@@ -218,23 +218,19 @@ exec_dummy_device(Opts) ->
         ),
     {ok, _SpecUnsignedID} = hb_cache:write(SpecMsg, Opts),
     SpecID = hb_message:id(SpecMsg, signed, Opts),
-    % Compile the test device and store it in an accessible cache to the execution
+    % Package the test device and store it in an accessible cache to the execution
     % environment.
-    {ok, ModName, Bin} = compile:file("test/dev_dummy.erl", [binary]),
+    [DummyGroup] =
+        hb_packager:scan(
+            ["test"],
+            #{ <<"device-roots">> => [<<"dev_dummy">>] }
+        ),
+    DummyPkg = hb_packager:package(DummyGroup, Opts),
     DevMsg =
         hb_message:commit(
             hb_ao:normalize_keys(
-                #{
-                    <<"data-protocol">> => <<"ao">>,
-                    <<"variant">> => <<"ao.N.1">>,
-                    <<"content-type">> => <<"application/beam">>,
-                    <<"implements-device">> => SpecID,
-                    <<"module-name">> => ModName,
-                    <<"requires-otp-release">> =>
-                        hb_util:bin(erlang:system_info(otp_release)),
-                    <<"body">> => Bin
-                },
-				Opts
+                hb_packager:impl_message(DummyPkg, SpecID, Opts),
+                Opts
             ),
             Opts
         ),
@@ -297,7 +293,8 @@ load_device_test() ->
             <<"store-module">> => hb_store_fs,
             <<"name">> => <<"cache-TEST/fs">>
         },
-        <<"priv-wallet">> => Wallet
+        <<"priv-wallet">> => Wallet,
+        <<"device-bootstrap">> => hb_packager:bootstrap_device_map()
     },
     hb_store:reset(Store),
     ?assertEqual({ok, <<"example">>}, exec_dummy_device(Opts)).
@@ -314,7 +311,8 @@ untrusted_load_device_test() ->
             <<"store-module">> => hb_store_fs,
             <<"name">> => <<"cache-TEST/fs">>
         },
-        <<"priv-wallet">> => UntrustedWallet
+        <<"priv-wallet">> => UntrustedWallet,
+        <<"device-bootstrap">> => hb_packager:bootstrap_device_map()
     },
     hb_store:reset(Store),
     ?assertThrow(
