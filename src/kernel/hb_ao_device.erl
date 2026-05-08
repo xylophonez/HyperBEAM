@@ -442,19 +442,28 @@ read_impl_field(Store, ImplID, Key, Opts) ->
 
 %% @doc Verify that a directly-read implementation was signed by a trusted key.
 verify_direct_signer(Store, ImplID, Ref, Opts) ->
-    Signers = direct_signers(Store, ImplID, Opts),
-    Trusted = signer_trusted(Signers, trusted_signers(Opts)),
-    ?event(device_load,
-        {verifying_device_trust,
-            {ref, Ref},
-            {trusted, Trusted},
-            {signers, Signers}
-        },
-        Opts
-    ),
-    case Trusted of
-        true -> ok;
-        false -> {error, {device_signer_not_trusted, Ref}}
+    case hb_opts:get(trust_preloaded_devices, true, Opts) of
+        true ->
+            ?event(device_load,
+                {trusting_preloaded_device, {ref, Ref}, {impl, ImplID}},
+                Opts
+            ),
+            ok;
+        false ->
+            Signers = direct_signers(Store, ImplID, Opts),
+            Trusted = signer_trusted(Signers, trusted_signers(Opts)),
+            ?event(device_load,
+                {verifying_device_trust,
+                    {ref, Ref},
+                    {trusted, Trusted},
+                    {signers, Signers}
+                },
+                Opts
+            ),
+            case Trusted of
+                true -> ok;
+                false -> {error, {device_signer_not_trusted, Ref}}
+            end
     end.
 
 %% @doc Read implementation commitment signers without decoding the whole msg.
@@ -925,8 +934,8 @@ preload_all(Opts) ->
         {_, undefined} -> ok;
         {Store, IndexID} ->
             ListPath = <<IndexID/binary, "/impl-of">>,
-            case hb_store:list(Store, ListPath, Opts) of
-                {ok, Names} ->
+            case hb_store:read(Store, ListPath, Opts) of
+                {composite, Names} ->
                     lists:foreach(
                         fun(N) ->
                             preload_one(Store, IndexID, N, Opts)
