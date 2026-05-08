@@ -14,6 +14,7 @@
     write_item/2,
     write_tx/3,
     complete_tx/2,
+    get_item_bundle/2,
     load_bundle_states/1,
     load_tx/2,
     load_items/2,
@@ -47,6 +48,8 @@ link_item_to_tx(Item, TX, Opts) when is_map(Item) and is_map(TX) ->
 
 %% @doc Get the bundle TXID for a data item, or <<>> if not bundled.
 get_item_bundle(Item, Opts) when is_map(Item) ->
+    get_item_bundle(item_id(Item, Opts), Opts);
+get_item_bundle(Item, Opts) when is_binary(Item) ->
     Path = item_path(Item, Opts),
     case read_pseudopath(Path, Opts) of
         {ok, Value} -> Value;
@@ -373,20 +376,22 @@ bundler_optimistic_cache_test() ->
         <<"store">> => hb_test_utils:test_store(hb_store_lmdb)
     }),
     try
+        ClientOpts = #{ <<"store">> => hb_test_utils:test_store() },
         StructuredBundle = hb_message:convert(
             L2Bundle,
             <<"structured@1.0">>,
             <<"ans104@1.0">>,
-            #{}
+            ClientOpts
         ),
+        LoadedBundle = hb_cache:ensure_all_loaded(StructuredBundle, ClientOpts),
         ?assertMatch({ok, _}, hb_http:post(
             Node,
             #{
                 <<"path">> => <<"/~bundler@1.0/tx">>,
                 <<"bundler-subject">> => <<"body">>,
-                <<"body">> => StructuredBundle
+                <<"body">> => LoadedBundle
             },
-            #{}
+            ClientOpts
         )),
         % Every item at every nesting level must be independently readable
         % via a bare GET /ID — the real user-facing access pattern.
@@ -400,11 +405,12 @@ bundler_optimistic_cache_test() ->
         lists:foreach(
             fun({Label, ExpectedID}) ->
                 {ok, Msg} = hb_http:get(
-                    Node, #{ <<"path">> => <<"/", ExpectedID/binary>> }, #{}),
+                    Node, #{ <<"path">> => <<"/", ExpectedID/binary>> }, ClientOpts),
+                LoadedMsg = hb_cache:ensure_all_loaded(Msg, ClientOpts),
                 ?event(debug_test, {item_result,
                     {label, Label}, {expected_id, ExpectedID}, {msg, Msg}}),
-                ?assert(hb_message:verify(Msg)),
-                ?assertEqual(ExpectedID, hb_message:id(Msg, signed))
+                ?assert(hb_message:verify(LoadedMsg, all, ClientOpts)),
+                ?assertEqual(ExpectedID, hb_message:id(LoadedMsg, signed, ClientOpts))
             end,
             AllItems
         ),

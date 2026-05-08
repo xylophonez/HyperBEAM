@@ -524,6 +524,7 @@ task_completed(
 %% @doc Mark a bundle as complete and remove it from state.
 bundle_complete(Bundle, State = #state{opts = Opts}) ->
     ok = dev_bundler_cache:complete_tx(Bundle#bundle.tx, Opts),
+    maybe_index_pending_bundle(Bundle, Opts),
     ElapsedTime =
         timer:now_diff(erlang:timestamp(), Bundle#bundle.start_time) / 1000000,
     ?event(
@@ -537,6 +538,48 @@ bundle_complete(Bundle, State = #state{opts = Opts}) ->
     ),
     run_completion_hooks(Bundle, Opts),
     State#state{bundles = maps:remove(Bundle#bundle.id, State#state.bundles)}.
+
+%% @doc Trigger mempool copycat for this just-posted bundle. This writes
+%% Arweave offset-index entries for the pending L1 bundle and its children so
+%% this node can resolve uploaded data items before gateway indexing catches up.
+maybe_index_pending_bundle(Bundle, Opts) ->
+    case hb_opts:get(arweave_mempool_copycat_on_bundle_complete, false, Opts) of
+        true ->
+            TXID = hb_message:id(Bundle#bundle.tx, signed, Opts),
+            Sender =
+                case hb_opts:get(operator, undefined, Opts) of
+                    undefined -> undefined;
+                    Operator -> hb_util:human_id(Operator)
+                end,
+            spawn(fun() -> index_pending_bundle(TXID, Sender, Opts) end),
+            ok;
+        false ->
+            ok
+    end.
+
+index_pending_bundle(TXID, Sender, Opts) ->
+    Req0 = #{ <<"path">> => <<"arweave">>, <<"mode">> => <<"mempool">> },
+    Req =
+        case Sender of
+            undefined -> Req0;
+            _ -> Req0#{ <<"sender">> => Sender }
+        end,
+    CopycatOpts = Opts#{
+        arweave_static_pending_txids => [TXID],
+        <<"arweave-static-pending-txids">> => [TXID]
+    },
+    Res =
+        hb_ao:resolve(
+            #{ <<"device">> => <<"copycat@1.0">> },
+            Req,
+            CopycatOpts
+        ),
+    ?event(
+        copycat_short,
+        {bundler_pending_copycat_finished,
+            {tx_id, {explicit, TXID}},
+            {result, Res}}
+    ).
 
 %% @doc Execute hooks for each completed bundled item and the full bundle.
 run_completion_hooks(Bundle, Opts) ->
@@ -747,6 +790,43 @@ unsigned_dataitem_test_parallel() ->
     after
         %% Always cleanup, even if test fails
         stop_test_servers(ServerHandle, NodeOpts)
+    end.
+
+optimistic_raw_cache_test_parallel() ->
+    Data = <<"optimistic-cache-data">>,
+    Item =
+        ar_bundles:sign_item(
+            #tx{
+                data = Data,
+                tags = [{<<"content-type">>, <<"text/plain">>}]
+            },
+            ar_wallet:new()
+        ),
+    Opts = #{
+        <<"priv-wallet">> => ar_wallet:new(),
+        <<"store">> => hb_test_utils:test_store(),
+        <<"bundler-max-items">> => 1000
+    },
+    try
+        StructuredItem =
+            hb_message:convert(
+                Item,
+                <<"structured@1.0">>,
+                <<"ans104@1.0">>,
+                Opts
+            ),
+        ItemID = hb_util:encode(ar_bundles:id(Item, signed)),
+        ?assertMatch({ok, _}, item(#{}, StructuredItem, Opts)),
+        {ok, Raw} =
+            dev_arweave:raw(
+                #{},
+                #{ <<"raw">> => ItemID },
+                Opts
+            ),
+        ?assertEqual(Data, maps:get(<<"body">>, Raw)),
+        ?assertEqual(<<"text/plain">>, maps:get(<<"content-type">>, Raw))
+    after
+        stop_server(Opts)
     end.
 
 idle_test() ->
@@ -1154,6 +1234,49 @@ post_proof_failure_retry_test_parallel() ->
         stop_test_servers(ServerHandle, NodeOpts)
     end.
 
+bundle_complete_waits_for_seeded_chunks_test_parallel() ->
+    Anchor = rand:bytes(32),
+    Price = 12345,
+    setup_test_counter(bundle_complete_hook_counter),
+    {ServerHandle, NodeOpts} = start_mock_gateway(#{
+        price => {200, integer_to_binary(Price)},
+        tx_anchor => {200, hb_util:encode(Anchor)},
+        chunk => {500, <<"error">>}
+    }),
+    try
+        Opts = NodeOpts#{
+            <<"priv-wallet">> => ar_wallet:new(),
+            <<"store">> => hb_test_utils:test_store(),
+            <<"bundler-max-items">> => 1,
+            <<"retry-base-delay-ms">> => 50,
+            <<"retry-jitter">> => 0,
+            <<"on">> => #{
+                <<"bundle-complete">> => #{
+                    <<"device">> => #{
+                        bundle_complete =>
+                            fun(_Base, Req, _Opts) ->
+                                increment_test_counter(bundle_complete_hook_counter),
+                                {ok, Req}
+                            end
+                    },
+                    <<"hook">> => #{ <<"result">> => <<"ignore">> }
+                }
+            }
+        },
+        hb_http_server:start_node(Opts),
+        ensure_server(Opts),
+        Items = [new_structured_data_item(1, floor(1.5 * ?DATA_CHUNK_SIZE), Opts)],
+        submit_test_items(Items, Opts),
+        [_] = hb_mock_server:get_requests(tx, 1, ServerHandle),
+        Chunks = hb_mock_server:get_requests(chunk, 3, ServerHandle),
+        ?assert(length(Chunks) >= 3),
+        ?assertEqual(0, get_test_counter(bundle_complete_hook_counter)),
+        ok
+    after
+        cleanup_test_counter(bundle_complete_hook_counter),
+        stop_test_servers(ServerHandle, NodeOpts)
+    end.
+
 rapid_dispatch_test_parallel() ->
     Anchor = rand:bytes(32),
     Price = 12345,
@@ -1531,23 +1654,34 @@ new_data_item(Index, Size, Wallet) ->
     ).
 
 post_data_item(Node, Item, Opts) ->
+    ClientOpts =
+        case maps:is_key(<<"store">>, Opts) orelse maps:is_key(store, Opts) of
+            true -> Opts;
+            false -> Opts#{ <<"store">> => hb_test_utils:test_store() }
+        end,
     StructuredItem = hb_message:convert(
         Item,
         <<"structured@1.0">>,
         <<"ans104@1.0">>,
-        Opts
+        ClientOpts
     ),
+    LoadedItem = hb_cache:ensure_all_loaded(StructuredItem, ClientOpts),
     hb_http:post(
         Node,
         #{
             <<"path">> => <<"/~bundler@1.0/tx">>,
             <<"bundler-subject">> => <<"body">>,
-            <<"body">> => StructuredItem
+            <<"body">> => LoadedItem
         },
-        Opts
+        ClientOpts
     ).
 
 assert_bundle(Node, ExpectedItems, Anchor, Price, TXRequest, Proofs, ClientOpts) ->
+    TestOpts =
+        case maps:is_key(<<"store">>, ClientOpts) orelse maps:is_key(store, ClientOpts) of
+            true -> ClientOpts;
+            false -> ClientOpts#{ <<"store">> => hb_test_utils:test_store() }
+        end,
     %% Reconstitute the transaction with its data from the POSTed payloads.
     TXBinary = maps:get(<<"body">>, TXRequest),
     TXJSON = hb_json:decode(TXBinary),
@@ -1580,9 +1714,10 @@ assert_bundle(Node, ExpectedItems, Anchor, Price, TXRequest, Proofs, ClientOpts)
     ?assertEqual(Anchor, TX#tx.anchor),
     ?assertEqual(Price, TX#tx.reward),
     TXStructured = hb_message:convert(
-        TX, <<"structured@1.0">>, <<"tx@1.0">>, ClientOpts),
+        TX, <<"structured@1.0">>, <<"tx@1.0">>, TestOpts),
+    LoadedTXStructured = hb_cache:ensure_all_loaded(TXStructured, TestOpts),
     ?event(debug_test, {tx_structured, TXStructured}),
-    ?assert(hb_message:verify(TXStructured, all, ClientOpts)),
+    ?assert(hb_message:verify(LoadedTXStructured, all, TestOpts)),
     %% Verify individual data items in the bundle
     BundleDeserialized = ar_bundles:deserialize(TX),
     ?event(debug_test, {bundle_deserialized, BundleDeserialized}),
@@ -1600,12 +1735,12 @@ assert_bundle(Node, ExpectedItems, Anchor, Price, TXRequest, Proofs, ClientOpts)
     ?assertEqual(undefined, TX#tx.manifest),
     ?assertEqual(undefined, BundleDeserialized#tx.manifest),
     % Verify that the TX was cached
-    SignedTXID = hb_message:id(TXStructured, signed, ClientOpts),
+    SignedTXID = hb_message:id(LoadedTXStructured, signed, TestOpts),
     CachedTXFromSignedID = dev_cache:read_from_cache(Node, SignedTXID),
-    ?assert(hb_message:verify(CachedTXFromSignedID, all, ClientOpts)),
-    UnsignedTXID = hb_message:id(TXStructured, unsigned, ClientOpts),
+    ?assert(hb_message:verify(CachedTXFromSignedID, all, TestOpts)),
+    UnsignedTXID = hb_message:id(LoadedTXStructured, unsigned, TestOpts),
     CachedTXFromUnsignedID = dev_cache:read_from_cache(Node, UnsignedTXID),
-    ?assert(hb_message:verify(CachedTXFromUnsignedID, all, ClientOpts)),
+    ?assert(hb_message:verify(CachedTXFromUnsignedID, all, TestOpts)),
     % Verify that the items were cached
     lists:foreach(
         fun(Item) ->
