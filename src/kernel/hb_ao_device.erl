@@ -357,7 +357,7 @@ resolve_via_name_device(Ref, Opts) ->
         {ok, _NameMod} ->
             case hb_ao:resolve(
                 #{ <<"device">> => <<"name@1.0">> },
-                #{ <<"path">> => Ref },
+                #{ <<"path">> => Ref, <<"load">> => false },
                 Opts
             ) of
                 {ok, ID} when ?IS_ID(ID) -> {ok, ID};
