@@ -35,8 +35,9 @@ do(State) ->
     Wallet = load_wallet(KeyPath),
     NodeOpts = #{
         <<"priv-wallet">> => Wallet,
-        <<"store">> =>
-            [#{ <<"store-module">> => hb_store_arweave }]
+        <<"commitment-device">> => <<"ans104@1.0">>,
+        <<"http-client">> => httpc,
+        <<"prometheus">> => false
     },
     Groups = hb_packager:scan(Dirs,
         #{ <<"device-roots">> => Roots }
@@ -44,12 +45,16 @@ do(State) ->
     Pkgs = [hb_packager:package(G, NodeOpts) || G <- Groups],
     Results = lists:map(
         fun(Pkg) ->
-            Spec = hb_message:commit(
-                hb_packager:spec_message(Pkg, NodeOpts), NodeOpts),
-            {ok, SpecID} = hb_cache:write(Spec, NodeOpts),
-            Impl = hb_message:commit(
-                hb_packager:impl_message(Pkg, SpecID, NodeOpts), NodeOpts),
-            {ok, ImplID} = hb_cache:write(Impl, NodeOpts),
+            {ok, SpecID} =
+                publish_msg(
+                    hb_packager:spec_message(Pkg, NodeOpts),
+                    NodeOpts
+                ),
+            {ok, ImplID} =
+                publish_msg(
+                    hb_packager:impl_message(Pkg, SpecID, NodeOpts),
+                    NodeOpts
+                ),
             #{
                 device_name => maps:get(device_name, Pkg),
                 spec_id => SpecID,
@@ -66,6 +71,38 @@ do(State) ->
         Results
     ),
     {ok, State}.
+
+publish_msg(Msg, NodeOpts) ->
+    Wallet = hb_opts:get(priv_wallet, no_viable_wallet, NodeOpts),
+    {ok, TX} = dev_ans104:to(Msg, #{}, NodeOpts),
+    SignedTX = ar_bundles:sign_item(TX, Wallet),
+    ID = hb_util:id(SignedTX, signed),
+    case upload_item(ar_bundles:serialize(SignedTX), NodeOpts) of
+        ok -> {ok, ID};
+        Error -> erlang:error({device_publish_failed, ID, Error})
+    end.
+
+upload_item(Serialized, NodeOpts) ->
+    application:ensure_all_started(inets),
+    application:ensure_all_started(ssl),
+    Bundler = hb_opts:get(bundler_ans104, not_found, NodeOpts),
+    Req = #{
+        peer => Bundler,
+        path => <<"/~bundler@1.0/tx">>,
+        method => <<"POST">>,
+        headers => #{
+            <<"codec-device">> => <<"ans104@1.0">>,
+            <<"content-type">> => <<"application/ans104">>,
+            <<"accept">> => <<"application/json">>
+        },
+        body => Serialized
+    },
+    case hb_http_client:request(Req, NodeOpts) of
+        {ok, Status, _Headers, _Body} when Status >= 200, Status < 300 ->
+            ok;
+        Other ->
+            {error, Other}
+    end.
 
 load_wallet(undefined) -> hb:wallet();
 load_wallet(Path) -> hb:wallet(binary_to_list(hb_util:bin(Path))).

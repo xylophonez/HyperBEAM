@@ -112,6 +112,8 @@ preloaded_index_default() ->
                 fun topic_list_to_atoms/1,
                 {preparsed, false}
             },
+        <<"http-client-prefer-ipv4">> =>
+            {"HB_HTTP_CLIENT_PREFER_IPV4", fun list_to_existing_atom/1, "false"},
         <<"log-dir">> => {"HB_LOG_DIR", fun hb_util:bin/1, "logs"},
         <<"log-max-files">> => {"HB_LOG_MAX_FILES", fun hb_util:int/1, "5"},
         <<"log-max-bytes">> =>
@@ -269,6 +271,7 @@ raw_default_message() ->
         %% What should the node do if a client error occurs?
         <<"client-error-strategy">> => throw,
         %% HTTP client request options
+        <<"http-client-prefer-ipv4">> => false,
         <<"http-client-connect-timeout">> => 5000,
         <<"http-client-keepalive">> => 120000,
         <<"http-client-send-timeout">> => 300_000,

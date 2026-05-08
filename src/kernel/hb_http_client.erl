@@ -136,7 +136,9 @@ httpc_req(Args, Opts) ->
                         {URL, HeaderKV, binary_to_list(ContentType), Body}
                 end,
             ?event({http_client_outbound, Method, URL, Request}),
-            HTTPCOpts = [{full_result, true}, {body_format, binary}],
+            HTTPCOpts =
+                ipv4_httpc_options(Opts) ++
+                [{full_result, true}, {body_format, binary}],
             StartTime = os:system_time(native),
             case httpc:request(Method, Request, [], HTTPCOpts) of
                 {ok, {{_, Status, _}, RawRespHeaders, RespBody}} ->
@@ -191,10 +193,11 @@ hackney_req(Args, Opts) ->
             ConnTimeout = hb_opts:get(http_client_connect_timeout, ?DEFAULT_CONNECT_TIMEOUT, Opts),
             RecvTimeout = hb_opts:get(http_client_hackney_recv_timeout, ?DEFAULT_HACKNEY_RECEIVE_TIMEOUT, Opts),
             CheckoutTimeout = hb_opts:get(http_client_hackney_checkout_timeout, ?DEFAULT_HACKNEY_CHECKOUT_TIMEOUT, Opts),
+            ConnectOptions = [{nodelay, true} | ipv4_socket_options(Opts)],
             HackneyOpts = [with_body,
                 {pool, ?HACKNEY_POOL},
                 {connect_timeout, ConnTimeout},
-                {connect_options, [{nodelay, true}]},
+                {connect_options, ConnectOptions},
                 {checkout_timeout, CheckoutTimeout},
                 {recv_timeout, RecvTimeout}],
             StartTime = erlang:monotonic_time(native),
@@ -372,7 +375,7 @@ open_connection(#{ peer := Peer }, Opts) ->
 
 open_connection_gun(Host, Port, Peer, Opts) ->
     ?event(http_outbound, {parsed_peer, {peer, Peer}, {host, Host}, {port, Port}}),
-    BaseGunOpts =
+    BaseGunOpts0 =
         #{
             http_opts =>
                 #{
@@ -391,6 +394,11 @@ open_connection_gun(Host, Port, Peer, Opts) ->
                     Opts
                 )
         },
+    BaseGunOpts =
+        case ipv4_socket_options(Opts) of
+            [] -> BaseGunOpts0;
+            SocketOptions -> BaseGunOpts0#{ tcp_opts => SocketOptions }
+        end,
     Transport =
         case Port of
             443 -> tls;
@@ -417,6 +425,27 @@ open_connection_gun(Host, Port, Peer, Opts) ->
         }
     ),
 	gun:open(Host, Port, GunOpts).
+
+ipv4_httpc_options(Opts) ->
+    case ipv4_socket_options(Opts) of
+        [] -> [];
+        SocketOptions -> [{socket_opts, SocketOptions}]
+    end.
+
+ipv4_socket_options(Opts) ->
+    case prefer_ipv4(Opts) of
+        true -> [inet];
+        false -> []
+    end.
+
+prefer_ipv4(Opts) ->
+    case hb_opts:get(http_client_prefer_ipv4, false, Opts) of
+        true -> true;
+        <<"true">> -> true;
+        "true" -> true;
+        1 -> true;
+        _ -> false
+    end.
 
 parse_peer(Peer, Opts) ->
     Parsed = uri_string:parse(Peer),

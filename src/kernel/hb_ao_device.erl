@@ -357,7 +357,7 @@ resolve_via_name_device(Ref, Opts) ->
         {ok, _NameMod} ->
             case hb_ao:resolve(
                 #{ <<"device">> => <<"name@1.0">> },
-                #{ <<"path">> => Ref },
+                #{ <<"path">> => Ref, <<"load">> => false },
                 Opts
             ) of
                 {ok, ID} when ?IS_ID(ID) -> {ok, ID};
@@ -443,7 +443,9 @@ read_impl_field(Store, ImplID, Key, Opts) ->
 %% @doc Verify that a directly-read implementation was signed by a trusted key.
 verify_direct_signer(Store, ImplID, Ref, Opts) ->
     Signers = direct_signers(Store, ImplID, Opts),
-    Trusted = signer_trusted(Signers, trusted_signers(Opts)),
+    Trusted =
+        signer_trusted(Signers, trusted_signers(Opts))
+            orelse signer_trusted(Signers, preloaded_index_signers(Store, Opts)),
     ?event(device_load,
         {verifying_device_trust,
             {ref, Ref},
@@ -479,6 +481,15 @@ direct_signers(Store, ImplID, Opts) ->
                 CommitmentIDs
             );
         _ -> []
+    end.
+
+%% @doc The local preloaded-store is part of the node build. Treat the signer
+%% of its Device-Index as trusted for direct reads from that store only; remote
+%% implementations still use `trusted-device-signers'.
+preloaded_index_signers(Store, Opts) ->
+    case preloaded_index_id(Opts) of
+        undefined -> [];
+        IndexID -> direct_signers(Store, IndexID, Opts)
     end.
 
 %% @doc Find a matching implementation message through normal cache semantics.

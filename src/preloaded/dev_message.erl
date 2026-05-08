@@ -866,8 +866,19 @@ case_insensitive_get(Key, Msg, Opts) ->
     NormKey = hb_util:to_lower(hb_util:bin(Key)),
     NormMsg = hb_ao:normalize_keys(Msg, Opts),
     case hb_maps:get(NormKey, NormMsg, not_found, Opts) of
-        not_found -> {error, not_found};
+        not_found -> dash_fallback_get(NormKey, NormMsg, Opts);
         Value -> {ok, Value}
+    end.
+
+dash_fallback_get(NormKey, NormMsg, Opts) ->
+    DashKey = binary:replace(NormKey, <<"_">>, <<"-">>, [global]),
+    case DashKey of
+        NormKey -> {error, not_found};
+        _ ->
+            case hb_maps:get(DashKey, NormMsg, not_found, Opts) of
+                not_found -> {error, not_found};
+                Value -> {ok, Value}
+            end
     end.
 
 %%% Tests
@@ -889,7 +900,23 @@ keys_from_device_test() ->
 case_insensitive_get_test() ->
 	?assertEqual({ok, 1}, case_insensitive_get(<<"a">>, #{ <<"a">> => 1 }, #{})),
 %	?assertEqual({ok, 1}, case_insensitive_get(<<"a">>, #{ <<"A">> => 1 }, #{})),
-	?assertEqual({ok, 1}, case_insensitive_get(<<"A">>, #{ <<"a">> => 1 }, #{})).
+	?assertEqual({ok, 1}, case_insensitive_get(<<"A">>, #{ <<"a">> => 1 }, #{})),
+    ?assertEqual(
+        {ok, 1},
+        case_insensitive_get(
+            <<"preloaded_devices">>,
+            #{ <<"preloaded-devices">> => 1 },
+            #{}
+        )
+    ),
+    ?assertEqual(
+        {ok, 2},
+        case_insensitive_get(
+            <<"preloaded_devices">>,
+            #{ <<"preloaded-devices">> => 1, <<"preloaded_devices">> => 2 },
+            #{}
+        )
+    ).
 	%?assertEqual({ok, 1}, case_insensitive_get(<<"A">>, #{ <<"A">> => 1 }, #{})).
 
 private_keys_are_filtered_test() ->
