@@ -77,10 +77,11 @@ build_dir(Pkgs, Wallet, OutputDir, Opts) ->
         ),
     %% Build the index/provider message. The runtime needs both the
     %% standard `name@version -> spec-ID' lookup (for name@1.0
-    %% compatibility) and a parallel `impl-of/name@version -> impl-ID'
-    %% sub-map so it can find an impl message without going through the
-    %% codec-heavy `hb_cache:match' path. Without the latter, the
-    %% codec devices themselves cannot be loaded (chicken-and-egg).
+    %% compatibility) and parallel `impl-of/name@version -> impl-ID'
+    %% plus `impl-of/spec-id -> impl-ID' entries so aliases and direct
+    %% spec-ID loads can find an impl message without going through the
+    %% codec-heavy `hb_cache:match' path. Without this, the codec devices
+    %% themselves cannot be loaded (chicken-and-egg).
     IndexID = persist_signed(build_index_message(SpecIDs, ImplPerName), LocalOpts),
     {ok, #{
         store => StoreCfg,
@@ -120,9 +121,10 @@ signed_id(Msg, Opts) ->
 %% `hb_store:read/3' before any codec is loaded, and link traversal
 %% only happens once codecs are wired up.
 %%
-%% Two key prefixes are used:
-%%   - `<Name>'               -> signed spec ID (for `name@1.0' lookups)
-%%   - `<<"impl-of/", Name>>' -> signed impl ID (the BEAM message)
+%% Three key prefixes are used:
+%%   - `<Name>'                 -> signed spec ID (for `name@1.0' lookups)
+%%   - `<<"impl-of/", Name>>'   -> signed impl ID (the BEAM message)
+%%   - `<<"impl-of/", SpecID>>' -> signed impl ID (alias/spec-ID loads)
 build_index_message(SpecIDs, ImplIDs) ->
     Base = #{
         <<"data-protocol">> => <<"ao">>,
@@ -137,7 +139,11 @@ build_index_message(SpecIDs, ImplIDs) ->
         ),
     maps:fold(
         fun(Name, ImplID, Acc) ->
-            Acc#{ <<"impl-of/", Name/binary>> => ImplID }
+            SpecID = maps:get(Name, SpecIDs),
+            Acc#{
+                <<"impl-of/", Name/binary>> => ImplID,
+                <<"impl-of/", SpecID/binary>> => ImplID
+            }
         end,
         WithSpecs,
         ImplIDs

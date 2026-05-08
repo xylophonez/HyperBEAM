@@ -327,7 +327,10 @@ is_admissible(Ref, Opts) ->
 %% (if absent) a loaded `~name@1.0' device.
 resolve_to_spec_id(Ref, _Opts) when ?IS_ID(Ref) -> {ok, Ref};
 resolve_to_spec_id(<<"name@1.0">>, Opts) ->
-    bootstrap_index_lookup(<<"name@1.0">>, Opts);
+    case bootstrap_index_lookup(<<"name@1.0">>, Opts) of
+        {ok, _} = Ok -> Ok;
+        not_found -> {error, {name_resolution_unbootstrapped, <<"name@1.0">>}}
+    end;
 resolve_to_spec_id(Ref, Opts) ->
     case bootstrap_index_lookup(Ref, Opts) of
         {ok, _} = Ok -> Ok;
@@ -350,10 +353,10 @@ bootstrap_index_lookup(Name, Opts) ->
     end.
 
 %% @doc Use a runtime-loaded `~name@1.0' device to resolve a non-builtin
-%% name to a specification ID. Falls back to an error when name@1.0
-%% itself has not been loaded.
+%% name to a specification ID. Bootstrap `name@1.0' on demand so
+%% operator-provided `name-resolvers' work even on a cold device cache.
 resolve_via_name_device(Ref, Opts) ->
-    case lookup_device_cache(<<"name@1.0">>, Opts) of
+    case load(<<"name@1.0">>, Opts) of
         {ok, _NameMod} ->
             case hb_ao:resolve(
                 #{ <<"device">> => <<"name@1.0">> },
@@ -363,7 +366,7 @@ resolve_via_name_device(Ref, Opts) ->
                 {ok, ID} when ?IS_ID(ID) -> {ok, ID};
                 _ -> {error, {name_resolution_failed, Ref}}
             end;
-        not_found ->
+        {error, _} ->
             {error, {name_resolution_unbootstrapped, Ref}}
     end.
 
@@ -371,10 +374,10 @@ resolve_via_name_device(Ref, Opts) ->
 %% then verify and load the BEAM. Two paths:
 %%
 %% 1. Bootstrap path: read the impl-ID directly from the preloaded
-%%    store's `Device-Index/impl-of/<Name>' sub-map and load the BEAM
-%%    via raw `hb_store:read' calls. This avoids `hb_cache:match' (and
-%%    therefore the codec devices), which is the only way to
-%%    bootstrap the codecs themselves.
+%%    store's `Device-Index/impl-of/<NameOrSpecID>' sub-map and load
+%%    the BEAM via raw `hb_store:read' calls. This avoids
+%%    `hb_cache:match' (and therefore the codec devices), which is the
+%%    only way to bootstrap the codecs themselves.
 %%
 %% 2. Slow path: `hb_cache:match' against the configured stores plus
 %%    the preloaded store. Used when the bootstrap path misses (e.g.
@@ -387,21 +390,35 @@ find_and_load_impl(Ref, SpecID, Opts) ->
         {error, _} = E -> E
     end.
 
-%% @doc Bootstrap path. Looks up `<IndexID>/impl-of/<Ref>' in the
-%% preloaded-store, verifies the signed impl message's committer via
-%% direct store reads, then reads `module-name' and `body' directly.
+%% @doc Bootstrap path. Looks up `<IndexID>/impl-of/<Ref>' and then
+%% `<IndexID>/impl-of/<SpecID>' in the preloaded-store, verifies the
+%% signed impl message's committer via direct store reads, then reads
+%% `module-name' and `body' directly.
 %% No codec involvement: the BEAM is just bytes on disk.
 bootstrap_load_impl(Ref, SpecID, Opts) ->
     case {preloaded_store(Opts), preloaded_index_id(Opts)} of
         {undefined, _} -> not_found;
         {_, undefined} -> not_found;
         {Store, IndexID} ->
-            case hb_store:read(Store,
-                <<IndexID/binary, "/impl-of/", Ref/binary>>, Opts) of
-                {ok, ImplID} when is_binary(ImplID) ->
-                    read_and_load_impl(Store, ImplID, Ref, SpecID, Opts);
-                _ -> not_found
-            end
+            bootstrap_load_impl_from_index(
+                Store,
+                IndexID,
+                [Ref, SpecID],
+                Ref,
+                SpecID,
+                Opts
+            )
+    end.
+
+bootstrap_load_impl_from_index(_Store, _IndexID, [], _Ref, _SpecID, _Opts) ->
+    not_found;
+bootstrap_load_impl_from_index(Store, IndexID, [Lookup | Rest], Ref, SpecID, Opts) ->
+    case hb_store:read(Store,
+        <<IndexID/binary, "/impl-of/", Lookup/binary>>, Opts) of
+        {ok, ImplID} when is_binary(ImplID) ->
+            read_and_load_impl(Store, ImplID, Ref, SpecID, Opts);
+        _ ->
+            bootstrap_load_impl_from_index(Store, IndexID, Rest, Ref, SpecID, Opts)
     end.
 
 %% @doc Read and load an implementation message by direct store path.

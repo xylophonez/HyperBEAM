@@ -77,6 +77,9 @@ filesystem-backed `preloaded-store`. Output:
   provider message that maps each human-readable device name to its
   spec ID. `name@1.0` is one of those names — it is what the runtime
   reads first to bootstrap.
+* `<output-dir>/<index-id>/impl-of/<device-name>` and
+  `<output-dir>/<index-id>/impl-of/<spec-id>` — direct implementation
+  lookups used before codec-heavy cache matching is available.
 * `_build/hb_preloaded_index.hrl` — a generated compile-time macro
   containing the index ID. The build hook recompiles `hb_opts` after
   writing it, so the default node config embeds the correct index
@@ -92,8 +95,9 @@ re-executed.
 ### `rebar3 device publish`
 
 Packages, signs, and uploads spec + implementation messages to
-Arweave via `dev_arweave`. Returns each device's spec and impl IDs
-on stdout.
+Arweave by signing ANS-104 items and posting them to the configured
+`bundler_ans104` endpoint. Returns each device's spec and impl IDs on
+stdout.
 
 ## Configuration the runtime cares about
 

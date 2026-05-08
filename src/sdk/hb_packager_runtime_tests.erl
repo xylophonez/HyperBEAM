@@ -14,6 +14,15 @@ setup() ->
     SrcDir = hb_packager:test_fixture_dir(),
     [Group] = hb_packager:scan([SrcDir], #{}),
     Pkg = hb_packager:package(Group, #{}),
+    PreloadedGroups =
+        hb_packager:scan(
+            ["src/preloaded"],
+            #{ <<"device-roots">> => [dev_name, dev_message] }
+        ),
+    [NameGroup] = [G || G = #{ root := dev_name } <- PreloadedGroups],
+    [MessageGroup] = [G || G = #{ root := dev_message } <- PreloadedGroups],
+    NamePkg = hb_packager:package(NameGroup, #{}),
+    MessagePkg = hb_packager:package(MessageGroup, #{}),
     Wallet = ar_wallet:new(),
     %% Use the encode/0 form ar_wallet uses internally so this matches
     %% whatever `hb_message:signers/2' returns for impl messages.
@@ -21,7 +30,8 @@ setup() ->
     PreloadDir =
         list_to_binary(filename:join(["/tmp",
             "hb_pkg_rt_" ++ integer_to_list(erlang:system_time())])),
-    {ok, Result} = hb_preload:build_dir([Pkg], Wallet, PreloadDir, #{}),
+    {ok, Result} =
+        hb_preload:build_dir([NamePkg, MessagePkg, Pkg], Wallet, PreloadDir, #{}),
     Store = maps:get(store, Result),
     Index = maps:get(index, Result),
     SpecIDs = maps:get(specs, Result),
@@ -74,18 +84,16 @@ all_runtime_test_() ->
             end,
             fun({Pkg, Opts, _}) ->
                 fun() ->
-                    %% Trust enforcement applies on the bootstrap/direct
-                    %% load path too. With trust restricted to an
-                    %% unrelated signer the load must fail.
+                    %% The local preloaded-store is trusted through the
+                    %% signed Device-Index, even if remote device trust is
+                    %% restricted to an unrelated signer.
                     Name = maps:get(device_name, Pkg),
                     Other = hb_util:human_id(crypto:strong_rand_bytes(32)),
                     BadOpts = Opts#{
                         <<"trusted-device-signers">> => [Other],
                         <<"device-store">> => hb_test_utils:test_store()
                     },
-                    ?assertMatch(
-                        {error, _},
-                        hb_ao_device:load(Name, BadOpts))
+                    ?assertMatch({ok, _}, hb_ao_device:load(Name, BadOpts))
                 end
             end,
             fun({_Pkg, Opts, _}) ->
@@ -96,6 +104,19 @@ all_runtime_test_() ->
                         hb_store:read(Store,
                             <<Index/binary, "/test-pkg@1.0">>, Opts),
                     ?assert(byte_size(Got) == 43)
+                end
+            end,
+            fun({Pkg, Opts, SpecIDs}) ->
+                fun() ->
+                    Name = maps:get(device_name, Pkg),
+                    Alias = <<"alias-test-pkg@1.0">>,
+                    SpecID = maps:get(Name, SpecIDs),
+                    ColdOpts = Opts#{
+                        <<"device-store">> => hb_test_utils:test_store(),
+                        <<"name-resolvers">> => [#{ Alias => SpecID }]
+                    },
+                    {ok, Mod} = hb_ao_device:load(Alias, ColdOpts),
+                    ?assertEqual(maps:get(module_name, Pkg), Mod)
                 end
             end
         ]
