@@ -17,7 +17,20 @@ main(_Args) ->
     SrcDir = "src/preloaded",
     Wallet = hb:wallet(),
     io:format("[preload] scanning ~s...~n", [SrcDir]),
-    Groups = hb_packager:scan([SrcDir], #{}),
+    ExcludedRoots = excluded_roots(),
+    Groups0 = hb_packager:scan([SrcDir], #{}),
+    Groups =
+        [
+            G
+        ||
+            G = #{ root := Root } <- Groups0,
+            not sets:is_element(Root, ExcludedRoots)
+        ],
+    case sets:size(ExcludedRoots) of
+        0 -> ok;
+        N -> io:format("[preload] excluding ~p root(s): ~p~n",
+            [N, sets:to_list(ExcludedRoots)])
+    end,
     io:format("[preload] packaging ~p devices~n", [length(Groups)]),
     Pkgs =
         lists:map(
@@ -39,6 +52,21 @@ main(_Args) ->
     io:format("[preload] header written: ~s~n", [HeaderPath]),
     recompile_hb_opts(),
     halt(0).
+
+excluded_roots() ->
+    case os:getenv("HB_PRELOAD_EXCLUDE_ROOTS") of
+        false -> sets:new();
+        "" -> sets:new();
+        Raw ->
+            sets:from_list(
+                [
+                    list_to_atom(Name)
+                ||
+                    Name <- string:tokens(Raw, ", "),
+                    Name =/= ""
+                ]
+            )
+    end.
 
 add_code_paths() ->
     code:add_pathsa(
