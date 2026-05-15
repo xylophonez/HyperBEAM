@@ -41,6 +41,10 @@
 -define(TEMP_DIR, <<"/tmp/hyperbeam-ffmpeg">>).
 -define(DEFAULT_GATEWAY, <<"https://arweave.net">>).
 -define(DEFAULT_BINARY, <<"/usr/bin/ffmpeg">>).
+-define(DEFAULT_CURL_BINARY, <<"/usr/bin/curl">>).
+-define(DEFAULT_FETCH_TIMEOUT_MS, 120000).
+-define(DEFAULT_FFMPEG_TIMEOUT_MS, 300000).
+-define(DEFAULT_FFPROBE_TIMEOUT_MS, 30000).
 
 %% Supported output formats with their ffmpeg codec names and content-types.
 -define(FORMATS, #{
@@ -116,7 +120,7 @@ do_transcode(TXID, _Base, Request, Opts) ->
             ?event(debug_ffmpeg_audio, {options, TranscodeOpts}),
             %% Fetch the audio data from Arweave
             ?event(debug_ffmpeg_audio, {fetching_audio, {txid, TXID}, {gateway, Gateway}}),
-            case fetch_audio(Gateway, TXID) of
+            case fetch_audio(Gateway, TXID, Opts) of
                 {ok, AudioData, ContentType} ->
                     ?event(debug_ffmpeg_audio, {audio_fetched,
                         {size, byte_size(AudioData)},
@@ -294,23 +298,29 @@ parse_float(Bin, Default) ->
     end.
 
 %% @doc Fetch audio data from an Arweave gateway using curl.
-fetch_audio(Gateway, TXID) ->
+fetch_audio(Gateway, TXID, Opts) ->
     URL = iolist_to_binary([Gateway, "/", TXID]),
     ?event(debug_ffmpeg_audio, {http_get, {url, URL}}),
 
     TempFile = iolist_to_binary(io_lib:format("/tmp/hyperbeam-ffmpeg/fetch_~p.bin",
                                               [erlang:unique_integer([positive])])),
+    HeadersFile = iolist_to_binary([TempFile, ".headers"]),
     ok = filelib:ensure_dir(TempFile),
 
-    Cmd = iolist_to_binary(io_lib:format(
-        "curl -fsSL --max-time 120 -o ~s -D ~s ~s",
-        [shell_quote(TempFile), shell_quote(iolist_to_binary([TempFile, ".headers"])), shell_quote(URL)]
-    )),
-    ?event(debug_ffmpeg_audio, {curl_cmd, {cmd, Cmd}}),
+    CurlBin = ensure_binary_path(hb_opts:get(curl_binary, ?DEFAULT_CURL_BINARY, Opts)),
+    FetchTimeoutMs = timeout_ms(curl_timeout, ?DEFAULT_FETCH_TIMEOUT_MS, Opts),
+    CurlArgs = [
+        "-fsSL",
+        "--max-time", integer_to_list(max(1, FetchTimeoutMs div 1000)),
+        "-o", binary_to_list(TempFile),
+        "-D", binary_to_list(HeadersFile),
+        binary_to_list(URL)
+    ],
+    ?event(debug_ffmpeg_audio, {curl_cmd, {bin, CurlBin}, {args, CurlArgs}}),
 
     try
-        case os:cmd(binary_to_list(Cmd)) of
-            "" ->
+        case run_executable(CurlBin, CurlArgs, FetchTimeoutMs + 5000) of
+            {ok, _Output} ->
                 case file:read_file(TempFile) of
                     {ok, Body} when byte_size(Body) > 0 ->
                         ContentType = parse_content_type(TempFile),
@@ -322,12 +332,12 @@ fetch_audio(Gateway, TXID) ->
                     {error, ReadErr} ->
                         {error, ReadErr}
                 end;
-            ErrorOutput ->
-                {error, {curl_error, iolist_to_binary(ErrorOutput)}}
+            {error, Error} ->
+                {error, {curl_error, format_command_error(Error)}}
         end
     after
         file:delete(TempFile),
-        file:delete(iolist_to_binary([TempFile, ".headers"]))
+        file:delete(HeadersFile)
     end.
 
 %% @doc Parse content-type from curl headers file.
@@ -335,29 +345,29 @@ parse_content_type(TempFile) ->
     HeadersFile = iolist_to_binary([TempFile, ".headers"]),
     case file:read_file(HeadersFile) of
         {ok, RawHeaders} ->
-            LcList = string:to_lower(binary_to_list(RawHeaders)),
-            LcHeaders = list_to_binary(LcList),
-            LcLines = binary:split(LcHeaders, <<"\r\n">>, [global]),
-            lists:foldl(fun(Line, Acc) when is_binary(Line) ->
-                case binary:match(Line, <<"content-type: ">>) of
-                    {Start, Length} ->
-                        Value = string:trim(binary:part(Line, {Start + Length, byte_size(Line) - Start - Length}), trailing, " \t\r\n"),
-                        case Acc of
-                            undefined -> Value;
-                            _ -> Acc
-                        end;
-                    nomatch -> Acc
-                end;
-               (_Line, Acc) -> Acc
-            end, undefined, LcLines);
+            Lines = binary:split(RawHeaders, <<"\n">>, [global]),
+            lists:foldl(fun(Line, Acc) ->
+                case content_type_header(Line) of
+                    undefined -> Acc;
+                    ContentType -> ContentType
+                end
+            end, undefined, Lines);
         _ -> undefined
     end.
 
-%% @doc Shell-quote a string for safe use in os:cmd.
-shell_quote(S) when is_binary(S) ->
-    shell_quote(binary_to_list(S));
-shell_quote(S) when is_list(S) ->
-    "'" ++ lists:flatten(string:replace(S, "'", "'\\''", all)) ++ "'".
+content_type_header(Line) ->
+    case binary:split(Line, <<":">>) of
+        [Name, Value0] ->
+            LowerName = list_to_binary(string:to_lower(binary_to_list(
+                string:trim(Name, both, " \t\r\n")
+            ))),
+            case LowerName of
+                <<"content-type">> ->
+                    string:trim(Value0, both, " \t\r\n");
+                _ -> undefined
+            end;
+        _ -> undefined
+    end.
 
 %% @doc Run ffmpeg to transcode audio data.
 run_ffmpeg(AudioData, ContentType, TranscodeOpts, _Request, Opts) ->
@@ -391,7 +401,7 @@ run_ffmpeg(AudioData, ContentType, TranscodeOpts, _Request, Opts) ->
             case file:write_file(InFile, AudioData) of
                 ok ->
                     build_and_run_ffmpeg(FfmpegBin, InFile, OutFile,
-                                         TranscodeOpts, FormatInfo);
+                                         TranscodeOpts, FormatInfo, Opts);
                 {error, WriteErr} ->
                     ?event(error, {write_input_failed, WriteErr}),
                     return_error(<<"Failed to write temporary audio file.">>, 500)
@@ -402,38 +412,47 @@ run_ffmpeg(AudioData, ContentType, TranscodeOpts, _Request, Opts) ->
     end.
 
 %% @doc Build and execute the ffmpeg command.
-build_and_run_ffmpeg(FfmpegBin, InFile, OutFile, TranscodeOpts, FormatInfo) ->
+build_and_run_ffmpeg(FfmpegBin, InFile, OutFile, TranscodeOpts, FormatInfo, Opts) ->
     try
         %% Build ffmpeg command arguments
         Codec = maps:get(codec, FormatInfo),
         Format = maps:get(format, TranscodeOpts),
         Quality = maps:get(quality, TranscodeOpts),
 
-        CmdParts = build_ffmpeg_cmd(FfmpegBin, InFile, OutFile,
-                                    Codec, Format, Quality, TranscodeOpts),
-        Cmd = string:join(CmdParts, " "),
-        ?event(debug_ffmpeg_audio, {running_ffmpeg, {cmd, Cmd}}),
+        FfmpegArgs = build_ffmpeg_args(InFile, OutFile,
+                                       Codec, Format, Quality, TranscodeOpts),
+        ?event(debug_ffmpeg_audio, {running_ffmpeg, {bin, FfmpegBin}, {args, FfmpegArgs}}),
 
-        %% Run ffmpeg via os:cmd
-        Stderr = os:cmd(Cmd),
-        ?event(debug_ffmpeg_audio, {ffmpeg_done, {stderr_len, byte_size(iolist_to_binary(Stderr))}}),
+        FfmpegTimeoutMs = timeout_ms(ffmpeg_timeout, ?DEFAULT_FFMPEG_TIMEOUT_MS, Opts),
+        FfmpegResult = run_executable(FfmpegBin, FfmpegArgs, FfmpegTimeoutMs),
+        FfmpegOutput = command_output(FfmpegResult),
+        ?event(debug_ffmpeg_audio, {ffmpeg_done, {output_len, byte_size(FfmpegOutput)}}),
 
-        %% Check output file exists and is non-empty
-        case file:read_file(OutFile) of
-            {ok, OutputData} when byte_size(OutputData) > 0 ->
-                %% Extract metadata from ffmpeg stderr
-                Metadata = probe_metadata(OutFile, FfmpegBin),
-                ?event(debug_ffmpeg_audio, {transcode_success,
-                    {size, byte_size(OutputData)},
-                    {metadata, Metadata}}),
-                success_response(OutputData, FormatInfo, Metadata, TranscodeOpts);
-            {ok, <<>>} ->
-                return_error(iolist_to_binary(["ffmpeg produced empty output. stderr: ",
-                                       iolist_to_binary(Stderr)]), 500);
-            {error, ReadErr} ->
-                return_error(iolist_to_binary(["ffmpeg failed to produce output: ",
-                                       io_lib:format("~p", [ReadErr]),
-                                       ". stderr: ", iolist_to_binary(Stderr)]), 500)
+        case FfmpegResult of
+            {ok, _} ->
+                %% Check output file exists and is non-empty
+                case file:read_file(OutFile) of
+                    {ok, OutputData} when byte_size(OutputData) > 0 ->
+                        Metadata = probe_metadata(OutFile, FfmpegBin, Opts),
+                        ?event(debug_ffmpeg_audio, {transcode_success,
+                            {size, byte_size(OutputData)},
+                            {metadata, Metadata}}),
+                        success_response(OutputData, FormatInfo, Metadata, TranscodeOpts);
+                    {ok, <<>>} ->
+                        return_error(iolist_to_binary([
+                            "ffmpeg produced empty output. output: ", FfmpegOutput
+                        ]), 500);
+                    {error, ReadErr} ->
+                        return_error(iolist_to_binary([
+                            "ffmpeg failed to produce output: ",
+                            io_lib:format("~p", [ReadErr]),
+                            ". output: ", FfmpegOutput
+                        ]), 500)
+                end;
+            {error, Error} ->
+                return_error(iolist_to_binary([
+                    "ffmpeg failed: ", format_command_error(Error)
+                ]), 500)
         end
     catch ErrorType:Reason ->
         ?event(error, {transcode_crash, {type, ErrorType}, {reason, Reason}}),
@@ -446,45 +465,45 @@ build_and_run_ffmpeg(FfmpegBin, InFile, OutFile, TranscodeOpts, FormatInfo) ->
         file:delete(OutFile)
     end.
 
-%% @doc Build the ffmpeg command argument list.
-build_ffmpeg_cmd(FfmpegBin, InFile, OutFile, Codec, Format, Quality, Opts) ->
+%% @doc Build the ffmpeg argument list.
+build_ffmpeg_args(InFile, OutFile, Codec, Format, Quality, Opts) ->
     Parts0 = [
-        shell_quote(FfmpegBin),
         "-hide_banner",
+        "-nostdin",
         "-y",                          %% overwrite output
-        "-i", shell_quote(InFile)      %% input file
+        "-i", binary_to_list(InFile)   %% input file
     ],
 
     %% Audio-only filter (strip video if present)
     Parts1 = Parts0 ++ ["-vn"],
 
     %% Sample rate
-    Parts2 = case maps:get(samplerate, Opts) of
+    Parts2 = case maps:get(samplerate, Opts, undefined) of
         undefined -> Parts1;
         SR -> Parts1 ++ ["-ar", binary_to_list(SR)]
     end,
 
     %% Channels
-    Parts3 = case maps:get(channels, Opts) of
+    Parts3 = case maps:get(channels, Opts, undefined) of
         undefined -> Parts2;
         <<"mono">> -> Parts2 ++ ["-ac", "1"];
         <<"stereo">> -> Parts2 ++ ["-ac", "2"]
     end,
 
     %% Start / duration (input-side for efficiency)
-    Parts4 = case maps:get(start, Opts) of
+    Parts4 = case maps:get(start, Opts, undefined) of
         undefined -> Parts3;
         S when is_number(S) ->
             Parts3 ++ ["-ss", number_arg(S)]
     end,
-    Parts5 = case maps:get(duration, Opts) of
+    Parts5 = case maps:get(duration, Opts, undefined) of
         undefined -> Parts4;
         D when is_number(D) ->
             Parts4 ++ ["-t", number_arg(D)]
     end,
 
     %% Audio filter chain
-    FilterParts = case maps:get(normalize, Opts) of
+    FilterParts = case maps:get(normalize, Opts, false) of
         true -> ["loudnorm=print_format=json"];
         false -> []
     end,
@@ -503,7 +522,7 @@ build_ffmpeg_cmd(FfmpegBin, InFile, OutFile, Codec, Format, Quality, Opts) ->
     end,
 
     %% Output
-    Parts8 ++ [shell_quote(OutFile)].
+    Parts8 ++ [binary_to_list(OutFile)].
 
 number_arg(N) when is_integer(N) ->
     integer_to_list(N);
@@ -511,26 +530,32 @@ number_arg(N) when is_float(N) ->
     lists:flatten(io_lib:format("~.3f", [N])).
 
 %% @doc Probe output file metadata using ffprobe.
-probe_metadata(OutFile, FfmpegBin) ->
-    FfprobeCandidate = derive_ffprobe_path(FfmpegBin),
+probe_metadata(OutFile, FfmpegBin, Opts) ->
+    FfprobeCandidate = ensure_binary_path(
+        hb_opts:get(ffprobe_binary, derive_ffprobe_path(FfmpegBin), Opts)
+    ),
     Ffprobe = case filelib:is_regular(FfprobeCandidate) of
         true -> FfprobeCandidate;
         false -> <<"/usr/bin/ffprobe">>
     end,
 
-    Cmd = iolist_to_binary(io_lib:format(
-        "~s -v quiet -print_format json -show_format -show_streams ~s 2>/dev/null",
-        [shell_quote(Ffprobe), shell_quote(OutFile)]
-    )),
-    case os:cmd(binary_to_list(Cmd)) of
-        "" -> #{};
-        ProbeOut ->
+    Args = [
+        "-v", "quiet",
+        "-print_format", "json",
+        "-show_format",
+        "-show_streams",
+        binary_to_list(OutFile)
+    ],
+    case run_executable(Ffprobe, Args, timeout_ms(ffprobe_timeout, ?DEFAULT_FFPROBE_TIMEOUT_MS, Opts)) of
+        {ok, <<>>} -> #{};
+        {ok, ProbeOut} ->
             try
-                ProbeJson = hb_json:decode(iolist_to_binary(ProbeOut)),
+                ProbeJson = hb_json:decode(ProbeOut),
                 extract_probe_metadata(ProbeJson)
             catch
                 _:_ -> #{}
-            end
+            end;
+        {error, _} -> #{}
     end.
 
 derive_ffprobe_path(FfmpegBin) ->
@@ -678,6 +703,80 @@ return_error(Reason, Status) ->
 ensure_binary_path(Path) when is_binary(Path) -> Path;
 ensure_binary_path(Path) when is_list(Path) -> iolist_to_binary(Path).
 
+timeout_ms(Key, Default, Opts) ->
+    case hb_opts:get(Key, Default, Opts) of
+        N when is_integer(N), N > 0 -> N;
+        N when is_float(N), N > 0 -> trunc(N);
+        B when is_binary(B) ->
+            case parse_float(B, invalid) of
+                I when is_integer(I), I > 0 -> I;
+                F when is_float(F), F > 0 -> trunc(F);
+                _ -> Default
+            end;
+        _ -> Default
+    end.
+
+run_executable(Executable0, Args0, TimeoutMs) ->
+    Executable = ensure_binary_path(Executable0),
+    case filelib:is_regular(Executable) of
+        false ->
+            {error, {not_found, Executable}};
+        true ->
+            Args = [arg_to_list(Arg) || Arg <- Args0],
+            try open_port(
+                {spawn_executable, binary_to_list(Executable)},
+                [binary, exit_status, stderr_to_stdout, use_stdio, stream, {args, Args}]
+            ) of
+                Port ->
+                    collect_port(Port, TimeoutMs, [])
+            catch
+                error:Reason ->
+                    {error, {spawn_failed, Reason}}
+            end
+    end.
+
+arg_to_list(Arg) when is_binary(Arg) -> binary_to_list(Arg);
+arg_to_list(Arg) when is_integer(Arg) -> integer_to_list(Arg);
+arg_to_list(Arg) when is_float(Arg) -> number_arg(Arg);
+arg_to_list(Arg) when is_list(Arg) -> lists:flatten(Arg).
+
+collect_port(Port, TimeoutMs, Acc) ->
+    receive
+        {Port, {data, Data}} ->
+            collect_port(Port, TimeoutMs, [Data | Acc]);
+        {Port, {exit_status, 0}} ->
+            {ok, iolist_to_binary(lists:reverse(Acc))};
+        {Port, {exit_status, Status}} ->
+            {error, {exit_status, Status, iolist_to_binary(lists:reverse(Acc))}}
+    after TimeoutMs ->
+        catch port_close(Port),
+        {error, {timeout, iolist_to_binary(lists:reverse(Acc))}}
+    end.
+
+command_output({ok, Output}) -> Output;
+command_output({error, {exit_status, _Status, Output}}) -> Output;
+command_output({error, {timeout, Output}}) -> Output;
+command_output({error, _}) -> <<>>.
+
+format_command_error({exit_status, Status, Output}) ->
+    iolist_to_binary([
+        "exit_status=", integer_to_list(Status),
+        " output=", truncate_output(Output)
+    ]);
+format_command_error({timeout, Output}) ->
+    iolist_to_binary(["timeout output=", truncate_output(Output)]);
+format_command_error({not_found, Executable}) ->
+    iolist_to_binary(["executable not found: ", Executable]);
+format_command_error({spawn_failed, Reason}) ->
+    iolist_to_binary(["spawn failed: ", io_lib:format("~p", [Reason])]);
+format_command_error(Reason) ->
+    iolist_to_binary(io_lib:format("~p", [Reason])).
+
+truncate_output(Output) when byte_size(Output) > 4096 ->
+    <<(binary:part(Output, 0, 4096))/binary, "...">>;
+truncate_output(Output) ->
+    Output.
+
 %% @doc Find the Arweave TXID from the request or base message.
 find_txid(Base, Request, Opts) ->
     find_txid_in([
@@ -760,6 +859,33 @@ quality_bitrate_test() ->
 
 derive_ffprobe_path_test() ->
     ?assertEqual(<<"/usr/bin/ffprobe">>, derive_ffprobe_path(<<"/usr/bin/ffmpeg">>)).
+
+content_type_header_test() ->
+    ?assertEqual(
+        <<"audio/mpeg">>,
+        content_type_header(<<"Content-Type: audio/mpeg\r">>)
+    ).
+
+build_ffmpeg_args_no_shell_test() ->
+    Args = build_ffmpeg_args(
+        <<"/tmp/input file's.wav">>,
+        <<"/tmp/output file.mp3">>,
+        <<"libmp3lame">>,
+        <<"mp3">>,
+        <<"low">>,
+        #{channels => <<"mono">>, duration => 1}
+    ),
+    ?assert(lists:member("/tmp/input file's.wav", Args)),
+    ?assert(lists:member("/tmp/output file.mp3", Args)),
+    ?assertNot(lists:member("'/tmp/input file'\\''s.wav'", Args)).
+
+run_executable_success_test() ->
+    case filelib:is_regular(<<"/bin/echo">>) of
+        false ->
+            ok;
+        true ->
+            ?assertEqual({ok, <<"ok\n">>}, run_executable(<<"/bin/echo">>, ["ok"], 5000))
+    end.
 
 success_response_test() ->
     {ok, Res} = success_response(
