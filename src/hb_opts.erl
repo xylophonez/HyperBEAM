@@ -263,6 +263,7 @@ raw_default_message() ->
             #{<<"name">> => <<"snp@1.0">>, <<"module">> => dev_snp},
             #{<<"name">> => <<"stack@1.0">>, <<"module">> => dev_stack},
             #{<<"name">> => <<"structured@1.0">>, <<"module">> => dev_codec_structured},
+            #{<<"name">> => <<"ffmpeg-audio@1.0">>, <<"module">> => dev_ffmpeg_audio},
             #{<<"name">> => <<"test-device@1.0">>, <<"module">> => dev_test},
             #{<<"name">> => <<"trie@1.0">>, <<"module">> => dev_trie},
             #{<<"name">> => <<"tx@1.0">>, <<"module">> => dev_codec_tx},
