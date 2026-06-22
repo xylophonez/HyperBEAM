@@ -716,10 +716,10 @@ find_markdown_body(_Term, Depth) when Depth > 12 ->
     error;
 find_markdown_body(#tx{data = Data}, Depth) ->
     find_markdown_body(Data, Depth + 1);
-find_markdown_body(Bin, _Depth) when is_binary(Bin), byte_size(Bin) > 0 ->
+find_markdown_body(Bin, Depth) when is_binary(Bin), byte_size(Bin) > 0 ->
     case markdown_payload(Bin) of
         true -> {ok, Bin};
-        false -> error
+        false -> nested_ans104_body(Bin, Depth + 1)
     end;
 find_markdown_body(Map, Depth) when is_map(Map) ->
     case maps:get(<<"body">>, Map, undefined) of
@@ -741,6 +741,14 @@ find_markdown_body(Tuple, Depth) when is_tuple(Tuple) ->
     find_markdown_body_in_list(tuple_to_list(Tuple), Depth + 1);
 find_markdown_body(_Other, _Depth) ->
     error.
+
+nested_ans104_body(Bin, Depth) ->
+    try ar_bundles:deserialize(Bin) of
+        Bin -> error;
+        Nested -> find_markdown_body(Nested, Depth)
+    catch
+        _Class:_Reason -> error
+    end.
 
 find_markdown_body_in_list([], _Depth) ->
     error;
@@ -5393,6 +5401,11 @@ raw_ans104_body_nested_body_test() ->
         }
     },
     ?assertEqual({ok, Markdown}, raw_ans104_body(Item)).
+
+raw_ans104_body_serialized_nested_item_test() ->
+    Markdown = <<"# `arweave-byte-pricing@1.1`\n\nDevice spec body.">>,
+    Inner = ar_bundles:serialize(ar_tx:normalize(#tx{data = Markdown})),
+    ?assertEqual({ok, Markdown}, raw_ans104_body(#tx{data = Inner})).
 
 raw_ans104_body_rejects_wrapper_binary_test() ->
     Item = #tx{data = <<131, 116, 0, 0, 0, 1, 100, 0, 4, "body">>},
