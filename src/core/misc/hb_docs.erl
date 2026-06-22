@@ -703,22 +703,65 @@ structured_ans104_body(Item, Opts) ->
             {error, {missing_or_empty_ans104_body, Other}}
     end.
 
-raw_ans104_body(#tx{data = #{<<"body">> := #tx{data = Body}}}) ->
-    raw_text_body(Body);
-raw_ans104_body(#tx{data = #{<<"body">> := Body}}) ->
-    raw_text_body(Body);
-raw_ans104_body(#tx{data = Body}) ->
-    raw_text_body(Body);
-raw_ans104_body(_Other) ->
-    {error, unsupported_ans104_shape}.
+raw_ans104_body(Item) ->
+    case find_markdown_body(Item) of
+        {ok, Body} -> {ok, Body};
+        error -> {error, unsupported_ans104_shape}
+    end.
 
-raw_text_body(Body) when is_binary(Body), byte_size(Body) > 0 ->
-    case text_payload(Body) of
-        true -> {ok, Body};
-        false -> {error, non_text_raw_body}
+find_markdown_body(Term) ->
+    find_markdown_body(Term, 0).
+
+find_markdown_body(_Term, Depth) when Depth > 12 ->
+    error;
+find_markdown_body(#tx{data = Data}, Depth) ->
+    find_markdown_body(Data, Depth + 1);
+find_markdown_body(Bin, _Depth) when is_binary(Bin), byte_size(Bin) > 0 ->
+    case markdown_payload(Bin) of
+        true -> {ok, Bin};
+        false -> error
     end;
-raw_text_body(Other) ->
-    {error, {non_binary_raw_body, Other}}.
+find_markdown_body(Map, Depth) when is_map(Map) ->
+    case maps:get(<<"body">>, Map, undefined) of
+        undefined ->
+            find_markdown_body_in_list(maps:values(Map), Depth + 1);
+        Body ->
+            case find_markdown_body(Body, Depth + 1) of
+                {ok, _} = Found -> Found;
+                error ->
+                    find_markdown_body_in_list(
+                        maps:values(maps:remove(<<"body">>, Map)),
+                        Depth + 1
+                    )
+            end
+    end;
+find_markdown_body(List, Depth) when is_list(List) ->
+    find_markdown_body_in_list(List, Depth + 1);
+find_markdown_body(Tuple, Depth) when is_tuple(Tuple) ->
+    find_markdown_body_in_list(tuple_to_list(Tuple), Depth + 1);
+find_markdown_body(_Other, _Depth) ->
+    error.
+
+find_markdown_body_in_list([], _Depth) ->
+    error;
+find_markdown_body_in_list([Term | Rest], Depth) ->
+    case find_markdown_body(Term, Depth) of
+        {ok, _} = Found -> Found;
+        error -> find_markdown_body_in_list(Rest, Depth)
+    end.
+
+markdown_payload(Bin) ->
+    text_payload(Bin) andalso markdown_prefix(skip_ascii_ws(Bin)).
+
+skip_ascii_ws(<<C, Rest/binary>>) when C =:= 9; C =:= 10; C =:= 13; C =:= 32 ->
+    skip_ascii_ws(Rest);
+skip_ascii_ws(Bin) ->
+    Bin.
+
+markdown_prefix(<<"#", _/binary>>) ->
+    true;
+markdown_prefix(_Bin) ->
+    false.
 
 gateway_item_data(ID, Opts) ->
     Req = #{
@@ -5336,6 +5379,24 @@ esc(Value) ->
     B3 = binary:replace(B2, <<">">>, <<"&gt;">>, [global]),
     B4 = binary:replace(B3, <<"\"">>, <<"&quot;">>, [global]),
     binary:replace(B4, <<"'">>, <<"&#39;">>, [global]).
+
+raw_ans104_body_nested_body_test() ->
+    Markdown = <<"# `arweave-byte-pricing@1.1`\n\nDevice spec body.">>,
+    Item = #tx{
+        data = #{
+            <<"1">> => #tx{
+                data = #{
+                    <<"body">> => #tx{data = Markdown},
+                    <<"content-type">> => <<"text/markdown">>
+                }
+            }
+        }
+    },
+    ?assertEqual({ok, Markdown}, raw_ans104_body(Item)).
+
+raw_ans104_body_rejects_wrapper_binary_test() ->
+    Item = #tx{data = <<131, 116, 0, 0, 0, 1, 100, 0, 4, "body">>},
+    ?assertEqual({error, unsupported_ans104_shape}, raw_ans104_body(Item)).
 
 node_info_contract_test() ->
     Data = node_info_data(#{ <<"port">> => 9999 }),
