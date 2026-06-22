@@ -1,0 +1,48 @@
+#!/bin/sh
+set -eu
+
+ROOT="${HB_DOCS_TEST_ROOT:-/mnt/atl-83174bc4f5874d/src/hyperbeam-docs-info}"
+cd "$ROOT"
+
+EVAL='
+application:ensure_all_started(hackney),
+Spec = <<"0gIqZYOrZDVJ2nneRYLv2t4BhOuA6rz6l9-RtozfrBM">>,
+Impl = <<"Knz1wSoji3iZonvEs2IBNszc_GCjpntLqhHblpne5cc">>,
+Signer = <<"HjRo75Gi6lbpP-PoUDZrIaA3vG_l2r1PKGrlmUp6GKE">>,
+Base = hb_opts:default_message_with_env(),
+NameResolvers =
+    [
+        #{<<"arweave-byte-pricing@1.1">> => Spec}
+        | hb_opts:get(<<"name-resolvers">>, [], Base)
+    ],
+TrustedSigners =
+    [
+        #{
+            <<"address">> => Signer,
+            <<"devices">> => [<<"arweave-byte-pricing@1.1">>, Spec]
+        }
+        | hb_opts:get(<<"trusted-device-signers">>, [], Base)
+    ],
+TrustedDevices =
+    maps:merge(
+        hb_opts:get(<<"trusted-devices">>, #{}, Base),
+        #{Spec => Impl}
+    ),
+Opts =
+    Base#{
+        <<"port">> => 28737,
+        <<"node-host">> => <<"docs-test.mystical.computer">>,
+        <<"prometheus">> => false,
+        <<"system-monitor">> => false,
+        <<"process-sampler">> => false,
+        <<"load-remote-devices">> => true,
+        <<"name-resolvers">> => NameResolvers,
+        <<"trusted-device-signers">> => TrustedSigners,
+        <<"trusted-devices">> => TrustedDevices
+    },
+Url = hb_http_server:start_node(Opts),
+io:format("started ~s~n", [Url]),
+receive after infinity -> ok end.
+'
+
+exec /usr/bin/erl +S 2:2 +A 2 -pa _build/default/lib/*/ebin -noshell -eval "$EVAL"
