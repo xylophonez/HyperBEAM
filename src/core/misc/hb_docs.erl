@@ -96,6 +96,8 @@ node_info_route([<<"introduction">> | Parts], Req, _Opts) ->
     boilerplate_page_response([<<"introduction">> | Parts], Req);
 node_info_route([<<"forge">> | Parts], Req, _Opts) ->
     boilerplate_page_response([<<"forge">> | Parts], Req);
+node_info_route([<<"processes">> | Parts], Req, _Opts) ->
+    boilerplate_page_response([<<"processes">> | Parts], Req);
 node_info_route([<<"boilerplate">> | _Parts], _Req, _Opts) ->
     {ok, not_found_response()};
 node_info_route([<<"concepts">>], Req, Opts) ->
@@ -1083,7 +1085,7 @@ boilerplate_index() ->
         <<"kind">> => <<"node-boilerplate-index">>,
         <<"href">> => <<"/info/guides">>,
         <<"summary">> =>
-            <<"Conceptual HyperBEAM and AO-Core guides plus Device Forge operator docs.">>,
+            <<"Conceptual HyperBEAM, AO-Core, process, and Device Forge guides.">>,
         <<"source-root">> => hb_util:bin(device_docs_root()),
         <<"ui-source">> => <<"priv/docs/cookbook/device-docs/site">>,
         <<"build-script">> => <<"priv/docs/cookbook/device-docs/scripts/build-docs-site.mjs">>,
@@ -1124,6 +1126,10 @@ boilerplate_relpath_from_parts([]) ->
 boilerplate_relpath_from_parts([Section])
     when Section =:= <<"introduction">>; Section =:= <<"forge">> ->
     boilerplate_relpath_from_parts([Section, <<"index">>]);
+boilerplate_relpath_from_parts([<<"processes">>]) ->
+    boilerplate_relpath_from_parts([<<"processes">>, <<"overview">>]);
+boilerplate_relpath_from_parts([<<"processes">>, Slug]) ->
+    boilerplate_process_route(Slug);
 boilerplate_relpath_from_parts(Parts) ->
     case lists:all(fun safe_route_part/1, Parts) of
         true ->
@@ -1146,21 +1152,48 @@ boilerplate_page_entry({Section, RelPath, FallbackTitle}) ->
             {ok, Body} -> sanitize_boilerplate_markdown(Body);
             {error, _Reason} -> <<>>
         end,
+    Title =
+        case boilerplate_title_override(RelPath) of
+            undefined -> markdown_title(Markdown, FallbackTitle);
+            OverrideTitle -> OverrideTitle
+        end,
     #{
         <<"section">> => Section,
-        <<"title">> => markdown_title(Markdown, FallbackTitle),
+        <<"title">> => Title,
         <<"summary">> => boilerplate_card_summary(RelPath, Markdown),
         <<"href">> => boilerplate_href(RelPath),
         <<"source">> => Source,
         <<"source-relative">> => RelPath
     }.
 
+boilerplate_title_override(RelPath) ->
+    case lists:keyfind(RelPath, 2, boilerplate_process_pages()) of
+        {_, RelPath, Title} -> Title;
+        false -> undefined
+    end.
+
 boilerplate_href(<<"docs/", Rest/binary>>) ->
-    WithoutExt = strip_suffix(Rest, <<".md">>),
-    boilerplate_href_from_doc_path(WithoutExt);
+    case boilerplate_href_override(<<"docs/", Rest/binary>>) of
+        undefined ->
+            WithoutExt = strip_suffix(Rest, <<".md">>),
+            boilerplate_href_from_doc_path(WithoutExt);
+        Href ->
+            Href
+    end;
 boilerplate_href(RelPath) ->
-    WithoutExt = strip_suffix(RelPath, <<".md">>),
-    boilerplate_href_from_doc_path(WithoutExt).
+    case boilerplate_href_override(RelPath) of
+        undefined ->
+            WithoutExt = strip_suffix(RelPath, <<".md">>),
+            boilerplate_href_from_doc_path(WithoutExt);
+        Href ->
+            Href
+    end.
+
+boilerplate_href_override(RelPath) ->
+    case lists:keyfind(RelPath, 2, boilerplate_process_pages()) of
+        {Slug, RelPath, _Title} -> <<"/info/processes/", Slug/binary>>;
+        false -> undefined
+    end.
 
 boilerplate_href_from_doc_path(<<"introduction/", Rest/binary>>) ->
     <<"/introduction/", Rest/binary>>;
@@ -1185,6 +1218,20 @@ boilerplate_card_summary_override(<<"docs/introduction/what-is-ao-core.md">>) ->
     <<"The HTTP-native protocol for decentralized computation on the Arweave permaweb.">>;
 boilerplate_card_summary_override(<<"docs/introduction/pathing-in-ao-core.md">>) ->
     <<"How HyperPATH URLs address messages, devices, and computation results.">>;
+boilerplate_card_summary_override(<<"docs/devices/compute-and-processes/process-at-1-0/01-intro-to-process@1.0.md">>) ->
+    <<"Create and understand HyperBEAM process@1.0 processes, messages, and authorities.">>;
+boilerplate_card_summary_override(<<"docs/devices/compute-and-processes/process-at-1-0/02-state-and-reads.md">>) ->
+    <<"Expose process state through patch@1.0 and read it over HTTP.">>;
+boilerplate_card_summary_override(<<"docs/devices/compute-and-processes/process-at-1-0/03-builder-templates.md">>) ->
+    <<"Copy practical Lua process templates for tokens, chats, and public state.">>;
+boilerplate_card_summary_override(<<"docs/devices/compute-and-processes/process-at-1-0/04-aoconnect-mainnet.md">>) ->
+    <<"Spawn, message, and read HyperBEAM processes from JavaScript clients.">>;
+boilerplate_card_summary_override(<<"docs/devices/compute-and-processes/process-at-1-0/05-aos-lua-reference.md">>) ->
+    <<"Keep the AOS Lua commands, globals, handlers, and replies close at hand.">>;
+boilerplate_card_summary_override(<<"docs/devices/compute-and-processes/process-at-1-0/06-migration-to-hyperbeam.md">>) ->
+    <<"Move legacy AO process patterns to HyperBEAM HTTP reads and patch updates.">>;
+boilerplate_card_summary_override(<<"docs/devices/compute-and-processes/process-at-1-0/07-legacynet-appendix.md">>) ->
+    <<"Reference old Legacynet AO patterns only when supporting existing processes.">>;
 boilerplate_card_summary_override(_) ->
     undefined.
 
@@ -1227,7 +1274,11 @@ boilerplate_pages() ->
         {<<"Introduction">>, <<"docs/introduction/index.md">>, <<"Introduction">>},
         {<<"Introduction">>, <<"docs/introduction/what-is-hyperbeam.md">>, <<"What Is HyperBEAM?">>},
         {<<"Introduction">>, <<"docs/introduction/what-is-ao-core.md">>, <<"What Is AO-Core?">>},
-        {<<"Introduction">>, <<"docs/introduction/pathing-in-ao-core.md">>, <<"Pathing In AO-Core">>},
+        {<<"Introduction">>, <<"docs/introduction/pathing-in-ao-core.md">>, <<"Pathing In AO-Core">>}
+    ] ++ [
+        {<<"Processes">>, RelPath, Title}
+    || {_Slug, RelPath, Title} <- boilerplate_process_pages()
+    ] ++ [
         {<<"Device Forge">>, <<"docs/forge/index.md">>, <<"Device Forge">>},
         {<<"Device Forge">>, <<"docs/forge/create-a-device.md">>, <<"Create A Device">>},
         {<<"Device Forge">>, <<"docs/forge/install-template.md">>, <<"Install Template">>},
@@ -1237,6 +1288,24 @@ boilerplate_pages() ->
         {<<"Device Forge">>, <<"docs/forge/runbook.md">>, <<"Runbook">>},
         {<<"Device Forge">>, <<"docs/forge/test-package-verify.md">>, <<"Test Package Verify">>},
         {<<"Device Forge">>, <<"docs/forge/trusted-signers-and-pins.md">>, <<"Trusted Signers And Pins">>}
+    ].
+
+boilerplate_process_route(Slug) ->
+    case lists:keyfind(Slug, 1, boilerplate_process_pages()) of
+        {Slug, RelPath, _Title} -> RelPath;
+        false -> undefined
+    end.
+
+boilerplate_process_pages() ->
+    Base = <<"docs/devices/compute-and-processes/process-at-1-0/">>,
+    [
+        {<<"overview">>, <<Base/binary, "01-intro-to-process@1.0.md">>, <<"Process Overview">>},
+        {<<"state-and-reads">>, <<Base/binary, "02-state-and-reads.md">>, <<"State And Reads">>},
+        {<<"builder-templates">>, <<Base/binary, "03-builder-templates.md">>, <<"Builder Templates">>},
+        {<<"ao-connect-mainnet">>, <<Base/binary, "04-aoconnect-mainnet.md">>, <<"AO Connect Mainnet">>},
+        {<<"aos-lua-reference">>, <<Base/binary, "05-aos-lua-reference.md">>, <<"AOS Lua Reference">>},
+        {<<"migration-to-hyperbeam">>, <<Base/binary, "06-migration-to-hyperbeam.md">>, <<"Migration To HyperBEAM">>},
+        {<<"legacynet-appendix">>, <<Base/binary, "07-legacynet-appendix.md">>, <<"Legacynet Appendix">>}
     ].
 
 select_recipe_markdown(Markdown, undefined) ->
@@ -2534,6 +2603,7 @@ boilerplate_pages_for_section(Section, Pages) ->
 boilerplate_section_order() ->
     [
         <<"Introduction">>,
+        <<"Processes">>,
         <<"Device Forge">>
     ].
 
@@ -2735,7 +2805,8 @@ boilerplate_group_pages_by_section([Page | Rest], Acc) ->
             boilerplate_group_pages_by_section(Rest, [{Section, [Page]} | Acc])
     end.
 
-boilerplate_card_row(Page, Section) when Section =:= <<"Device Forge">> ->
+boilerplate_card_row(Page, Section)
+        when Section =:= <<"Device Forge">>; Section =:= <<"Processes">> ->
     boilerplate_recipe_card_row(Page);
 boilerplate_card_row(Page, _Section) ->
     [
@@ -4804,7 +4875,7 @@ node_info_contract_test() ->
     ?assertEqual(<<"/~arweave@2.9/info">>, maps:get(<<"arweave-info">>, Data)),
     ?assertEqual(<<"/~message@1.0/info">>, maps:get(<<"message-info">>, Data)),
     ?assertEqual(<<"/info/guides">>, maps:get(<<"boilerplate-link">>, Data)),
-    ?assertEqual(13, length(maps:get(<<"pages">>, maps:get(<<"boilerplate">>, Data)))),
+    ?assertEqual(20, length(maps:get(<<"pages">>, maps:get(<<"boilerplate">>, Data)))),
     ?assertEqual(<<"cookbook@1.0">>, maps:get(<<"device">>, maps:get(<<"renderer">>, Data))),
     ?assertEqual(3, length(maps:get(<<"devices">>, Data))).
 
@@ -4814,6 +4885,7 @@ node_sidebar_hierarchy_test() ->
     ?assert(binary:match(Body, <<"<li><p>Guides</p><ul>">>) =/= nomatch),
     ?assert(binary:match(Body, <<"<li><a href=\"/info/guides\">All guides</a></li>">>) =/= nomatch),
     ?assert(binary:match(Body, <<"<li><p>Introduction</p><ul>">>) =/= nomatch),
+    ?assert(binary:match(Body, <<"<li><p>Processes</p><ul>">>) =/= nomatch),
     ?assert(binary:match(Body, <<"<li><p>Device Forge</p><ul>">>) =/= nomatch),
     ?assertEqual(nomatch, binary:match(Body, <<"/info/boilerplate">>)),
     ?assertEqual(nomatch, binary:match(Body, <<"Device Recipes">>)),
@@ -5151,14 +5223,52 @@ boilerplate_routes_test() ->
     ?assertEqual(<<"node-boilerplate-index">>, maps:get(<<"kind">>, Index)),
     ?assertEqual(<<"/info/guides">>, maps:get(<<"href">>, Index)),
     Pages = maps:get(<<"pages">>, Index),
-    ?assertEqual(13, length(Pages)),
+    ?assertEqual(20, length(Pages)),
     RelPaths = [maps:get(<<"source-relative">>, Page) || Page <- Pages],
+    ProcessPages = boilerplate_pages_for_section(<<"Processes">>, Pages),
+    ?assertEqual(7, length(ProcessPages)),
+    ?assertEqual(
+        [
+            <<"Process Overview">>,
+            <<"State And Reads">>,
+            <<"Builder Templates">>,
+            <<"AO Connect Mainnet">>,
+            <<"AOS Lua Reference">>,
+            <<"Migration To HyperBEAM">>,
+            <<"Legacynet Appendix">>
+        ],
+        [maps:get(<<"title">>, Page) || Page <- ProcessPages]
+    ),
+    ?assertEqual(
+        [
+            <<"/info/processes/overview">>,
+            <<"/info/processes/state-and-reads">>,
+            <<"/info/processes/builder-templates">>,
+            <<"/info/processes/ao-connect-mainnet">>,
+            <<"/info/processes/aos-lua-reference">>,
+            <<"/info/processes/migration-to-hyperbeam">>,
+            <<"/info/processes/legacynet-appendix">>
+        ],
+        [maps:get(<<"href">>, Page) || Page <- ProcessPages]
+    ),
     ?assertNot(lists:member(<<"docs/index.md">>, RelPaths)),
     ?assertNot(lists:member(<<"docs/introduction/ao-devices.md">>, RelPaths)),
     ?assertNot(lists:member(<<"docs/devices/index.md">>, RelPaths)),
     ?assertNot(lists:member(<<"docs/recipes/index.md">>, RelPaths)),
     ?assertNot(lists:member(<<"docs/device-recipes/index.md">>, RelPaths)),
     ?assertNot(lists:member(<<"docs/reference/device-inventory.md">>, RelPaths)),
+    ?assertNot(lists:member(
+        <<"docs/devices/compute-and-processes/process-at-1-0/index.md">>,
+        RelPaths
+    )),
+    ?assertNot(lists:member(
+        <<"docs/devices/compute-and-processes/process-at-1-0/SUMMARY.md">>,
+        RelPaths
+    )),
+    ?assertNot(lists:member(
+        <<"docs/devices/compute-and-processes/process-at-1-0/SOURCE-MAP.md">>,
+        RelPaths
+    )),
     ?assertEqual(nomatch, binary:match(maps:get(<<"source-root">>, Index), <<"/home/fn/Dev/device-docs">>)),
     {ok, JSON} = node_info_route(
         [<<"introduction">>, <<"what-is-hyperbeam">>],
@@ -5210,6 +5320,32 @@ boilerplate_routes_test() ->
     ?assertEqual(nomatch, binary:match(PathingBody, <<"/info/recipes/patch-process-state">>)),
     ?assertEqual(nomatch, binary:match(PathingBody, <<"/info/recipes/arweave-json-to-lua">>)),
     ?assertEqual(nomatch, binary:match(PathingBody, <<"/info/boilerplate">>)),
+    {ok, ProcessRootJSON} = node_info_route(
+        [<<"processes">>],
+        #{ <<"accept">> => <<"application/json">> },
+        #{}
+    ),
+    ?assertEqual(<<"/info/processes/overview">>, maps:get(<<"href">>, ProcessRootJSON)),
+    ?assertEqual(<<"Process Overview">>, maps:get(<<"title">>, ProcessRootJSON)),
+    {ok, ProcessJSON} = node_info_route(
+        [<<"processes">>, <<"state-and-reads">>],
+        #{ <<"accept">> => <<"application/json">> },
+        #{}
+    ),
+    ?assertEqual(<<"State And Reads">>, maps:get(<<"title">>, ProcessJSON)),
+    ?assertEqual(
+        <<"docs/devices/compute-and-processes/process-at-1-0/02-state-and-reads.md">>,
+        maps:get(<<"source-relative">>, ProcessJSON)
+    ),
+    {ok, ProcessHTML} = node_info_route(
+        [<<"processes">>, <<"state-and-reads">>],
+        #{ <<"accept">> => <<"text/html">> },
+        #{}
+    ),
+    ProcessBody = maps:get(<<"body">>, ProcessHTML),
+    ?assert(binary:match(ProcessBody, <<"State And Reads">>) =/= nomatch),
+    ?assert(binary:match(ProcessBody, <<"<code>patch@1.0</code>">>) =/= nomatch),
+    ?assertEqual(nomatch, binary:match(ProcessBody, <<"02-state-and-reads">>)),
     {ok, ForgeJSON} = node_info_route(
         [<<"forge">>, <<"index">>],
         #{ <<"accept">> => <<"application/json">> },
@@ -5235,11 +5371,15 @@ boilerplate_routes_test() ->
     {ok, GuidesHTML} = node_info_route([<<"guides">>], #{ <<"accept">> => <<"text/html">> }, #{}),
     GuidesBody = maps:get(<<"body">>, GuidesHTML),
     ?assert(binary:match(GuidesBody, <<"hb-docs-recipe-card-title\">Create A Device</strong>">>) =/= nomatch),
+    ?assert(binary:match(GuidesBody, <<"hb-docs-recipe-card-title\">Process Overview</strong>">>) =/= nomatch),
     ?assert(binary:match(GuidesBody, <<"hb-docs-recipe-card-cta\">Open &rarr;</span>">>) =/= nomatch),
     ?assert(binary:match(GuidesBody, <<"href=\"/introduction/what-is-ao-core\"">>) =/= nomatch),
+    ?assert(binary:match(GuidesBody, <<"href=\"/info/processes/state-and-reads\"">>) =/= nomatch),
     ?assert(binary:match(GuidesBody, <<"href=\"/info/forge/create-a-device\"">>) =/= nomatch),
     ?assertEqual(nomatch, binary:match(GuidesBody, <<"Merged from the HyperBEAM">>)),
     ?assertEqual(nomatch, binary:match(GuidesBody, <<"/info/boilerplate">>)),
+    ?assertEqual(nomatch, binary:match(GuidesBody, <<"01-intro-to-process">>)),
+    ?assertEqual(nomatch, binary:match(GuidesBody, <<"SOURCE-MAP">>)),
     ?assert(binary:match(GuidesBody, <<"The HTTP-native protocol for decentralized computation">>) =/= nomatch),
     ?assertEqual(nomatch, binary:match(GuidesBody, <<"hb-docs-recipe-card-title\">Device Recipe Format</strong>">>)),
     ?assertEqual(nomatch, binary:match(GuidesBody, <<"Device Recipes">>)),
@@ -5258,7 +5398,13 @@ boilerplate_routes_test() ->
     {ok, OldDeviceRecipes} = node_info_route([<<"boilerplate">>, <<"device-recipes">>, <<"index">>], #{ <<"accept">> => <<"application/json">> }, #{}),
     ?assertEqual(404, maps:get(<<"status">>, OldDeviceRecipes)),
     {ok, OldDeviceInventory} = node_info_route([<<"boilerplate">>, <<"reference">>, <<"device-inventory">>], #{ <<"accept">> => <<"application/json">> }, #{}),
-    ?assertEqual(404, maps:get(<<"status">>, OldDeviceInventory)).
+    ?assertEqual(404, maps:get(<<"status">>, OldDeviceInventory)),
+    {ok, ProcessIndex} = node_info_route([<<"processes">>, <<"index">>], #{ <<"accept">> => <<"application/json">> }, #{}),
+    ?assertEqual(404, maps:get(<<"status">>, ProcessIndex)),
+    {ok, ProcessSummary} = node_info_route([<<"processes">>, <<"summary">>], #{ <<"accept">> => <<"application/json">> }, #{}),
+    ?assertEqual(404, maps:get(<<"status">>, ProcessSummary)),
+    {ok, ProcessSourceMap} = node_info_route([<<"processes">>, <<"source-map">>], #{ <<"accept">> => <<"application/json">> }, #{}),
+    ?assertEqual(404, maps:get(<<"status">>, ProcessSourceMap)).
 
 cookbook_device_contract_test() ->
     Data = device_info_data(?COOKBOOK_DEVICE, #{}),
