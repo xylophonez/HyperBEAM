@@ -32,6 +32,7 @@ maybe_info_request(Msgs, Req, Opts) ->
 info_route([Base, Info | Tail]) when is_map(Base), is_map(Info) ->
     case {maps:is_key(<<"device">>, Base), path_key(Info)} of
         {false, <<"info">>} -> {node, path_tail_keys(Tail)};
+        {false, <<"introduction">>} -> {node, [<<"introduction">> | path_tail_keys(Tail)]};
         _ -> false
     end;
 info_route([{as, Device, _Base}, Info | Tail]) when is_map(Info) ->
@@ -88,16 +89,15 @@ node_info_route([<<"implementations">>], Req, Opts) ->
     Data = node_info_data(Opts),
     Payload = node_component_index(<<"node-implementations-index">>, <<"implementations">>, Data),
     respond_html_or_json(node_implementations, Payload, Payload, Req);
-node_info_route([<<"boilerplate">>], Req, _Opts) ->
+node_info_route([<<"guides">>], Req, _Opts) ->
     Payload = boilerplate_index(),
     respond_html_or_json(node_boilerplate, Payload, Payload, Req);
-node_info_route([<<"boilerplate">> | Parts], Req, _Opts) ->
-    case boilerplate_page_payload(Parts) of
-        {ok, Payload} ->
-            respond_html_or_json(node_boilerplate_page, Payload, Payload, Req);
-        not_found ->
-            {ok, not_found_response()}
-    end;
+node_info_route([<<"introduction">> | Parts], Req, _Opts) ->
+    boilerplate_page_response([<<"introduction">> | Parts], Req);
+node_info_route([<<"forge">> | Parts], Req, _Opts) ->
+    boilerplate_page_response([<<"forge">> | Parts], Req);
+node_info_route([<<"boilerplate">> | _Parts], _Req, _Opts) ->
+    {ok, not_found_response()};
 node_info_route([<<"concepts">>], Req, Opts) ->
     Data = node_info_data(Opts),
     Payload = #{
@@ -120,6 +120,14 @@ node_info_route([<<"concepts">>, Concept], Req, Opts) ->
     end;
 node_info_route(_Tail, _Req, _Opts) ->
     {ok, not_found_response()}.
+
+boilerplate_page_response(Parts, Req) ->
+    case boilerplate_page_payload(Parts) of
+        {ok, Payload} ->
+            respond_html_or_json(node_boilerplate_page, Payload, Payload, Req);
+        not_found ->
+            {ok, not_found_response()}
+    end.
 
 device_info_route(Device, Tail, Req, Opts) ->
     case supported_device(Device) of
@@ -280,7 +288,7 @@ node_info_data(Opts) ->
             <<"HyperBEAM node documentation index generated from the node's "
                 "runtime device inventory prototype.">>,
         <<"renderer">> => cookbook_renderer(),
-        <<"boilerplate-link">> => <<"/info/boilerplate">>,
+        <<"boilerplate-link">> => <<"/info/guides">>,
         <<"devices">> => [
             prototype_node_device(
                 ?ARWEAVE_DEVICE, <<"arweave">>, <<"2.9">>,
@@ -1073,7 +1081,7 @@ boilerplate_index() ->
     Pages = [boilerplate_page_entry(Page) || Page <- boilerplate_pages()],
     #{
         <<"kind">> => <<"node-boilerplate-index">>,
-        <<"href">> => <<"/info/boilerplate">>,
+        <<"href">> => <<"/info/guides">>,
         <<"summary">> =>
             <<"Conceptual HyperBEAM and AO-Core guides plus Device Forge operator docs.">>,
         <<"source-root">> => hb_util:bin(device_docs_root()),
@@ -1113,6 +1121,9 @@ boilerplate_page_payload(Parts) ->
 
 boilerplate_relpath_from_parts([]) ->
     undefined;
+boilerplate_relpath_from_parts([Section])
+    when Section =:= <<"introduction">>; Section =:= <<"forge">> ->
+    boilerplate_relpath_from_parts([Section, <<"index">>]);
 boilerplate_relpath_from_parts(Parts) ->
     case lists:all(fun safe_route_part/1, Parts) of
         true ->
@@ -1146,10 +1157,17 @@ boilerplate_page_entry({Section, RelPath, FallbackTitle}) ->
 
 boilerplate_href(<<"docs/", Rest/binary>>) ->
     WithoutExt = strip_suffix(Rest, <<".md">>),
-    <<"/info/boilerplate/", WithoutExt/binary>>;
+    boilerplate_href_from_doc_path(WithoutExt);
 boilerplate_href(RelPath) ->
     WithoutExt = strip_suffix(RelPath, <<".md">>),
-    <<"/info/boilerplate/", WithoutExt/binary>>.
+    boilerplate_href_from_doc_path(WithoutExt).
+
+boilerplate_href_from_doc_path(<<"introduction/", Rest/binary>>) ->
+    <<"/introduction/", Rest/binary>>;
+boilerplate_href_from_doc_path(<<"forge/", Rest/binary>>) ->
+    <<"/info/forge/", Rest/binary>>;
+boilerplate_href_from_doc_path(Path) ->
+    <<"/info/", Path/binary>>.
 
 boilerplate_card_summary(RelPath, Markdown) ->
     case boilerplate_card_summary_override(RelPath) of
@@ -1543,12 +1561,12 @@ render_node_boilerplate_html(Data) ->
             boilerplate_section_cards(Data, h2)
         ],
     docs_page_html(
-        <<"HyperBEAM Guides">>, <<"/info/boilerplate">>, node_sidebar([], <<"/info/boilerplate">>), Content
+        <<"HyperBEAM Guides">>, <<"/info/guides">>, node_sidebar([], <<"/info/guides">>), Content
     ).
 
 render_node_boilerplate_page_html(Data) ->
     Markdown = maps:get(<<"markdown">>, Data, <<>>),
-    ActivePath = maps:get(<<"href">>, Data, <<"/info/boilerplate">>),
+    ActivePath = maps:get(<<"href">>, Data, <<"/info/guides">>),
     Content =
         [
             <<"<p class=\"eyebrow\">Guide</p><h1>">>,
@@ -2471,7 +2489,7 @@ node_sidebar_devices_section(Devices, ActivePath) ->
 boilerplate_sidebar_rows(Index) ->
     Pages = maps:get(<<"pages">>, Index, []),
     [
-        <<"<li><a href=\"/info/boilerplate\">All guides</a></li>">>,
+        <<"<li><a href=\"/info/guides\">All guides</a></li>">>,
         [
             boilerplate_sidebar_section(Section, Pages)
         || Section <- boilerplate_section_order()
@@ -4254,12 +4272,7 @@ render_inline(Text, Acc, Opts) ->
                     {Label, Url, TotalLen} = Payload,
                     RestPos = Pos + TotalLen,
                     Rest = binary:part(Text, RestPos, byte_size(Text) - RestPos),
-                    Href = resolve_markdown_href(Url, Opts),
-                    Node = [
-                        <<"<a href=\"">>, esc(Href), <<"\">">>,
-                        render_inline(Label, Opts),
-                        <<"</a>">>
-                    ],
+                    Node = render_markdown_link(Label, Url, Opts),
                     render_inline(Rest, [Node, esc(Prefix) | Acc], Opts);
                 code ->
                     Marker = Payload,
@@ -4292,19 +4305,36 @@ render_inline(Text, Acc, Opts) ->
             end
     end.
 
-resolve_markdown_href(Href, Opts) ->
+render_markdown_link(Label, Url, Opts) ->
+    case resolve_markdown_link(Label, Url, Opts) of
+        {link, Href} ->
+            [
+                <<"<a href=\"">>, esc(Href), <<"\">">>,
+                render_inline(Label, Opts),
+                <<"</a>">>
+            ];
+        {code, Text} ->
+            [<<"<code>">>, esc(Text), <<"</code>">>]
+    end.
+
+resolve_markdown_link(Label, Href, Opts) ->
     Trim = trim(hb_util:bin(Href)),
-    case is_external_href(Trim) of
-        true ->
-            Trim;
+    case Trim of
         <<"#", _/binary>> ->
-            Trim;
+            {link, Trim};
         _ ->
-            case maps:get(<<"source-relative">>, Opts, undefined) of
-                undefined ->
-                    resolve_boilerplate_href_from_path(Trim);
-                SourceRel ->
-                    boilerplate_href(resolve_doc_relpath(Trim, SourceRel))
+            case is_external_href(Trim) of
+                true ->
+                    {link, Trim};
+                false ->
+                    RelPath =
+                        case maps:get(<<"source-relative">>, Opts, undefined) of
+                            undefined ->
+                                resolve_boilerplate_relpath_from_path(Trim);
+                            SourceRel ->
+                                resolve_doc_relpath(Trim, SourceRel)
+                        end,
+                    boilerplate_link_target(Label, RelPath)
             end
     end.
 
@@ -4317,10 +4347,55 @@ is_external_href(<<"mailto:", _/binary>>) ->
 is_external_href(_) ->
     false.
 
-resolve_boilerplate_href_from_path(<<"/", Rest/binary>>) ->
-    boilerplate_href(<<"docs/", Rest/binary>>);
-resolve_boilerplate_href_from_path(Path) ->
-    boilerplate_href(<<"docs/", Path/binary>>).
+resolve_boilerplate_relpath_from_path(<<"/", Rest/binary>>) ->
+    normalize_doc_relpath(<<"docs/", Rest/binary>>);
+resolve_boilerplate_relpath_from_path(Path) ->
+    normalize_doc_relpath(<<"docs/", Path/binary>>).
+
+boilerplate_link_target(Label, RelPathWithFragment) ->
+    {RelPath, Fragment} = split_href_fragment(RelPathWithFragment),
+    case device_id_from_doc_relpath(RelPath) of
+        {ok, DeviceID} ->
+            case supported_device(DeviceID) of
+                true -> {link, append_href_fragment(device_info_path(DeviceID), Fragment)};
+                false -> {code, device_marked_id(DeviceID)}
+            end;
+        false ->
+            case lists:keyfind(RelPath, 2, boilerplate_pages()) of
+                false -> {code, link_code_label(Label)};
+                _Page -> {link, append_href_fragment(boilerplate_href(RelPath), Fragment)}
+            end
+    end.
+
+split_href_fragment(Href) ->
+    case binary:split(Href, <<"#">>) of
+        [Path, Fragment] -> {Path, <<"#", Fragment/binary>>};
+        [Path] -> {Path, <<>>}
+    end.
+
+append_href_fragment(Href, <<>>) ->
+    Href;
+append_href_fragment(Href, Fragment) ->
+    <<Href/binary, Fragment/binary>>.
+
+device_id_from_doc_relpath(<<"docs/devices/", Rest/binary>>) ->
+    File = lists:last(binary:split(Rest, <<"/">>, [global])),
+    Slug = strip_suffix(File, <<".md">>),
+    case binary:split(Slug, <<"-at-">>) of
+        [Name, VersionSlug] when Name =/= <<>>, VersionSlug =/= <<>> ->
+            Version = binary:replace(VersionSlug, <<"-">>, <<".">>, [global]),
+            {ok, <<Name/binary, "@", Version/binary>>};
+        _ ->
+            false
+    end;
+device_id_from_doc_relpath(_) ->
+    false.
+
+link_code_label(Label) ->
+    case trim(strip_inline_markdown(Label)) of
+        <<>> -> <<"reference">>;
+        Text -> Text
+    end.
 
 resolve_doc_relpath(Href, SourceRel) ->
     Trim = trim(hb_util:bin(Href)),
@@ -4728,7 +4803,7 @@ node_info_contract_test() ->
     ?assertEqual(<<"node-info">>, maps:get(<<"kind">>, Data)),
     ?assertEqual(<<"/~arweave@2.9/info">>, maps:get(<<"arweave-info">>, Data)),
     ?assertEqual(<<"/~message@1.0/info">>, maps:get(<<"message-info">>, Data)),
-    ?assertEqual(<<"/info/boilerplate">>, maps:get(<<"boilerplate-link">>, Data)),
+    ?assertEqual(<<"/info/guides">>, maps:get(<<"boilerplate-link">>, Data)),
     ?assertEqual(13, length(maps:get(<<"pages">>, maps:get(<<"boilerplate">>, Data)))),
     ?assertEqual(<<"cookbook@1.0">>, maps:get(<<"device">>, maps:get(<<"renderer">>, Data))),
     ?assertEqual(3, length(maps:get(<<"devices">>, Data))).
@@ -4737,10 +4812,10 @@ node_sidebar_hierarchy_test() ->
     {ok, HTML} = node_info(#{ <<"accept">> => <<"text/html">> }, #{}),
     Body = maps:get(<<"body">>, HTML),
     ?assert(binary:match(Body, <<"<li><p>Guides</p><ul>">>) =/= nomatch),
-    ?assert(binary:match(Body, <<"<li><a href=\"/info/boilerplate\">All guides</a></li>">>) =/= nomatch),
+    ?assert(binary:match(Body, <<"<li><a href=\"/info/guides\">All guides</a></li>">>) =/= nomatch),
     ?assert(binary:match(Body, <<"<li><p>Introduction</p><ul>">>) =/= nomatch),
     ?assert(binary:match(Body, <<"<li><p>Device Forge</p><ul>">>) =/= nomatch),
-    ?assertEqual(nomatch, binary:match(Body, <<"<li><a href=\"/info/boilerplate/index\">Overview</a></li>">>)),
+    ?assertEqual(nomatch, binary:match(Body, <<"/info/boilerplate">>)),
     ?assertEqual(nomatch, binary:match(Body, <<"Device Recipes">>)),
     ?assertEqual(nomatch, binary:match(Body, <<"AO Devices">>)),
     ?assertEqual(nomatch, binary:match(Body, <<"/info/boilerplate/devices/index">>)),
@@ -5072,8 +5147,9 @@ node_component_routes_test() ->
     ?assertEqual(3, length(maps:get(<<"devices">>, Recipes))).
 
 boilerplate_routes_test() ->
-    {ok, Index} = node_info_route([<<"boilerplate">>], #{ <<"accept">> => <<"application/json">> }, #{}),
+    {ok, Index} = node_info_route([<<"guides">>], #{ <<"accept">> => <<"application/json">> }, #{}),
     ?assertEqual(<<"node-boilerplate-index">>, maps:get(<<"kind">>, Index)),
+    ?assertEqual(<<"/info/guides">>, maps:get(<<"href">>, Index)),
     Pages = maps:get(<<"pages">>, Index),
     ?assertEqual(13, length(Pages)),
     RelPaths = [maps:get(<<"source-relative">>, Page) || Page <- Pages],
@@ -5085,15 +5161,16 @@ boilerplate_routes_test() ->
     ?assertNot(lists:member(<<"docs/reference/device-inventory.md">>, RelPaths)),
     ?assertEqual(nomatch, binary:match(maps:get(<<"source-root">>, Index), <<"/home/fn/Dev/device-docs">>)),
     {ok, JSON} = node_info_route(
-        [<<"boilerplate">>, <<"introduction">>, <<"what-is-hyperbeam">>],
+        [<<"introduction">>, <<"what-is-hyperbeam">>],
         #{ <<"accept">> => <<"application/json">> },
         #{}
     ),
     ?assertEqual(<<"node-boilerplate-page">>, maps:get(<<"kind">>, JSON)),
+    ?assertEqual(<<"/introduction/what-is-hyperbeam">>, maps:get(<<"href">>, JSON)),
     ?assertEqual(<<"docs/introduction/what-is-hyperbeam.md">>, maps:get(<<"source-relative">>, JSON)),
     ?assert(maps:get(<<"markdown-bytes">>, JSON) > 0),
     {ok, HTML} = node_info_route(
-        [<<"boilerplate">>, <<"introduction">>, <<"what-is-hyperbeam">>],
+        [<<"introduction">>, <<"what-is-hyperbeam">>],
         #{ <<"accept">> => <<"text/html">> },
         #{}
     ),
@@ -5101,35 +5178,75 @@ boilerplate_routes_test() ->
     ?assert(binary:match(Body, <<"What is HyperBEAM">>) =/= nomatch),
     ?assert(binary:match(Body, <<"HyperBEAM is the primary">>) =/= nomatch),
     ?assertEqual(nomatch, binary:match(Body, <<"Merged from the HyperBEAM">>)),
+    ?assertEqual(nomatch, binary:match(Body, <<"/devices/">>)),
+    ?assertEqual(nomatch, binary:match(Body, <<"href=\"/~process@1.0/info\"">>)),
+    ?assert(binary:match(Body, <<"<code>~process@1.0</code>">>) =/= nomatch),
+    ?assertEqual(nomatch, binary:match(Body, <<"/info/boilerplate">>)),
     {ok, IntroHTML} = node_info_route(
-        [<<"boilerplate">>, <<"introduction">>, <<"index">>],
+        [<<"introduction">>, <<"index">>],
         #{ <<"accept">> => <<"text/html">> },
         #{}
     ),
     IntroBody = maps:get(<<"body">>, IntroHTML),
-    ?assert(binary:match(IntroBody, <<"href=\"/info/boilerplate/introduction/what-is-hyperbeam\"">>) =/= nomatch),
-    ?assertEqual(nomatch, binary:match(IntroBody, <<"href=\"/info/boilerplate/introduction/ao-devices\"">>)),
-    ?assertEqual(nomatch, binary:match(IntroBody, <<"href=\"/info/boilerplate/getting-started/example-style\"">>)),
-    ?assertEqual(nomatch, binary:match(IntroBody, <<"href=\"/info/boilerplate/devices/index\"">>)),
+    ?assert(binary:match(IntroBody, <<"href=\"/introduction/what-is-hyperbeam\"">>) =/= nomatch),
+    ?assertEqual(nomatch, binary:match(IntroBody, <<"href=\"/introduction/ao-devices\"">>)),
+    ?assertEqual(nomatch, binary:match(IntroBody, <<"href=\"/info/getting-started/example-style\"">>)),
+    ?assertEqual(nomatch, binary:match(IntroBody, <<"href=\"/info/devices/index\"">>)),
+    ?assertEqual(nomatch, binary:match(IntroBody, <<"/info/boilerplate">>)),
     ?assertEqual(nomatch, binary:match(IntroBody, <<"(what-is-hyperbeam.md)">>)),
     {ok, PathingHTML} = node_info_route(
-        [<<"boilerplate">>, <<"introduction">>, <<"pathing-in-ao-core">>],
+        [<<"introduction">>, <<"pathing-in-ao-core">>],
         #{ <<"accept">> => <<"text/html">> },
         #{}
     ),
     PathingBody = maps:get(<<"body">>, PathingHTML),
     ?assert(binary:match(PathingBody, <<"Pathing in AO-Core">>) =/= nomatch),
     ?assertEqual(nomatch, binary:match(PathingBody, <<"Merged from the HyperBEAM">>)),
-    {ok, GuidesHTML} = node_info_route([<<"boilerplate">>], #{ <<"accept">> => <<"text/html">> }, #{}),
+    ?assert(binary:match(PathingBody, <<"href=\"/~message@1.0/info\"">>) =/= nomatch),
+    ?assert(binary:match(PathingBody, <<"<code>~process@1.0</code>">>) =/= nomatch),
+    ?assert(binary:match(PathingBody, <<"<code>~patch@1.0</code>">>) =/= nomatch),
+    ?assertEqual(nomatch, binary:match(PathingBody, <<"/devices/">>)),
+    ?assertEqual(nomatch, binary:match(PathingBody, <<"/recipes/">>)),
+    ?assertEqual(nomatch, binary:match(PathingBody, <<"/info/recipes/patch-process-state">>)),
+    ?assertEqual(nomatch, binary:match(PathingBody, <<"/info/recipes/arweave-json-to-lua">>)),
+    ?assertEqual(nomatch, binary:match(PathingBody, <<"/info/boilerplate">>)),
+    {ok, ForgeJSON} = node_info_route(
+        [<<"forge">>, <<"index">>],
+        #{ <<"accept">> => <<"application/json">> },
+        #{}
+    ),
+    ?assertEqual(<<"/info/forge/index">>, maps:get(<<"href">>, ForgeJSON)),
+    ?assertEqual(<<"docs/forge/index.md">>, maps:get(<<"source-relative">>, ForgeJSON)),
+    {ok, ForgeHTML} = node_info_route(
+        [<<"forge">>, <<"index">>],
+        #{ <<"accept">> => <<"text/html">> },
+        #{}
+    ),
+    ForgeBody = maps:get(<<"body">>, ForgeHTML),
+    ?assert(binary:match(ForgeBody, <<"Device Forge">>) =/= nomatch),
+    ?assert(binary:match(ForgeBody, <<"href=\"/info/forge/runbook\"">>) =/= nomatch),
+    ?assertEqual(nomatch, binary:match(ForgeBody, <<"/info/boilerplate">>)),
+    IntroMsgs = hb_singleton:from(#{ <<"path">> => <<"/introduction/what-is-ao-core">> }, #{}),
+    {true, {ok, RootIntroHTML}} =
+        maybe_info_request(IntroMsgs, #{ <<"accept">> => <<"text/html">> }, #{}),
+    RootIntroBody = maps:get(<<"body">>, RootIntroHTML),
+    ?assert(binary:match(RootIntroBody, <<"What is AO-Core">>) =/= nomatch),
+    ?assert(binary:match(RootIntroBody, <<"data-active-path=\"/introduction/what-is-ao-core\"">>) =/= nomatch),
+    {ok, GuidesHTML} = node_info_route([<<"guides">>], #{ <<"accept">> => <<"text/html">> }, #{}),
     GuidesBody = maps:get(<<"body">>, GuidesHTML),
     ?assert(binary:match(GuidesBody, <<"hb-docs-recipe-card-title\">Create A Device</strong>">>) =/= nomatch),
     ?assert(binary:match(GuidesBody, <<"hb-docs-recipe-card-cta\">Open &rarr;</span>">>) =/= nomatch),
+    ?assert(binary:match(GuidesBody, <<"href=\"/introduction/what-is-ao-core\"">>) =/= nomatch),
+    ?assert(binary:match(GuidesBody, <<"href=\"/info/forge/create-a-device\"">>) =/= nomatch),
     ?assertEqual(nomatch, binary:match(GuidesBody, <<"Merged from the HyperBEAM">>)),
+    ?assertEqual(nomatch, binary:match(GuidesBody, <<"/info/boilerplate">>)),
     ?assert(binary:match(GuidesBody, <<"The HTTP-native protocol for decentralized computation">>) =/= nomatch),
     ?assertEqual(nomatch, binary:match(GuidesBody, <<"hb-docs-recipe-card-title\">Device Recipe Format</strong>">>)),
     ?assertEqual(nomatch, binary:match(GuidesBody, <<"Device Recipes">>)),
     ?assertEqual(nomatch, binary:match(GuidesBody, <<"AO Devices">>)),
     ?assertEqual(nomatch, binary:match(GuidesBody, <<"Device Inventory">>)),
+    {ok, OldIndex} = node_info_route([<<"boilerplate">>], #{ <<"accept">> => <<"application/json">> }, #{}),
+    ?assertEqual(404, maps:get(<<"status">>, OldIndex)),
     {ok, OldOverview} = node_info_route([<<"boilerplate">>, <<"index">>], #{ <<"accept">> => <<"application/json">> }, #{}),
     ?assertEqual(404, maps:get(<<"status">>, OldOverview)),
     {ok, OldDevices} = node_info_route([<<"boilerplate">>, <<"devices">>, <<"index">>], #{ <<"accept">> => <<"application/json">> }, #{}),
