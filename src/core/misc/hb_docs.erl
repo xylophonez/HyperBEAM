@@ -719,7 +719,11 @@ find_markdown_body(#tx{data = Data}, Depth) ->
 find_markdown_body(Bin, Depth) when is_binary(Bin), byte_size(Bin) > 0 ->
     case markdown_payload(Bin) of
         true -> {ok, Bin};
-        false -> nested_ans104_body(Bin, Depth + 1)
+        false ->
+            case embedded_markdown_body(Bin) of
+                {ok, _} = Found -> Found;
+                error -> nested_ans104_body(Bin, Depth + 1)
+            end
     end;
 find_markdown_body(Map, Depth) when is_map(Map) ->
     case maps:get(<<"body">>, Map, undefined) of
@@ -748,6 +752,35 @@ nested_ans104_body(Bin, Depth) ->
         Nested -> find_markdown_body(Nested, Depth)
     catch
         _Class:_Reason -> error
+    end.
+
+embedded_markdown_body(Bin) ->
+    case embedded_markdown_start(Bin) of
+        {ok, Pos} ->
+            Candidate0 = binary:part(Bin, Pos, byte_size(Bin) - Pos),
+            Candidate = binary_before_nul(Candidate0),
+            case markdown_payload(Candidate) of
+                true -> {ok, Candidate};
+                false -> error
+            end;
+        error ->
+            error
+    end.
+
+embedded_markdown_start(Bin) ->
+    case binary:match(Bin, <<"# `">>) of
+        {Pos, _Len} -> {ok, Pos};
+        nomatch ->
+            case binary:match(Bin, <<"# ">>) of
+                {Pos, _Len} -> {ok, Pos};
+                nomatch -> error
+            end
+    end.
+
+binary_before_nul(Bin) ->
+    case binary:match(Bin, <<0>>) of
+        {Pos, _Len} -> binary:part(Bin, 0, Pos);
+        nomatch -> Bin
     end.
 
 find_markdown_body_in_list([], _Depth) ->
@@ -5406,6 +5439,11 @@ raw_ans104_body_serialized_nested_item_test() ->
     Markdown = <<"# `arweave-byte-pricing@1.1`\n\nDevice spec body.">>,
     Inner = ar_bundles:serialize(ar_tx:normalize(#tx{data = Markdown})),
     ?assertEqual({ok, Markdown}, raw_ans104_body(#tx{data = Inner})).
+
+raw_ans104_body_embedded_markdown_binary_test() ->
+    Markdown = <<"# `arweave-byte-pricing@1.1`\n\nDevice spec body.">>,
+    Wrapped = <<0, 0, 1, 0, "ao-type", 0, "binary", 0, Markdown/binary>>,
+    ?assertEqual({ok, Markdown}, raw_ans104_body(#tx{data = Wrapped})).
 
 raw_ans104_body_rejects_wrapper_binary_test() ->
     Item = #tx{data = <<131, 116, 0, 0, 0, 1, 100, 0, 4, "body">>},
