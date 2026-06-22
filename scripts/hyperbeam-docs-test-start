@@ -11,11 +11,11 @@ DeviceSpecs =
     [
         {
             <<"arweave-byte-pricing@1.1">>,
-            <<"0gIqZYOrZDVJ2nneRYLv2t4BhOuA6rz6l9-RtozfrBM">>
+            <<"tzrA1PzAUWeQ3eN7OjS86gCDDkFNzw1cHydCJ-4iFYU">>
         },
         {
             <<"simple-oracle@1.0">>,
-            <<"SGIOFvYoRKYIj3bC9_3Ggv2n0lNCOoSRrWJyHUrKeKg">>
+            <<"DdNdjRB9Mg4BG6mpSbE98TXsIUI75P_g5INkbUJVTv4">>
         }
     ],
 NameResolvers =

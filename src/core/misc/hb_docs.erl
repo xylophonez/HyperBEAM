@@ -3,6 +3,24 @@
 -export([node_info/2, device_info/3, maybe_info_request/3, is_node_info_request/2]).
 -export([device_info_route/4]).
 -export([node_info_data/1, device_info_data/2]).
+-export([
+    render_node_html/1,
+    render_device_html/1,
+    render_schema_index_html/1,
+    render_schema_key_html/1,
+    render_schema_parameter_html/1,
+    render_spec_html/1,
+    render_spec_section_page_html/1,
+    render_recipes_html/1,
+    render_recipe_html/1,
+    render_implementations_html/1,
+    render_node_component_html/3,
+    render_node_boilerplate_html/1,
+    render_node_boilerplate_page_html/1,
+    render_node_concepts_html/1,
+    render_node_concept_html/1,
+    render_unsupported_device_html/1
+]).
 
 -include("include/hb.hrl").
 -include_lib("eunit/include/eunit.hrl").
@@ -70,11 +88,11 @@ supported_device(Device, Opts) ->
 
 node_info(Req, Opts) ->
     Data = node_info_data(Opts),
-    {ok, maybe_render(node, Data, Req)}.
+    {ok, hb_docs_cookbook:render(node, Data, Req)}.
 
 device_info(Device, Req, Opts) ->
     Data = device_info_data(Device, Opts),
-    {ok, maybe_render(device, Data, Req)}.
+    {ok, hb_docs_cookbook:render(device, Data, Req)}.
 
 node_info_route([], Req, Opts) ->
     node_info(Req, Opts);
@@ -234,11 +252,7 @@ supported_device_info_route(_Device, _Tail, _Req, _Opts) ->
     {ok, not_found_response()}.
 
 respond_html_or_json(Kind, HtmlData, JsonData, Req) ->
-    {ok,
-        case wants_html(Req) of
-            true -> html_response(Kind, HtmlData);
-            false -> JsonData
-        end}.
+    hb_docs_cookbook:respond_html_or_json(Kind, HtmlData, JsonData, Req).
 
 not_found_response() ->
     #{
@@ -248,22 +262,7 @@ not_found_response() ->
     }.
 
 unsupported_device_info_response(Device, Req) ->
-    case wants_html(Req) of
-        true ->
-            (html_doc_response(render_unsupported_device_html(Device)))#{
-                <<"status">> => 404
-            };
-        false ->
-            #{
-                <<"status">> => 404,
-                <<"kind">> => <<"device-info">>,
-                <<"device">> => #{ <<"id">> => Device },
-                <<"device-id">> => Device,
-                <<"docs-status">> => <<"not-documented">>,
-                <<"summary">> =>
-                    <<"No prototype /info documentation is wired for this device.">>
-            }
-    end.
+    hb_docs_cookbook:unsupported_device_response(Device, Req).
 
 prototype_node_device(DeviceID, Name, Version, Summary) ->
     #{
@@ -877,86 +876,13 @@ doc_item_tag(Node, Name, Default) ->
 format_reason(Reason) ->
     hb_util:bin(io_lib:format("~tp", [Reason])).
 
-maybe_render(Kind, Data, Req) ->
-    case wants_html(Req) of
-        true ->
-            html_response(Kind, Data);
-        false ->
-            Data
-    end.
-
-wants_html(Req) ->
-    Accept = hb_util:to_lower(hb_maps:get(<<"accept">>, Req, <<"">>, #{})),
-    binary:match(Accept, <<"text/html">>) =/= nomatch andalso
-        binary:match(Accept, <<"application/json">>) =:= nomatch.
-
-html_response(node, Data) ->
-    html_doc_response(render_node_html(Data));
-html_response(device, Data) ->
-    Links = maps:get(<<"links">>, Data, #{}),
-    maps:merge(
-        html_doc_response(render_device_html(Data)),
-        #{
-        <<"schema+link">> => maps:get(<<"schema">>, Links, <<>>),
-        <<"specification+link">> => maps:get(<<"spec">>, Links, <<>>),
-            <<"recipes+link">> => maps:get(<<"recipes">>, Links, <<>>)
-        }
-    );
-html_response(schema_index, Data) ->
-    html_doc_response(render_schema_index_html(Data));
-html_response(schema_key, Data) ->
-    html_doc_response(render_schema_key_html(Data));
-html_response(schema_parameter, Data) ->
-    html_doc_response(render_schema_parameter_html(Data));
-html_response(spec, Data) ->
-    html_doc_response(render_spec_html(Data));
-html_response(spec_section, Data) ->
-    html_doc_response(render_spec_section_page_html(Data));
-html_response(recipes, Data) ->
-    html_doc_response(render_recipes_html(Data));
-html_response(recipe, Data) ->
-    html_doc_response(render_recipe_html(Data));
-html_response(implementations, Data) ->
-    html_doc_response(render_implementations_html(Data));
-html_response(node_schema, Data) ->
-    html_doc_response(render_node_component_html(<<"Schema">>, <<"/info/schema">>, Data));
-html_response(node_spec, Data) ->
-    html_doc_response(render_node_component_html(<<"Spec">>, <<"/info/spec">>, Data));
-html_response(node_recipes, Data) ->
-    html_doc_response(render_node_component_html(<<"Recipes">>, <<"/info/recipes">>, Data));
-html_response(node_implementations, Data) ->
-    html_doc_response(
-        render_node_component_html(<<"Implementations">>, <<"/info/implementations">>, Data)
-    );
-html_response(node_boilerplate, Data) ->
-    html_doc_response(render_node_boilerplate_html(Data));
-html_response(node_boilerplate_page, Data) ->
-    html_doc_response(render_node_boilerplate_page_html(Data));
-html_response(node_concepts, Data) ->
-    html_doc_response(render_node_concepts_html(Data));
-html_response(node_concept, Data) ->
-    html_doc_response(render_node_concept_html(Data)).
-
-html_doc_response(Body) ->
-    #{
-        <<"status">> => 200,
-        <<"content-type">> => <<"text/html; charset=utf-8">>,
-        <<"body">> => Body
-    }.
-
 node_href(Opts) ->
     Host = hb_opts:get(node_host, <<"localhost">>, Opts),
     Port = hb_opts:get(port, 8734, Opts),
     iolist_to_binary(["http://", hb_util:bin(Host), ":", hb_util:bin(Port)]).
 
 cookbook_renderer() ->
-    #{
-        <<"device">> => ?COOKBOOK_DEVICE,
-        <<"node-renderer">> => <<"/~cookbook@1.0/index">>,
-        <<"device-renderer">> => <<"/~cookbook@1.0/device?for=<device@version>">>,
-        <<"source">> => <<"src/preloaded/node/dev_cookbook.erl">>,
-        <<"status">> => <<"prototype-renderer-device">>
-    }.
+    hb_docs_cookbook:renderer_metadata().
 
 node_component_index(Kind, LinkKey, Data) ->
     Devices = maps:get(<<"devices">>, Data, []),
