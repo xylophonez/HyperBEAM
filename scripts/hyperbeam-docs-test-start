@@ -6,28 +6,40 @@ cd "$ROOT"
 
 EVAL='
 application:ensure_all_started(hackney),
-Spec = <<"0gIqZYOrZDVJ2nneRYLv2t4BhOuA6rz6l9-RtozfrBM">>,
-Impl = <<"Knz1wSoji3iZonvEs2IBNszc_GCjpntLqhHblpne5cc">>,
-Signer = <<"HjRo75Gi6lbpP-PoUDZrIaA3vG_l2r1PKGrlmUp6GKE">>,
 Base = hb_opts:default_message_with_env(),
+DeviceSpecs =
+    [
+        {
+            <<"arweave-byte-pricing@1.1">>,
+            <<"0gIqZYOrZDVJ2nneRYLv2t4BhOuA6rz6l9-RtozfrBM">>
+        },
+        {
+            <<"simple-oracle@1.0">>,
+            <<"SGIOFvYoRKYIj3bC9_3Ggv2n0lNCOoSRrWJyHUrKeKg">>
+        }
+    ],
 NameResolvers =
     [
-        #{<<"arweave-byte-pricing@1.1">> => Spec}
+        maps:from_list(DeviceSpecs)
         | hb_opts:get(<<"name-resolvers">>, [], Base)
     ],
+SpecSigner =
+    fun(Spec) ->
+        {ok, SpecMsg} = hb_client_gateway:read(Spec, Base),
+        [Signer | _] = hb_message:signers(SpecMsg, Base),
+        Signer
+    end,
 TrustedSigners =
     [
         #{
-            <<"address">> => Signer,
-            <<"devices">> => [<<"arweave-byte-pricing@1.1">>, Spec]
+            <<"address">> => SpecSigner(Spec),
+            <<"devices">> => [Device, Spec]
         }
-        | hb_opts:get(<<"trusted-device-signers">>, [], Base)
+    || {Device, Spec} <- DeviceSpecs
+    ] ++ [
+        Signer
+    || Signer <- hb_opts:get(<<"trusted-device-signers">>, [], Base)
     ],
-TrustedDevices =
-    maps:merge(
-        hb_opts:get(<<"trusted-devices">>, #{}, Base),
-        #{Spec => Impl}
-    ),
 Opts =
     Base#{
         <<"port">> => 28737,
@@ -37,8 +49,7 @@ Opts =
         <<"process-sampler">> => false,
         <<"load-remote-devices">> => true,
         <<"name-resolvers">> => NameResolvers,
-        <<"trusted-device-signers">> => TrustedSigners,
-        <<"trusted-devices">> => TrustedDevices
+        <<"trusted-device-signers">> => TrustedSigners
     },
 Url = hb_http_server:start_node(Opts),
 io:format("started ~s~n", [Url]),

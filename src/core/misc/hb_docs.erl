@@ -56,10 +56,17 @@ path_tail_key(_) ->
 path_tail_keys(Tail) ->
     [Key || Msg <- Tail, (Key = path_tail_key(Msg)) =/= <<>>].
 
-supported_device(?ARWEAVE_DEVICE) -> true;
-supported_device(?MESSAGE_DEVICE) -> true;
-supported_device(?COOKBOOK_DEVICE) -> true;
-supported_device(_) -> false.
+supported_device(Device) ->
+    supported_device(Device, #{}).
+
+supported_device(?ARWEAVE_DEVICE, _Opts) -> true;
+supported_device(?MESSAGE_DEVICE, _Opts) -> true;
+supported_device(?COOKBOOK_DEVICE, _Opts) -> true;
+supported_device(Device, Opts) ->
+    case docs_resolve_spec(Device, Opts) of
+        {ok, _SpecID} -> true;
+        _ -> false
+    end.
 
 node_info(Req, Opts) ->
     Data = node_info_data(Opts),
@@ -132,7 +139,7 @@ boilerplate_page_response(Parts, Req) ->
     end.
 
 device_info_route(Device, Tail, Req, Opts) ->
-    case supported_device(Device) of
+    case supported_device(Device, Opts) of
         true -> supported_device_info_route(Device, Tail, Req, Opts);
         false -> {ok, unsupported_device_info_response(Device, Req)}
     end.
@@ -308,7 +315,7 @@ node_info_data(Opts) ->
                 <<"Prototype docs renderer device for node and device /info pages "
                     "while the long-term HyperBuddy integration is in progress.">>
             )
-        ],
+        ] ++ on_weave_node_devices(Opts),
         <<"boilerplate">> => boilerplate_index(),
         <<"concepts">> => #{
             <<"hyperbeam">> =>
@@ -443,13 +450,432 @@ device_info_data(?COOKBOOK_DEVICE, Opts) ->
         },
         <<"spec-status">> => maps:get(<<"spec-status">>, device_spec_status(?COOKBOOK_DEVICE))
     });
-device_info_data(Device, _Opts) ->
-    #{
+device_info_data(Device, Opts) ->
+    case docs_resolve_spec(Device, Opts) of
+        {ok, SpecID} ->
+            on_weave_info_data(Device, SpecID, Opts);
+        _ ->
+            #{
+                <<"kind">> => <<"device-info">>,
+                <<"device">> => #{ <<"id">> => Device },
+                <<"status">> => <<"not-implemented">>,
+                <<"summary">> => <<"No prototype docs payload exists for this device.">>
+            }
+    end.
+
+on_weave_node_devices(Opts) ->
+    Builtins = [?ARWEAVE_DEVICE, ?MESSAGE_DEVICE, ?COOKBOOK_DEVICE],
+    NameResolvers = hb_opts:get(<<"name-resolvers">>, [], Opts),
+    Pairs0 =
+        lists:flatmap(
+            fun(Resolver) when is_map(Resolver) -> maps:to_list(Resolver);
+               (_Resolver) -> []
+            end,
+            NameResolvers
+        ),
+    Pairs =
+        lists:usort(
+            [
+                {DeviceID, SpecID}
+            || {DeviceID, SpecID} <- Pairs0,
+                is_binary(DeviceID),
+                is_binary(SpecID),
+                ?IS_ID(SpecID),
+                not lists:member(DeviceID, Builtins)
+            ]
+        ),
+    [on_weave_node_device(DeviceID, SpecID) || {DeviceID, SpecID} <- Pairs].
+
+on_weave_node_device(DeviceID, SpecID) ->
+    {Name, Version} = split_device_id(DeviceID),
+    prototype_node_device(
+        DeviceID,
+        Name,
+        Version,
+        <<"On-weave device docs discovered from spec ID ", SpecID/binary, ".">>
+    ).
+
+on_weave_info_data(Device, SpecID, Opts) ->
+    Spec = on_weave_spec_status(Device, SpecID, Opts),
+    SpecSigner = maps:get(<<"signer">>, Spec, <<>>),
+    SchemaDoc = on_weave_official_json_doc(<<"Device-Schema">>, <<"schema-for-device">>, SpecID, SpecSigner, Opts),
+    SchemaPayload = docs_payload(SchemaDoc),
+    Schema = on_weave_schema(Device, SchemaPayload),
+    SchemaOrder = on_weave_schema_order(SchemaPayload, Schema),
+    Recipes = on_weave_recipe_docs(SpecID, SpecSigner, Opts),
+    Summary =
+        maps:get(
+            <<"summary">>,
+            SchemaPayload,
+            maps:get(<<"summary">>, Spec, <<"On-weave device docs discovered from the device spec ID.">>)
+        ),
+    {Name, Version} = split_device_id(Device),
+    maps:merge(device_doc_link_fields(Device), #{
         <<"kind">> => <<"device-info">>,
-        <<"device">> => #{ <<"id">> => Device },
-        <<"status">> => <<"not-implemented">>,
-        <<"summary">> => <<"No prototype docs payload exists for this device.">>
+        <<"device">> => #{
+            <<"name">> => Name,
+            <<"version">> => Version,
+            <<"id">> => Device,
+            <<"spec-id">> => SpecID
+        },
+        <<"device-id">> => Device,
+        <<"device-name">> => Name,
+        <<"device-version">> => Version,
+        <<"summary">> => Summary,
+        <<"renderer">> => cookbook_renderer(),
+        <<"keys">> => on_weave_key_summaries(Device, Schema, SchemaOrder),
+        <<"schema">> => Schema,
+        <<"schema-order">> => SchemaOrder,
+        <<"spec">> => Spec,
+        <<"recipes">> => Recipes,
+        <<"recipe-count">> => map_size(Recipes),
+        <<"implementations">> => on_weave_implementations(SpecID, Opts),
+        <<"coverage">> => #{
+            <<"spec">> => SpecID,
+            <<"schema">> => maps:get(<<"txid">>, SchemaDoc, <<>>),
+            <<"schema-status">> => maps:get(<<"status">>, SchemaDoc, <<"missing">>),
+            <<"recipes">> => <<"recipe-for-device graph query">>,
+            <<"source">> => <<"on-weave">>
+        },
+        <<"dependencies">> => maps:get(<<"dependencies">>, SchemaPayload, []),
+        <<"docs-source">> => #{
+            <<"mode">> => <<"on-weave-by-spec-id">>,
+            <<"spec-id">> => SpecID,
+            <<"spec-signer">> => SpecSigner,
+            <<"schema-display-rule">> =>
+                <<"latest Device-Schema where owner is the spec signer">>,
+            <<"recipe-display-rule">> =>
+                <<"Device-Recipe messages tagged recipe-for-device, any owner">>
+        },
+        <<"spec-status">> => maps:get(<<"spec-status">>, Spec, <<"missing">>)
+    }).
+
+docs_payload(Doc) ->
+    maps:get(<<"payload">>, Doc, #{}).
+
+split_device_id(DeviceID) ->
+    case binary:split(DeviceID, <<"@">>) of
+        [Name, Version] when Name =/= <<>>, Version =/= <<>> ->
+            {Name, Version};
+        _ ->
+            {DeviceID, <<>>}
+    end.
+
+docs_resolve_spec(Ref, _Opts) when ?IS_ID(Ref) ->
+    {ok, Ref};
+docs_resolve_spec(Ref, Opts) ->
+    case
+        hb_ao:raw(
+            #{ <<"device">> => <<"name@1.0">> },
+            #{ <<"path">> => Ref, <<"load">> => false },
+            Opts
+        )
+    of
+        {ok, SpecID} when ?IS_ID(SpecID) -> {ok, SpecID};
+        _ -> {error, <<"device-name-not-resolvable">>}
+    end.
+
+on_weave_official_json_doc(_Type, _TagName, _SpecID, <<>>, _Opts) ->
+    #{<<"status">> => <<"missing">>, <<"reason">> => <<"spec-signer-unavailable">>};
+on_weave_official_json_doc(Type, TagName, SpecID, SpecSigner, Opts) ->
+    on_weave_json_doc(Type, TagName, SpecID, [SpecSigner], Opts).
+
+on_weave_json_doc(Type, TagName, SpecID, Owners, Opts) ->
+    case on_weave_doc_items(Type, TagName, SpecID, Owners, 1, Opts) of
+        {ok, [Node | _]} ->
+            case fetch_json_doc(Node, Opts) of
+                {ok, Payload} ->
+                    maps:merge(doc_item_metadata(Node, Opts), #{
+                        <<"status">> => <<"present">>,
+                        <<"payload">> => Payload
+                    });
+                {error, Reason} ->
+                    maps:merge(doc_item_metadata(Node, Opts), #{
+                        <<"status">> => <<"invalid">>,
+                        <<"reason">> => format_reason(Reason)
+                    })
+            end;
+        {ok, []} ->
+            #{<<"status">> => <<"missing">>};
+        {error, Reason} ->
+            #{<<"status">> => <<"missing">>, <<"reason">> => format_reason(Reason)}
+    end.
+
+on_weave_spec_status(Device, SpecID, Opts) ->
+    case on_weave_item_by_id(SpecID, Opts) of
+        {ok, Node} ->
+            case hb_client_gateway:data(SpecID, Opts) of
+                {ok, Markdown} ->
+                    maps:merge(doc_item_metadata(Node, Opts), #{
+                        <<"kind">> => <<"device-spec">>,
+                        <<"href">> => <<"/~", Device/binary, "/info/spec">>,
+                        <<"spec-status">> => <<"present">>,
+                        <<"coverage-status">> => <<"present">>,
+                        <<"source-path">> => <<>>,
+                        <<"source">> => <<"on-weave">>,
+                        <<"txid">> => SpecID,
+                        <<"title">> => markdown_title(Markdown, Device),
+                        <<"summary">> => markdown_summary(Markdown),
+                        <<"markdown-bytes">> => byte_size(Markdown),
+                        <<"markdown">> => Markdown
+                    });
+                {error, Reason} ->
+                    missing_on_weave_spec(Device, SpecID, Reason)
+            end;
+        {error, Reason} ->
+            missing_on_weave_spec(Device, SpecID, Reason)
+    end.
+
+missing_on_weave_spec(Device, SpecID, Reason) ->
+            #{
+                <<"kind">> => <<"device-spec">>,
+                <<"href">> => <<"/~", Device/binary, "/info/spec">>,
+                <<"spec-status">> => <<"missing">>,
+                <<"coverage-status">> => <<"missing">>,
+                <<"source-path">> => <<>>,
+                <<"source">> => <<"on-weave">>,
+                <<"txid">> => SpecID,
+                <<"summary">> => <<"The on-weave Device-Specification could not be loaded.">>,
+                <<"reason">> => format_reason(Reason)
+            }.
+
+on_weave_schema(Device, Payload) ->
+    Schema0 = maps:get(<<"schema">>, Payload, #{}),
+    maps:from_list(
+        [
+            {Key, on_weave_schema_key(Device, Key, KeySchema)}
+        || {Key, KeySchema} <- maps:to_list(Schema0)
+        ]
+    ).
+
+on_weave_schema_key(Device, Key, KeySchema) ->
+    Params = maps:get(<<"parameters">>, KeySchema, #{}),
+    Desc = maps:get(<<"description">>, KeySchema, <<>>),
+    maps:merge(
+        schema_key(Device, Key, Desc, Params),
+        KeySchema#{<<"parameters">> => Params}
+    ).
+
+on_weave_schema_order(Payload, Schema) ->
+    case maps:get(<<"schema-order">>, Payload, undefined) of
+        Order when is_list(Order) -> Order;
+        _ -> lists:sort(maps:keys(Schema))
+    end.
+
+on_weave_key_summaries(Device, Schema, Order) ->
+    [
+        device_key_summary(
+            Device,
+            Name,
+            maps:get(<<"kind">>, KeySchema, <<"computed">>),
+            maps:get(<<"description">>, KeySchema, <<>>)
+        )
+    || Name <- Order,
+        KeySchema <- [maps:get(Name, Schema, #{})],
+        map_size(KeySchema) > 0
+    ].
+
+on_weave_recipe_docs(SpecID, SpecSigner, Opts) ->
+    case on_weave_doc_items(<<"Device-Recipe">>, <<"recipe-for-device">>, SpecID, [], 20, Opts) of
+        {ok, Nodes} ->
+            Recipes = [
+                Recipe
+            || Node <- Nodes,
+                {ok, Recipe} <- [on_weave_recipe_doc(Node, SpecSigner, Opts)]
+            ],
+            lists:foldl(
+                fun(Recipe, Acc) ->
+                    Slug = maps:get(<<"name">>, Recipe),
+                    case maps:is_key(Slug, Acc) of
+                        true -> Acc;
+                        false -> Acc#{Slug => Recipe}
+                    end
+                end,
+                #{},
+                Recipes
+            );
+        {error, _Reason} ->
+            #{}
+    end.
+
+on_weave_recipe_doc(Node, SpecSigner, Opts) ->
+    ID = maps:get(<<"id">>, Node),
+    case hb_client_gateway:data(ID, Opts) of
+        {ok, Markdown} ->
+            Slug = doc_item_tag(Node, <<"slug">>, ID),
+            Title = doc_item_tag(Node, <<"title">>, markdown_title(Markdown, Slug)),
+            Blocks = code_blocks(Markdown),
+            Runnable = [Block || Block <- Blocks, maps:get(<<"runnable">>, Block, false) =:= true],
+            FirstCommand =
+                case Runnable of
+                    [First|_] -> command_preview(maps:get(<<"text">>, First, <<>>));
+                    [] -> <<>>
+                end,
+            {ok,
+                maps:merge(doc_item_metadata(Node, Opts), #{
+                    <<"name">> => Slug,
+                    <<"title">> => Title,
+                    <<"summary">> => markdown_summary(Markdown),
+                    <<"source">> => <<"on-weave">>,
+                    <<"source-relative">> => <<"weave:", ID/binary>>,
+                    <<"recipe-status">> => <<"loaded">>,
+                    <<"block-count">> => length(Blocks),
+                    <<"runnable-block-count">> => length(Runnable),
+                    <<"first-command">> => FirstCommand,
+                    <<"blocks">> => Blocks,
+                    <<"markdown">> => Markdown,
+                    <<"official">> =>
+                        SpecSigner =/= <<>> andalso doc_item_owner(Node, Opts) =:= SpecSigner
+                })};
+        {error, Reason} ->
+            {ok,
+                maps:merge(doc_item_metadata(Node, Opts), #{
+                    <<"name">> => doc_item_tag(Node, <<"slug">>, ID),
+                    <<"title">> => doc_item_tag(Node, <<"title">>, ID),
+                    <<"summary">> => <<"Recipe body could not be loaded from the weave.">>,
+                    <<"source">> => <<"on-weave">>,
+                    <<"source-relative">> => <<"weave:", ID/binary>>,
+                    <<"recipe-status">> => <<"missing">>,
+                    <<"error">> => format_reason(Reason),
+                    <<"block-count">> => 0,
+                    <<"runnable-block-count">> => 0
+                })}
+    end.
+
+on_weave_implementations(SpecID, Opts) ->
+    TrustedSigners = hb_opts:get(<<"trusted-device-signers">>, [], Opts),
+    case TrustedSigners of
+        [] ->
+            [];
+        _ ->
+            case hb_client_gateway:device(SpecID, TrustedSigners, Opts) of
+                {ok, ImplIDs} ->
+                    [
+                        #{
+                            <<"name">> => SpecID,
+                            <<"module">> => <<"on-weave-beam-archive">>,
+                            <<"source">> => ImplID,
+                            <<"status">> => <<"discovered-by-implements-device">>
+                        }
+                    || ImplID <- ImplIDs
+                    ];
+                {error, _Reason} ->
+                    []
+            end
+    end.
+
+on_weave_item_by_id(ID, Opts) ->
+    Query =
+        <<"query($ids: [ID!]!) { ",
+            "transactions(ids: $ids, first: 1){ ",
+                "edges { ",
+                    "node { ",
+                        "id ",
+                        "owner { address key } ",
+                        "block { height timestamp } ",
+                        "tags { name value } ",
+                        "data { size } ",
+                    "} ",
+                    "cursor ",
+                "} ",
+            "} ",
+        "}">>,
+    Variables = #{<<"ids">> => [ID]},
+    case hb_client_gateway:query(Query, Variables, Opts) of
+        {ok, GqlMsg} ->
+            case hb_ao:get(<<"data/transactions/edges">>, GqlMsg, Opts) of
+                [#{<<"node">> := Node} | _] -> {ok, Node};
+                _ -> {error, not_found}
+            end;
+        {error, Reason} ->
+            {error, Reason}
+    end.
+
+on_weave_doc_items(Type, TagName, SpecID, Owners, First, Opts) ->
+    OwnerVar =
+        case Owners of
+            [] -> <<>>;
+            _ -> <<", $owners: [String!]">>
+        end,
+    OwnerArg =
+        case Owners of
+            [] -> <<>>;
+            _ -> <<"owners: $owners, ">>
+        end,
+    FirstBin = integer_to_binary(First),
+    Query =
+        <<"query($specid: [String!], $type: [String!]", OwnerVar/binary, ") { ",
+            "transactions(",
+                OwnerArg/binary,
+                "tags: [",
+                    "{ name: \"type\", values: $type }, ",
+                    "{ name: \"", TagName/binary, "\", values: $specid }",
+                "], ",
+                "sort: HEIGHT_DESC, ",
+                "first: ", FirstBin/binary,
+            "){ ",
+                "edges { ",
+                    "node { ",
+                        "id ",
+                        "owner { address key } ",
+                        "block { height timestamp } ",
+                        "tags { name value } ",
+                        "data { size } ",
+                    "} ",
+                    "cursor ",
+                "} ",
+            "} ",
+        "}">>,
+    Variables0 = #{<<"specid">> => [SpecID], <<"type">> => [Type]},
+    Variables =
+        case Owners of
+            [] -> Variables0;
+            _ -> Variables0#{<<"owners">> => Owners}
+        end,
+    case hb_client_gateway:query(Query, Variables, Opts) of
+        {ok, GqlMsg} ->
+            case hb_ao:get(<<"data/transactions/edges">>, GqlMsg, Opts) of
+                Edges when is_list(Edges) ->
+                    {ok, [Node || #{<<"node">> := Node} <- Edges]};
+                _ ->
+                    {ok, []}
+            end;
+        {error, Reason} ->
+            {error, Reason}
+    end.
+
+fetch_json_doc(Node, Opts) ->
+    ID = maps:get(<<"id">>, Node),
+    case hb_client_gateway:data(ID, Opts) of
+        {ok, Body} ->
+            try {ok, hb_json:decode(Body)}
+            catch Class:Reason:Stack ->
+                {error, {Class, Reason, Stack}}
+            end;
+        Error ->
+            Error
+    end.
+
+doc_item_metadata(Node, Opts) ->
+    #{
+        <<"txid">> => maps:get(<<"id">>, Node, <<>>),
+        <<"signer">> => doc_item_owner(Node, Opts),
+        <<"block-height">> => hb_ao:get(<<"block/height">>, Node, <<>>, Opts),
+        <<"block-timestamp">> => hb_ao:get(<<"block/timestamp">>, Node, <<>>, Opts)
     }.
+
+doc_item_owner(Node, Opts) ->
+    hb_ao:get(<<"owner/address">>, Node, <<>>, Opts).
+
+doc_item_tag(Node, Name, Default) ->
+    Tags = maps:get(<<"tags">>, Node, []),
+    case [Value || #{<<"name">> := TagName, <<"value">> := Value} <- Tags, TagName =:= Name] of
+        [Value | _] -> Value;
+        [] -> Default
+    end.
+
+format_reason(Reason) ->
+    hb_util:bin(io_lib:format("~tp", [Reason])).
 
 maybe_render(Kind, Data, Req) ->
     case wants_html(Req) of
@@ -3176,10 +3602,15 @@ spec_tx_link(Spec, Prefix) ->
     end.
 
 spec_markdown(Spec) ->
-    Source = maps:get(<<"source-path">>, Spec, <<>>),
-    case file:read_file(binary_to_list(Source)) of
-        {ok, Markdown} -> Markdown;
-        {error, _Reason} -> <<>>
+    case maps:get(<<"markdown">>, Spec, undefined) of
+        Markdown when is_binary(Markdown) ->
+            Markdown;
+        _ ->
+            Source = maps:get(<<"source-path">>, Spec, <<>>),
+            case file:read_file(binary_to_list(Source)) of
+                {ok, Markdown} -> Markdown;
+                {error, _Reason} -> <<>>
+            end
     end.
 
 params_table(_DeviceID, _Key, Params) when map_size(Params) =:= 0 ->
@@ -3206,11 +3637,16 @@ params_table(DeviceID, Key, Params) ->
     ].
 
 recipe_markdown(Recipe) ->
-    RelPath = maps:get(<<"source-relative">>, Recipe, <<>>),
-    case file:read_file(binary_to_list(device_docs_path(RelPath))) of
-        {ok, Markdown} ->
-            select_recipe_markdown(Markdown, maps:get(<<"source-section">>, Recipe, undefined));
-        {error, _Reason} -> <<>>
+    case maps:get(<<"markdown">>, Recipe, undefined) of
+        Markdown when is_binary(Markdown) ->
+            Markdown;
+        _ ->
+            RelPath = maps:get(<<"source-relative">>, Recipe, <<>>),
+            case file:read_file(binary_to_list(device_docs_path(RelPath))) of
+                {ok, Markdown} ->
+                    select_recipe_markdown(Markdown, maps:get(<<"source-section">>, Recipe, undefined));
+                {error, _Reason} -> <<>>
+            end
     end.
 
 docs_shell_assets() ->
