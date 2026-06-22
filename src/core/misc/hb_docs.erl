@@ -603,7 +603,7 @@ on_weave_json_doc(Type, TagName, SpecID, Owners, Opts) ->
 on_weave_spec_status(Device, SpecID, Opts) ->
     case on_weave_item_by_id(SpecID, Opts) of
         {ok, Node} ->
-            case hb_client_gateway:data(SpecID, Opts) of
+            case on_weave_spec_markdown(SpecID, Opts) of
                 {ok, Markdown} ->
                     maps:merge(doc_item_metadata(Node, Opts), #{
                         <<"kind">> => <<"device-spec">>,
@@ -637,6 +637,52 @@ missing_on_weave_spec(Device, SpecID, Reason) ->
                 <<"summary">> => <<"The on-weave Device-Specification could not be loaded.">>,
                 <<"reason">> => format_reason(Reason)
             }.
+
+on_weave_spec_markdown(SpecID, Opts) ->
+    case hb_client_gateway:data(SpecID, Opts) of
+        {ok, Markdown} when is_binary(Markdown) ->
+            case text_payload(Markdown) of
+                true -> {ok, Markdown};
+                false -> gateway_item_data(SpecID, Opts)
+            end;
+        {ok, Other} ->
+            case gateway_item_data(SpecID, Opts) of
+                {ok, Markdown} -> {ok, Markdown};
+                {error, Reason} -> {error, {non_binary_spec_body, Other, Reason}}
+            end;
+        {error, Reason} ->
+            case gateway_item_data(SpecID, Opts) of
+                {ok, Markdown} -> {ok, Markdown};
+                {error, FallbackReason} -> {error, {Reason, FallbackReason}}
+            end
+    end.
+
+text_payload(Bin) ->
+    binary:match(Bin, <<0>>) =:= nomatch.
+
+gateway_item_data(ID, Opts) ->
+    Req = #{
+        <<"multirequest-accept-status">> => 200,
+        <<"multirequest-responses">> => 1,
+        <<"path">> => <<"/arweave/", ID/binary>>,
+        <<"method">> => <<"GET">>
+    },
+    case hb_http:request(Req, Opts) of
+        {ok, Data} when is_binary(Data) ->
+            {ok, Data};
+        {ok, Res} ->
+            Data =
+                case hb_maps:find(<<"data">>, Res, Opts) of
+                    {ok, D} -> D;
+                    _ -> hb_ao:get(<<"body">>, Res, <<>>, Opts)
+                end,
+            case Data of
+                Bin when is_binary(Bin) -> {ok, Bin};
+                Other -> {error, {non_binary_gateway_body, Other}}
+            end;
+        {error, Reason} ->
+            {error, Reason}
+    end.
 
 on_weave_schema(Device, Payload) ->
     Schema0 = maps:get(<<"schema">>, Payload, #{}),
