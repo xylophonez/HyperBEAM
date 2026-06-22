@@ -673,25 +673,52 @@ recover_spec_body(Raw, SpecID, Opts) ->
 ans104_body(Raw, Opts) ->
     try
         Item = ar_bundles:deserialize(Raw),
-        Msg = hb_message:convert(
-            Item,
-            <<"structured@1.0">>,
-            <<"ans104@1.0">>,
-            Opts
-        ),
-        case hb_maps:get(<<"body">>, Msg, <<>>, Opts) of
-            Body when is_binary(Body) ->
-                case text_payload(Body) of
-                    true -> {ok, Body};
-                    false -> {error, non_text_ans104_body}
-                end;
-            Other ->
-                {error, {non_binary_ans104_body, Other}}
+        case structured_ans104_body(Item, Opts) of
+            {ok, Body} -> {ok, Body};
+            {error, StructuredReason} ->
+                case raw_ans104_body(Item) of
+                    {ok, Body} -> {ok, Body};
+                    {error, RawReason} -> {error, {StructuredReason, RawReason}}
+                end
         end
     catch
         Class:Reason:Stack ->
             {error, {Class, Reason, Stack}}
     end.
+
+structured_ans104_body(Item, Opts) ->
+    Msg = hb_message:convert(
+        Item,
+        <<"structured@1.0">>,
+        <<"ans104@1.0">>,
+        Opts
+    ),
+    case hb_maps:get(<<"body">>, Msg, not_found, Opts) of
+        Body when is_binary(Body), byte_size(Body) > 0 ->
+            case text_payload(Body) of
+                true -> {ok, Body};
+                false -> {error, non_text_ans104_body}
+            end;
+        Other ->
+            {error, {missing_or_empty_ans104_body, Other}}
+    end.
+
+raw_ans104_body(#tx{data = #{<<"body">> := #tx{data = Body}}}) ->
+    raw_text_body(Body);
+raw_ans104_body(#tx{data = #{<<"body">> := Body}}) ->
+    raw_text_body(Body);
+raw_ans104_body(#tx{data = Body}) ->
+    raw_text_body(Body);
+raw_ans104_body(_Other) ->
+    {error, unsupported_ans104_shape}.
+
+raw_text_body(Body) when is_binary(Body), byte_size(Body) > 0 ->
+    case text_payload(Body) of
+        true -> {ok, Body};
+        false -> {error, non_text_raw_body}
+    end;
+raw_text_body(Other) ->
+    {error, {non_binary_raw_body, Other}}.
 
 gateway_item_data(ID, Opts) ->
     Req = #{
