@@ -5949,6 +5949,11 @@ esc(Value) ->
     B4 = binary:replace(B3, <<"\"">>, <<"&quot;">>, [global]),
     binary:replace(B4, <<"'">>, <<"&#39;">>, [global]).
 
+decoded_json_response(#{ <<"content-type">> := <<"application/json">>, <<"body">> := Body }) ->
+    hb_json:decode(Body);
+decoded_json_response(Payload) ->
+    Payload.
+
 raw_ans104_body_nested_body_test() ->
     Markdown = <<"# `arweave-byte-pricing@1.1`\n\nDevice spec body.">>,
     Item = #tx{
@@ -6061,7 +6066,8 @@ packaged_device_docs_root_test() ->
 
 html_negotiation_test() ->
     {ok, JSON} = device_info(?ARWEAVE_DEVICE, #{ <<"accept">> => <<"application/json">> }, #{}),
-    ?assertNot(maps:is_key(<<"body">>, JSON)),
+    ?assertEqual(<<"application/json">>, maps:get(<<"content-type">>, JSON)),
+    ?assertNot(maps:is_key(<<"body">>, decoded_json_response(JSON))),
     {ok, HTML} = device_info(?ARWEAVE_DEVICE, #{ <<"accept">> => <<"text/html">> }, #{}),
     ?assertEqual(<<"text/html; charset=utf-8">>, maps:get(<<"content-type">>, HTML)),
     Body = maps:get(<<"body">>, HTML),
@@ -6188,7 +6194,8 @@ direct_docs_route_alias_test() ->
 node_docs_route_alias_test() ->
     Msgs = hb_singleton:from(#{ <<"path">> => <<"/docs/schema">> }, #{}),
     Req = #{ <<"accept">> => <<"application/json">> },
-    {true, {ok, JSON}} = maybe_info_request(Msgs, Req, #{}),
+    {true, {ok, JSONResponse}} = maybe_info_request(Msgs, Req, #{}),
+    JSON = decoded_json_response(JSONResponse),
     ?assertEqual(<<"node-schema-index">>, maps:get(<<"kind">>, JSON)).
 
 schema_source_contract_test() ->
@@ -6453,13 +6460,15 @@ implementations_route_test() ->
 node_component_routes_test() ->
     {ok, SchemaHTML} = node_info_route([<<"schema">>], #{ <<"accept">> => <<"text/html">> }, #{}),
     ?assert(binary:match(maps:get(<<"body">>, SchemaHTML), <<"Schema index">>) =/= nomatch),
-    {ok, Recipes} = node_info_route([<<"recipes">>], #{ <<"accept">> => <<"application/json">> }, #{}),
+    {ok, RecipesResponse} = node_info_route([<<"recipes">>], #{ <<"accept">> => <<"application/json">> }, #{}),
+    Recipes = decoded_json_response(RecipesResponse),
     ?assertEqual(<<"node-recipes-index">>, maps:get(<<"kind">>, Recipes)),
     ExpectedDevices = 3 + length(canonical_spec_devices()) - 2,
     ?assertEqual(ExpectedDevices, length(maps:get(<<"devices">>, Recipes))).
 
 boilerplate_routes_test() ->
-    {ok, Index} = node_info_route([<<"guides">>], #{ <<"accept">> => <<"application/json">> }, #{}),
+    {ok, IndexResponse} = node_info_route([<<"guides">>], #{ <<"accept">> => <<"application/json">> }, #{}),
+    Index = decoded_json_response(IndexResponse),
     ?assertEqual(<<"node-boilerplate-index">>, maps:get(<<"kind">>, Index)),
     ?assertEqual(<<"/info/guides">>, maps:get(<<"href">>, Index)),
     Pages = maps:get(<<"pages">>, Index),
@@ -6510,11 +6519,12 @@ boilerplate_routes_test() ->
         RelPaths
     )),
     ?assertEqual(nomatch, binary:match(maps:get(<<"source-root">>, Index), <<"/home/fn/Dev/device-docs">>)),
-    {ok, JSON} = node_info_route(
+    {ok, JSONResponse} = node_info_route(
         [<<"introduction">>, <<"what-is-hyperbeam">>],
         #{ <<"accept">> => <<"application/json">> },
         #{}
     ),
+    JSON = decoded_json_response(JSONResponse),
     ?assertEqual(<<"node-boilerplate-page">>, maps:get(<<"kind">>, JSON)),
     ?assertEqual(<<"/introduction/what-is-hyperbeam">>, maps:get(<<"href">>, JSON)),
     ?assertEqual(<<"docs/introduction/what-is-hyperbeam.md">>, maps:get(<<"source-relative">>, JSON)),
@@ -6560,18 +6570,20 @@ boilerplate_routes_test() ->
     ?assertEqual(nomatch, binary:match(PathingBody, <<"/info/recipes/patch-process-state">>)),
     ?assertEqual(nomatch, binary:match(PathingBody, <<"/info/recipes/arweave-json-to-lua">>)),
     ?assertEqual(nomatch, binary:match(PathingBody, <<"/info/boilerplate">>)),
-    {ok, ProcessRootJSON} = node_info_route(
+    {ok, ProcessRootJSONResponse} = node_info_route(
         [<<"processes">>],
         #{ <<"accept">> => <<"application/json">> },
         #{}
     ),
+    ProcessRootJSON = decoded_json_response(ProcessRootJSONResponse),
     ?assertEqual(<<"/info/processes/overview">>, maps:get(<<"href">>, ProcessRootJSON)),
     ?assertEqual(<<"Process Overview">>, maps:get(<<"title">>, ProcessRootJSON)),
-    {ok, ProcessJSON} = node_info_route(
+    {ok, ProcessJSONResponse} = node_info_route(
         [<<"processes">>, <<"state-and-reads">>],
         #{ <<"accept">> => <<"application/json">> },
         #{}
     ),
+    ProcessJSON = decoded_json_response(ProcessJSONResponse),
     ?assertEqual(<<"State And Reads">>, maps:get(<<"title">>, ProcessJSON)),
     ?assertEqual(
         <<"docs/devices/compute-and-processes/process-at-1-0/02-state-and-reads.md">>,
@@ -6586,11 +6598,12 @@ boilerplate_routes_test() ->
     ?assert(binary:match(ProcessBody, <<"State And Reads">>) =/= nomatch),
     ?assert(binary:match(ProcessBody, <<"<code>patch@1.0</code>">>) =/= nomatch),
     ?assertEqual(nomatch, binary:match(ProcessBody, <<"02-state-and-reads">>)),
-    {ok, ForgeJSON} = node_info_route(
+    {ok, ForgeJSONResponse} = node_info_route(
         [<<"forge">>, <<"index">>],
         #{ <<"accept">> => <<"application/json">> },
         #{}
     ),
+    ForgeJSON = decoded_json_response(ForgeJSONResponse),
     ?assertEqual(<<"/info/forge/index">>, maps:get(<<"href">>, ForgeJSON)),
     ?assertEqual(<<"docs/forge/index.md">>, maps:get(<<"source-relative">>, ForgeJSON)),
     {ok, ForgeHTML} = node_info_route(
@@ -6703,8 +6716,9 @@ docs_asset_route_test() ->
 
 canonical_and_unsupported_device_info_route_test() ->
     JSONMsgs = hb_singleton:from(#{ <<"path">> => <<"/~json@1.0/info">> }, #{}),
-    {true, {ok, JSON}} =
+    {true, {ok, JSONResponse}} =
         maybe_info_request(JSONMsgs, #{ <<"accept">> => <<"application/json">> }, #{}),
+    JSON = decoded_json_response(JSONResponse),
     ?assertEqual(<<"json@1.0">>, maps:get(<<"device-id">>, JSON)),
     ?assertEqual(<<"present">>, maps:get(<<"spec-status">>, JSON)),
     ?assertEqual(<<"specs-branch-canonical-spec">>, maps:get(<<"mode">>, maps:get(<<"docs-source">>, JSON))),
@@ -6718,18 +6732,20 @@ canonical_and_unsupported_device_info_route_test() ->
     ?assert(binary:match(Body, <<"~ans104@1.0">>) =/= nomatch),
     ?assertEqual(nomatch, binary:match(Body, <<"Construct messages from URL fields">>)),
 
-    {ok, StructuredSchema} = device_info_route(
+    {ok, StructuredSchemaResponse} = device_info_route(
         <<"structured@1.0">>,
         [<<"schema">>],
         #{ <<"accept">> => <<"application/json">> },
         #{}
     ),
+    StructuredSchema = decoded_json_response(StructuredSchemaResponse),
     ?assert(maps:size(StructuredSchema) > 0),
 
     UnknownMsgs = hb_singleton:from(#{ <<"path">> => <<"/~not-real@1.0/info">> }, #{}),
-    {true, {ok, Unknown}} =
+    {true, {ok, UnknownResponse}} =
         maybe_info_request(UnknownMsgs, #{ <<"accept">> => <<"application/json">> }, #{}),
-    ?assertEqual(404, maps:get(<<"status">>, Unknown)),
+    Unknown = decoded_json_response(UnknownResponse),
+    ?assertEqual(404, maps:get(<<"status">>, UnknownResponse)),
     ?assertEqual(<<"not-real@1.0">>, maps:get(<<"device-id">>, Unknown)),
     ?assertEqual(<<"not-documented">>, maps:get(<<"docs-status">>, Unknown)).
 

@@ -11,14 +11,14 @@
 render(Kind, Data, Req) ->
     case wants_html(Req) of
         true -> html_response(Kind, Data);
-        false -> Data
+        false -> json_response(Data)
     end.
 
 respond_html_or_json(Kind, HtmlData, JsonData, Req) ->
     {ok,
         case wants_html(Req) of
             true -> html_response(Kind, HtmlData);
-            false -> JsonData
+            false -> json_response(JsonData)
         end}.
 
 unsupported_device_response(Device, Req) ->
@@ -28,15 +28,17 @@ unsupported_device_response(Device, Req) ->
                 <<"status">> => 404
             };
         false ->
-            #{
-                <<"status">> => 404,
-                <<"kind">> => <<"device-info">>,
-                <<"device">> => #{ <<"id">> => Device },
-                <<"device-id">> => Device,
-                <<"docs-status">> => <<"not-documented">>,
-                <<"summary">> =>
-                    <<"No prototype /info documentation is wired for this device.">>
-            }
+            json_response(
+                404,
+                #{
+                    <<"kind">> => <<"device-info">>,
+                    <<"device">> => #{ <<"id">> => Device },
+                    <<"device-id">> => Device,
+                    <<"docs-status">> => <<"not-documented">>,
+                    <<"summary">> =>
+                        <<"No prototype /info documentation is wired for this device.">>
+                }
+            )
     end.
 
 renderer_metadata() ->
@@ -106,3 +108,40 @@ html_doc_response(Body) ->
         <<"content-type">> => <<"text/html; charset=utf-8">>,
         <<"body">> => Body
     }.
+
+json_response(Data) ->
+    json_response(200, Data).
+
+json_response(Status, Data) ->
+    #{
+        <<"status">> => Status,
+        <<"content-type">> => <<"application/json">>,
+        <<"body">> => hb_json:encode(json_safe(Data))
+    }.
+
+json_safe(Value) when is_map(Value) ->
+    maps:from_list(
+        [
+            {json_safe_key(Key), json_safe(Inner)}
+        || {Key, Inner} <- maps:to_list(Value)
+        ]
+    );
+json_safe(Value) when is_list(Value) ->
+    [json_safe(Inner) || Inner <- Value];
+json_safe(true) ->
+    true;
+json_safe(false) ->
+    false;
+json_safe(Value) when is_atom(Value) ->
+    atom_to_binary(Value, utf8);
+json_safe(Value) when is_tuple(Value) ->
+    [json_safe(Inner) || Inner <- tuple_to_list(Value)];
+json_safe(Value) ->
+    Value.
+
+json_safe_key(Key) when is_binary(Key) ->
+    Key;
+json_safe_key(Key) when is_atom(Key) ->
+    binary:replace(atom_to_binary(Key, utf8), <<"_">>, <<"-">>, [global]);
+json_safe_key(Key) ->
+    hb_util:bin(io_lib:format("~tp", [Key])).
