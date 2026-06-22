@@ -6,7 +6,7 @@ cd "$ROOT"
 
 EVAL='
 application:ensure_all_started(hackney),
-Base = hb_opts:default_message_with_env(),
+Base = (hb_opts:default_message_with_env())#{<<"prometheus">> => false},
 DeviceSpecs =
     [
         {
