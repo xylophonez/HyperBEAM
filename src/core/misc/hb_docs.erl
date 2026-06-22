@@ -1339,6 +1339,33 @@ doc_item_tag(Node, Name, Default) ->
 format_reason(Reason) ->
     hb_util:bin(io_lib:format("~tp", [Reason])).
 
+json_safe(Value) when is_map(Value) ->
+    maps:from_list(
+        [
+            {json_safe_key(Key), json_safe(Inner)}
+        || {Key, Inner} <- maps:to_list(Value)
+        ]
+    );
+json_safe(Value) when is_list(Value) ->
+    [json_safe(Inner) || Inner <- Value];
+json_safe(true) ->
+    true;
+json_safe(false) ->
+    false;
+json_safe(Value) when is_atom(Value) ->
+    atom_to_binary(Value, utf8);
+json_safe(Value) when is_tuple(Value) ->
+    [json_safe(Inner) || Inner <- tuple_to_list(Value)];
+json_safe(Value) ->
+    Value.
+
+json_safe_key(Key) when is_binary(Key) ->
+    Key;
+json_safe_key(Key) when is_atom(Key) ->
+    binary:replace(atom_to_binary(Key, utf8), <<"_">>, <<"-">>, [global]);
+json_safe_key(Key) ->
+    hb_util:bin(io_lib:format("~tp", [Key])).
+
 node_href(Opts) ->
     Host = hb_opts:get(node_host, <<"localhost">>, Opts),
     Port = hb_opts:get(port, 8734, Opts),
@@ -1395,7 +1422,7 @@ arweave_schema(Opts) ->
 
 generated_schema(Device, Opts) ->
     case hb_types:extract(Device, Opts#{ <<"hashpath">> => ignore }) of
-        {ok, Schema} -> Schema;
+        {ok, Schema} -> json_safe(Schema);
         {error, Reason} ->
             #{
                 <<"status">> => <<"unavailable">>,
@@ -1507,7 +1534,7 @@ implementation_schema_key(Device, Key, KeySchema) ->
             <<"source">> => <<"hb_types:extract/2">>,
             <<"derived">> => true,
             <<"returns">> => Return,
-            <<"type-schema">> => KeySchema
+            <<"type-schema">> => json_safe(KeySchema)
         }
     ).
 
@@ -6182,6 +6209,28 @@ schema_source_contract_test() ->
     ?assert(maps:is_key(<<"schema-direct">>, maps:get(<<"links">>, Data))),
     {ok, HTML} = device_info(?MESSAGE_DEVICE, #{ <<"accept">> => <<"text/html">> }, #{}),
     ?assert(binary:match(maps:get(<<"body">>, HTML), <<"Schema source:">>) =/= nomatch).
+
+json_safe_schema_payload_test() ->
+    ?assertEqual(
+        #{
+            <<"presence">> => <<"required">>,
+            <<"ok">> => true,
+            <<"tuple">> => [<<"ok">>, <<"optional">>],
+            <<"1">> => <<"arity-key">>
+        },
+        json_safe(#{
+            presence => required,
+            ok => true,
+            tuple => {ok, optional},
+            1 => <<"arity-key">>
+        })
+    ),
+    Data = device_info_data(?MESSAGE_DEVICE, #{}),
+    GeneratedKeys = maps:get(<<"keys">>, maps:get(<<"generated">>, maps:get(<<"schema">>, Data))),
+    DocsSchema = maps:get(<<"docs">>, GeneratedKeys),
+    DocsRequest = maps:get(<<"request">>, DocsSchema),
+    DocsWildcard = maps:get(<<"wildcard">>, DocsRequest),
+    ?assertEqual(<<"optional">>, maps:get(<<"presence">>, DocsWildcard)).
 
 canonical_specs_branch_registry_test() ->
     ?assertEqual(33, length(canonical_spec_devices())),
