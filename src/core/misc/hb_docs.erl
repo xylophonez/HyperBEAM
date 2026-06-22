@@ -37,9 +37,10 @@ is_node_info_request([Base, Req], Opts) when is_map(Base), is_map(Req) ->
 is_node_info_request(_, _Opts) ->
     false.
 
-%% @doc Route complete `/info/...` paths before AO-Core resolves the `info`
-%% device key. This keeps nested docs URLs such as `/~message@1.0/info/schema/field`
-%% from resolving against the already-rendered HTML response.
+%% @doc Route complete docs paths before AO-Core resolves the first docs key.
+%% This keeps nested docs URLs such as `/~message@1.0/info/schema/field` and
+%% `/~message@1.0/schema/field` from resolving against the already-rendered
+%% HTML response or a device-specific fallback.
 maybe_info_request(Msgs, Req, Opts) ->
     case info_route(Msgs) of
         {node, Tail} -> {true, node_info_route(Tail, Req, Opts)};
@@ -48,17 +49,48 @@ maybe_info_request(Msgs, Req, Opts) ->
     end.
 
 info_route([Base, Info | Tail]) when is_map(Base), is_map(Info) ->
-    case {maps:is_key(<<"device">>, Base), path_key(Info)} of
-        {false, <<"info">>} -> {node, path_tail_keys(Tail)};
-        {false, <<"introduction">>} -> {node, [<<"introduction">> | path_tail_keys(Tail)]};
+    case {maps:is_key(<<"device">>, Base), node_docs_tail(path_key(Info), Tail)} of
+        {false, {ok, RouteTail}} -> {node, RouteTail};
         _ -> false
     end;
 info_route([{as, Device, _Base}, Info | Tail]) when is_map(Info) ->
-    case path_key(Info) of
-        <<"info">> -> {device, Device, path_tail_keys(Tail)};
-        _ -> false
+    case device_docs_tail(path_key(Info), Tail) of
+        {ok, RouteTail} -> {device, Device, RouteTail};
+        false -> false
     end;
 info_route(_) ->
+    false.
+
+node_docs_tail(<<"info">>, Tail) ->
+    {ok, path_tail_keys(Tail)};
+node_docs_tail(<<"docs">>, Tail) ->
+    {ok, path_tail_keys(Tail)};
+node_docs_tail(<<"schema">>, Tail) ->
+    {ok, [<<"schema">> | path_tail_keys(Tail)]};
+node_docs_tail(<<"spec">>, Tail) ->
+    {ok, [<<"spec">> | path_tail_keys(Tail)]};
+node_docs_tail(<<"recipes">>, Tail) ->
+    {ok, [<<"recipes">> | path_tail_keys(Tail)]};
+node_docs_tail(<<"implementations">>, Tail) ->
+    {ok, [<<"implementations">> | path_tail_keys(Tail)]};
+node_docs_tail(<<"introduction">>, Tail) ->
+    {ok, [<<"introduction">> | path_tail_keys(Tail)]};
+node_docs_tail(_, _Tail) ->
+    false.
+
+device_docs_tail(<<"info">>, Tail) ->
+    {ok, path_tail_keys(Tail)};
+device_docs_tail(<<"docs">>, Tail) ->
+    {ok, path_tail_keys(Tail)};
+device_docs_tail(<<"schema">>, Tail) ->
+    {ok, [<<"schema">> | path_tail_keys(Tail)]};
+device_docs_tail(<<"spec">>, Tail) ->
+    {ok, [<<"spec">> | path_tail_keys(Tail)]};
+device_docs_tail(<<"recipes">>, Tail) ->
+    {ok, [<<"recipes">> | path_tail_keys(Tail)]};
+device_docs_tail(<<"implementations">>, Tail) ->
+    {ok, [<<"implementations">> | path_tail_keys(Tail)]};
+device_docs_tail(_, _Tail) ->
     false.
 
 path_key(Msg) ->
@@ -81,9 +113,14 @@ supported_device(?ARWEAVE_DEVICE, _Opts) -> true;
 supported_device(?MESSAGE_DEVICE, _Opts) -> true;
 supported_device(?COOKBOOK_DEVICE, _Opts) -> true;
 supported_device(Device, Opts) ->
-    case docs_resolve_spec(Device, Opts) of
-        {ok, _SpecID} -> true;
-        _ -> false
+    case canonical_spec_device(Device) of
+        true ->
+            true;
+        false ->
+            case docs_resolve_spec(Device, Opts) of
+                {ok, _SpecID} -> true;
+                _ -> false
+            end
     end.
 
 node_info(Req, Opts) ->
@@ -314,7 +351,7 @@ node_info_data(Opts) ->
                 <<"Prototype docs renderer device for node and device /info pages "
                     "while the long-term HyperBuddy integration is in progress.">>
             )
-        ] ++ on_weave_node_devices(Opts),
+        ] ++ canonical_spec_node_devices(Opts) ++ on_weave_node_devices(Opts),
         <<"boilerplate">> => boilerplate_index(),
         <<"concepts">> => #{
             <<"hyperbeam">> =>
@@ -352,6 +389,8 @@ device_info_data(?ARWEAVE_DEVICE, Opts) ->
         <<"keys">> => arweave_key_summaries(),
         <<"schema">> => arweave_schema(Opts),
         <<"schema-order">> => arweave_key_order(),
+        <<"schema-source">> =>
+            curated_schema_source(?ARWEAVE_DEVICE, dev_arweave, arweave_key_order(), Opts),
         <<"spec">> => arweave_spec_status(),
         <<"recipes">> => arweave_recipes(),
         <<"recipe-count">> => map_size(arweave_recipes()),
@@ -391,6 +430,8 @@ device_info_data(?MESSAGE_DEVICE, Opts) ->
         <<"keys">> => message_key_summaries(),
         <<"schema">> => message_schema(Opts),
         <<"schema-order">> => message_key_order(),
+        <<"schema-source">> =>
+            curated_schema_source(?MESSAGE_DEVICE, dev_message, message_key_order(), Opts),
         <<"spec">> => device_spec_status(?MESSAGE_DEVICE),
         <<"recipes">> => message_recipes(),
         <<"recipe-count">> => map_size(message_recipes()),
@@ -430,6 +471,8 @@ device_info_data(?COOKBOOK_DEVICE, Opts) ->
         <<"keys">> => cookbook_key_summaries(),
         <<"schema">> => cookbook_schema(Opts),
         <<"schema-order">> => cookbook_key_order(),
+        <<"schema-source">> =>
+            curated_schema_source(?COOKBOOK_DEVICE, dev_cookbook, cookbook_key_order(), Opts),
         <<"spec">> => device_spec_status(?COOKBOOK_DEVICE),
         <<"recipes">> => #{},
         <<"recipe-count">> => 0,
@@ -450,17 +493,191 @@ device_info_data(?COOKBOOK_DEVICE, Opts) ->
         <<"spec-status">> => maps:get(<<"spec-status">>, device_spec_status(?COOKBOOK_DEVICE))
     });
 device_info_data(Device, Opts) ->
-    case docs_resolve_spec(Device, Opts) of
-        {ok, SpecID} ->
-            on_weave_info_data(Device, SpecID, Opts);
-        _ ->
-            #{
-                <<"kind">> => <<"device-info">>,
-                <<"device">> => #{ <<"id">> => Device },
-                <<"status">> => <<"not-implemented">>,
-                <<"summary">> => <<"No prototype docs payload exists for this device.">>
+    case canonical_spec_device(Device) of
+        true ->
+            canonical_spec_info_data(Device, Opts);
+        false ->
+            case docs_resolve_spec(Device, Opts) of
+                {ok, SpecID} ->
+                    on_weave_info_data(Device, SpecID, Opts);
+                _ ->
+                    #{
+                        <<"kind">> => <<"device-info">>,
+                        <<"device">> => #{ <<"id">> => Device },
+                        <<"status">> => <<"not-implemented">>,
+                        <<"summary">> => <<"No prototype docs payload exists for this device.">>
+                    }
+            end
+    end.
+
+canonical_spec_node_devices(Opts) ->
+    Builtins = [?ARWEAVE_DEVICE, ?MESSAGE_DEVICE, ?COOKBOOK_DEVICE],
+    [
+        canonical_spec_node_device(Device, Opts)
+    || Device <- canonical_spec_devices(),
+        not lists:member(Device, Builtins)
+    ].
+
+canonical_spec_node_device(Device, _Opts) ->
+    {Name, Version} = split_device_id(Device),
+    Spec = device_spec_status(Device),
+    Summary =
+        maps:get(
+            <<"summary">>,
+            Spec,
+            <<"Canonical device documented by specs-branch source.">>
+        ),
+    prototype_node_device(Device, Name, Version, Summary).
+
+canonical_spec_info_data(Device, Opts) ->
+    Spec = device_spec_status(Device),
+    Module = canonical_device_module(Device),
+    {Schema, SchemaOrder, SchemaSource} = canonical_spec_schema(Device, Module, Opts),
+    Recipes = canonical_spec_recipes(Module),
+    {Name, Version} = split_device_id(Device),
+    Summary =
+        maps:get(
+            <<"summary">>,
+            Spec,
+            <<"Canonical device documented by the specs branch.">>
+        ),
+    maps:merge(device_doc_link_fields(Device), #{
+        <<"kind">> => <<"device-info">>,
+        <<"device">> => #{
+            <<"name">> => Name,
+            <<"version">> => Version,
+            <<"id">> => Device,
+            <<"spec-id">> => Device
+        },
+        <<"device-id">> => Device,
+        <<"device-name">> => Name,
+        <<"device-version">> => Version,
+        <<"summary">> => Summary,
+        <<"renderer">> => cookbook_renderer(),
+        <<"keys">> => on_weave_key_summaries(Device, Schema, SchemaOrder),
+        <<"schema">> => Schema,
+        <<"schema-order">> => SchemaOrder,
+        <<"schema-source">> => SchemaSource,
+        <<"spec">> => Spec,
+        <<"recipes">> => Recipes,
+        <<"recipe-count">> => map_size(Recipes),
+        <<"implementations">> => canonical_spec_implementations(Module),
+        <<"coverage">> => #{
+            <<"spec">> => maps:get(<<"source-path">>, Spec, <<>>),
+            <<"spec-status">> => maps:get(<<"spec-status">>, Spec, <<"missing">>),
+            <<"schema-source">> => maps:get(<<"mode">>, SchemaSource, <<"unknown">>),
+            <<"recipes">> => <<"device-docs module recipe page when available">>,
+            <<"source">> => <<"specs-branch">>
+        },
+        <<"dependencies">> => [],
+        <<"docs-source">> => #{
+            <<"mode">> => <<"specs-branch-canonical-spec">>,
+            <<"spec-path">> => maps:get(<<"source-path">>, Spec, <<>>),
+            <<"schema-source">> => SchemaSource,
+            <<"recipe-display-rule">> =>
+                <<"packaged device-docs module recipe page for the implementation">>,
+            <<"production-note">> =>
+                <<"Canonical devices in this demo are rooted in the specs branch. "
+                    "External/custom devices still use on-weave spec-ID discovery.">>
+        },
+        <<"spec-status">> => maps:get(<<"spec-status">>, Spec, <<"missing">>)
+    }).
+
+canonical_spec_schema(Device, undefined, _Opts) ->
+    {
+        #{},
+        [],
+        #{
+            <<"mode">> => <<"implementation-derived-unavailable">>,
+            <<"device">> => Device,
+            <<"status">> => <<"missing-module">>
+        }
+    };
+canonical_spec_schema(Device, Module, Opts) ->
+    case implementation_derived_schema(Device, Opts) of
+        {ok, Schema, SchemaOrder, Source} ->
+            {
+                Schema,
+                SchemaOrder,
+                Source#{
+                    <<"mode">> => <<"implementation-derived">>,
+                    <<"device">> => Device,
+                    <<"source-module">> => atom_to_binary(Module, utf8),
+                    <<"spec-source">> => <<"specs-branch">>
+                }
+            };
+        {error, Reason} ->
+            {
+                #{},
+                [],
+                #{
+                    <<"mode">> => <<"implementation-derived-unavailable">>,
+                    <<"device">> => Device,
+                    <<"module">> => atom_to_binary(Module, utf8),
+                    <<"status">> => <<"unavailable">>,
+                    <<"reason">> => format_reason(Reason)
+                }
             }
     end.
+
+canonical_spec_recipes(undefined) ->
+    #{};
+canonical_spec_recipes(Module) ->
+    RelPath = canonical_module_recipe_relpath(Module),
+    case filelib:is_file(binary_to_list(device_docs_path(RelPath))) of
+        true ->
+            recipes_from_sources([{<<"implementation-notes">>, RelPath}]);
+        false ->
+            #{}
+    end.
+
+canonical_spec_implementations(undefined) ->
+    [];
+canonical_spec_implementations(Module) ->
+    [
+        #{
+            <<"name">> => atom_to_binary(Module, utf8),
+            <<"module">> => atom_to_binary(Module, utf8),
+            <<"source">> => <<"preloaded-device-module">>,
+            <<"status">> => <<"preloaded-source">>
+        }
+    ].
+
+canonical_module_recipe_relpath(Module) ->
+    ModuleBin = atom_to_binary(Module, utf8),
+    FileSlug0 =
+        case ModuleBin of
+            <<"dev_wasm">> -> <<"dev-wasm">>;
+            Other -> binary:replace(Other, <<"_">>, <<"-">>, [global])
+        end,
+    <<"docs/device-recipes/modules/", FileSlug0/binary, ".md">>.
+
+canonical_spec_device(Device) ->
+    lists:member(Device, canonical_spec_devices()).
+
+canonical_spec_devices() ->
+    Specs = filelib:wildcard("specs/*.md"),
+    lists:sort(
+        [
+            hb_util:bin(filename:rootname(filename:basename(Spec)))
+        || Spec <- Specs,
+            canonical_spec_filename(Spec)
+        ]
+    ).
+
+canonical_spec_filename(Spec) ->
+    Name = hb_util:bin(filename:rootname(filename:basename(Spec))),
+    binary:match(Name, <<"@">>) =/= nomatch.
+
+canonical_device_module(Device) ->
+    {Name, _Version} = split_device_id(Device),
+    ModuleBin = canonical_device_module_name(Name),
+    list_to_atom(binary_to_list(ModuleBin)).
+
+canonical_device_module_name(<<"wasm-64">>) ->
+    <<"dev_wasm">>;
+canonical_device_module_name(Name) ->
+    <<"dev_", (binary:replace(Name, <<"-">>, <<"_">>, [global]))/binary>>.
 
 on_weave_node_devices(Opts) ->
     Builtins = [?ARWEAVE_DEVICE, ?MESSAGE_DEVICE, ?COOKBOOK_DEVICE],
@@ -499,8 +716,8 @@ on_weave_info_data(Device, SpecID, Opts) ->
     SpecSigner = maps:get(<<"signer">>, Spec, <<>>),
     SchemaDoc = on_weave_official_json_doc(<<"Device-Schema">>, <<"schema-for-device">>, SpecID, SpecSigner, Opts),
     SchemaPayload = docs_payload(SchemaDoc),
-    Schema = on_weave_schema(Device, SchemaPayload),
-    SchemaOrder = on_weave_schema_order(SchemaPayload, Schema),
+    {Schema, SchemaOrder, SchemaSource} =
+        docs_schema_for_device(Device, SpecID, SchemaPayload, SchemaDoc, Opts),
     Recipes = on_weave_recipe_docs(SpecID, SpecSigner, Opts),
     Summary =
         maps:get(
@@ -525,6 +742,7 @@ on_weave_info_data(Device, SpecID, Opts) ->
         <<"keys">> => on_weave_key_summaries(Device, Schema, SchemaOrder),
         <<"schema">> => Schema,
         <<"schema-order">> => SchemaOrder,
+        <<"schema-source">> => SchemaSource,
         <<"spec">> => Spec,
         <<"recipes">> => Recipes,
         <<"recipe-count">> => map_size(Recipes),
@@ -533,6 +751,7 @@ on_weave_info_data(Device, SpecID, Opts) ->
             <<"spec">> => SpecID,
             <<"schema">> => maps:get(<<"txid">>, SchemaDoc, <<>>),
             <<"schema-status">> => maps:get(<<"status">>, SchemaDoc, <<"missing">>),
+            <<"schema-source">> => maps:get(<<"mode">>, SchemaSource, <<"unknown">>),
             <<"recipes">> => <<"recipe-for-device graph query">>,
             <<"source">> => <<"on-weave">>
         },
@@ -541,8 +760,10 @@ on_weave_info_data(Device, SpecID, Opts) ->
             <<"mode">> => <<"on-weave-by-spec-id">>,
             <<"spec-id">> => SpecID,
             <<"spec-signer">> => SpecSigner,
+            <<"schema-source">> => SchemaSource,
             <<"schema-display-rule">> =>
-                <<"latest Device-Schema where owner is the spec signer">>,
+                <<"prefer implementation-derived schema; fall back to latest "
+                    "Device-Schema where owner is the spec signer">>,
             <<"recipe-display-rule">> =>
                 <<"Device-Recipe messages tagged recipe-for-device, any owner">>
         },
@@ -1168,15 +1389,12 @@ device_key_summary(Device, Name, Kind, Description) ->
 arweave_schema(Opts) ->
     Static = maps:from_list([{Name, arweave_key_schema(Name)} || Name <- arweave_key_order()]),
     Static#{
-        <<"generated">> => generated_schema(Opts),
-        <<"source">> => <<"hb_types:extract(dev_arweave, Opts)">>
+        <<"generated">> => generated_schema(?ARWEAVE_DEVICE, Opts),
+        <<"source">> => <<"hb_types:extract(\"arweave@2.9\", Opts)">>
     }.
 
-generated_schema(Opts) ->
-    generated_schema(dev_arweave, Opts).
-
-generated_schema(Module, Opts) ->
-    case hb_types:extract(Module, Opts#{ <<"hashpath">> => ignore }) of
+generated_schema(Device, Opts) ->
+    case hb_types:extract(Device, Opts#{ <<"hashpath">> => ignore }) of
         {ok, Schema} -> Schema;
         {error, Reason} ->
             #{
@@ -1184,6 +1402,160 @@ generated_schema(Module, Opts) ->
                 <<"reason">> => hb_util:bin(io_lib:format("~tp", [Reason]))
             }
     end.
+
+curated_schema_source(Device, Module, Order, Opts) ->
+    ExtractStatus =
+        case implementation_derived_schema(Device, Opts) of
+            {ok, _Schema, DerivedOrder, Source} ->
+                Source#{
+                    <<"status">> => <<"present">>,
+                    <<"key-count">> => length(DerivedOrder)
+                };
+            {error, Reason} ->
+                #{
+                    <<"status">> => <<"unavailable">>,
+                    <<"reason">> => format_reason(Reason)
+                }
+        end,
+    #{
+        <<"mode">> => <<"curated-plus-implementation-derived">>,
+        <<"device">> => Device,
+        <<"display">> => <<"curated docs schema with embedded hb_types extraction">>,
+        <<"curated-key-count">> => length(Order),
+        <<"implementation">> => atom_to_binary(Module, utf8),
+        <<"extractor">> => <<"hb_types:extract/2">>,
+        <<"extract-status">> => ExtractStatus
+    }.
+
+docs_schema_for_device(Device, SpecID, SchemaPayload, SchemaDoc, Opts) ->
+    case implementation_derived_schema(Device, Opts) of
+        {ok, Schema, SchemaOrder, Source} ->
+            {
+                Schema,
+                SchemaOrder,
+                Source#{
+                    <<"mode">> => <<"implementation-derived">>,
+                    <<"spec-id">> => SpecID,
+                    <<"fallback-status">> => maps:get(<<"status">>, SchemaDoc, <<"missing">>),
+                    <<"fallback-txid">> => maps:get(<<"txid">>, SchemaDoc, <<>>)
+                }
+            };
+        {error, Reason} ->
+            Schema = on_weave_schema(Device, SchemaPayload),
+            SchemaOrder = on_weave_schema_order(SchemaPayload, Schema),
+            {
+                Schema,
+                SchemaOrder,
+                #{
+                    <<"mode">> => <<"trusted-on-weave-fallback">>,
+                    <<"spec-id">> => SpecID,
+                    <<"status">> => maps:get(<<"status">>, SchemaDoc, <<"missing">>),
+                    <<"txid">> => maps:get(<<"txid">>, SchemaDoc, <<>>),
+                    <<"implementation-derived-status">> => <<"unavailable">>,
+                    <<"implementation-derived-reason">> => format_reason(Reason),
+                    <<"display-rule">> =>
+                        <<"latest Device-Schema where owner is the spec signer">>
+                }
+            }
+    end.
+
+implementation_derived_schema(Device, Opts) ->
+    case hb_types:extract(Device, Opts#{ <<"hashpath">> => ignore }) of
+        {ok, #{ <<"keys">> := Keys } = Extracted} when is_map(Keys), map_size(Keys) > 0 ->
+            Schema =
+                maps:from_list(
+                    [
+                        {Key, implementation_schema_key(Device, Key, KeySchema)}
+                    || {Key, KeySchema} <- maps:to_list(Keys)
+                    ]
+                ),
+            Order = lists:sort(maps:keys(Schema)),
+            {ok,
+                Schema,
+                Order,
+                #{
+                    <<"status">> => <<"present">>,
+                    <<"extractor">> => <<"hb_types:extract/2">>,
+                    <<"module">> => maps:get(<<"module">>, Extracted, hb_util:bin(Device)),
+                    <<"key-count">> => map_size(Schema)
+                }
+            };
+        {ok, #{ <<"keys">> := Keys }} when is_map(Keys) ->
+            {error, no_public_type_keys};
+        {ok, Other} ->
+            {error, {unexpected_schema_shape, Other}};
+        {error, Reason} ->
+            {error, Reason}
+    end.
+
+implementation_schema_key(Device, Key, KeySchema) ->
+    DeviceID =
+        case is_binary(Device) of
+            true -> Device;
+            false -> hb_util:bin(Device)
+        end,
+    Params = implementation_request_params(maps:get(<<"request">>, KeySchema, #{})),
+    Return = implementation_type_label(maps:get(<<"return">>, KeySchema, #{})),
+    maps:merge(
+        schema_key(
+            DeviceID,
+            Key,
+            <<"Implementation-derived type schema extracted from the loaded device.">>,
+            Params
+        ),
+        #{
+            <<"source">> => <<"hb_types:extract/2">>,
+            <<"derived">> => true,
+            <<"returns">> => Return,
+            <<"type-schema">> => KeySchema
+        }
+    ).
+
+implementation_request_params(#{ <<"kind">> := <<"message">>, <<"keys">> := Keys })
+        when is_map(Keys) ->
+    maps:from_list(
+        [
+            {
+                Name,
+                param(
+                    Name,
+                    implementation_required(Presence),
+                    implementation_type_label(Type),
+                    <<"Request field extracted from implementation type metadata.">>,
+                    <<"">>
+                )
+            }
+        || {Name, #{ <<"presence">> := Presence, <<"type">> := Type }} <- maps:to_list(Keys)
+        ]
+    );
+implementation_request_params(_Schema) ->
+    #{}.
+
+implementation_required(required) -> true;
+implementation_required(<<"required">>) -> true;
+implementation_required(_) -> false.
+
+implementation_type_label(#{ <<"kind">> := <<"message">>, <<"keys">> := Keys }) when is_map(Keys) ->
+    case maps:keys(Keys) of
+        [] -> <<"message">>;
+        Names -> iolist_to_binary([<<"message(">>, join_names(Names), <<")">>])
+    end;
+implementation_type_label(#{ <<"kind">> := <<"list">>, <<"item">> := Item }) ->
+    iolist_to_binary([<<"list<">>, implementation_type_label(Item), <<">">>]);
+implementation_type_label(#{ <<"kind">> := <<"tuple">>, <<"items">> := Items }) ->
+    implementation_join_type(<<"tuple(">>, Items, <<")">>);
+implementation_type_label(#{ <<"kind">> := <<"union">>, <<"members">> := Members }) ->
+    implementation_join_type(<<"union(">>, Members, <<")">>);
+implementation_type_label(#{ <<"kind">> := <<"literal">>, <<"value">> := Value }) ->
+    iolist_to_binary([<<"literal:">>, hb_util:bin(io_lib:format("~tp", [Value]))]);
+implementation_type_label(#{ <<"kind">> := Kind }) ->
+    hb_util:bin(Kind);
+implementation_type_label(_Type) ->
+    <<"any">>.
+
+implementation_join_type(Prefix, Items, Suffix) ->
+    Labels = [implementation_type_label(Item) || Item <- Items],
+    iolist_to_binary([Prefix, lists:join(<<",">>, Labels), Suffix]).
 
 arweave_key_schema(<<"status">>) ->
     schema_key(
@@ -1288,6 +1660,10 @@ message_key_summaries() ->
     [
         device_key_summary(?MESSAGE_DEVICE, <<"default field access">>, <<"computed">>,
             <<"Read public fields directly by path segment.">>),
+        device_key_summary(?MESSAGE_DEVICE, <<"docs">>, <<"computed">>,
+            <<"Return protocol-native documentation for the message device.">>),
+        device_key_summary(?MESSAGE_DEVICE, <<"schema">>, <<"computed">>,
+            <<"Return the schema index for the message device.">>),
         device_key_summary(?MESSAGE_DEVICE, <<"keys">>, <<"computed">>,
             <<"List public keys visible on the message.">>),
         device_key_summary(?MESSAGE_DEVICE, <<"set">>, <<"computed">>,
@@ -1321,8 +1697,8 @@ cookbook_key_summaries() ->
 message_schema(Opts) ->
     Static = maps:from_list([{Name, message_key_schema(Name)} || Name <- message_key_order()]),
     Static#{
-        <<"generated">> => generated_schema(dev_message, Opts),
-        <<"source">> => <<"hb_types:extract(dev_message, Opts)">>
+        <<"generated">> => generated_schema(?MESSAGE_DEVICE, Opts),
+        <<"source">> => <<"hb_types:extract(\"message@1.0\", Opts)">>
     }.
 
 message_key_schema(<<"field">>) ->
@@ -1336,6 +1712,20 @@ message_key_schema(<<"field">>) ->
                     <<"Public key present in the message, for example greeting or count.">>,
                     <<"greeting">>)
         }
+    );
+message_key_schema(<<"docs">>) ->
+    schema_key(
+        ?MESSAGE_DEVICE,
+        <<"docs">>,
+        <<"Return protocol-native documentation for the message device.">>,
+        #{}
+    );
+message_key_schema(<<"schema">>) ->
+    schema_key(
+        ?MESSAGE_DEVICE,
+        <<"schema">>,
+        <<"Return the schema index for the message device.">>,
+        #{}
     );
 message_key_schema(<<"keys">>) ->
     schema_key(
@@ -1416,8 +1806,8 @@ message_key_schema(<<"verify">>) ->
 cookbook_schema(Opts) ->
     Static = maps:from_list([{Name, cookbook_key_schema(Name)} || Name <- cookbook_key_order()]),
     Static#{
-        <<"generated">> => generated_schema(dev_cookbook, Opts),
-        <<"source">> => <<"hb_types:extract(dev_cookbook, Opts)">>
+        <<"generated">> => generated_schema(?COOKBOOK_DEVICE, Opts),
+        <<"source">> => <<"hb_types:extract(\"cookbook@1.0\", Opts)">>
     }.
 
 cookbook_key_schema(<<"index">>) ->
@@ -1971,7 +2361,10 @@ arweave_key_order() ->
     ].
 
 message_key_order() ->
-    [<<"field">>, <<"keys">>, <<"set">>, <<"remove">>, <<"id">>, <<"commit">>, <<"verify">>].
+    [
+        <<"field">>, <<"docs">>, <<"schema">>, <<"keys">>, <<"set">>,
+        <<"remove">>, <<"id">>, <<"commit">>, <<"verify">>
+    ].
 
 cookbook_key_order() ->
     [<<"index">>, <<"node">>, <<"device">>, <<"schema">>, <<"spec">>, <<"recipes">>].
@@ -2008,6 +2401,7 @@ render_device_html(Data) ->
             <<"<p class=\"eyebrow\">Device</p><h1>~">>,
             esc(maps:get(<<"id">>, Device)),
             <<"</h1><p>">>, esc(maps:get(<<"summary">>, Data)), <<"</p>">>,
+            schema_source_note(Data),
             device_section_index(SchemaOrder, Spec, Recipes),
             <<"<h2 id=\"schema\">Schema</h2><table><thead><tr>"
                 "<th>Key</th><th>Description</th><th>Parameters</th></tr></thead><tbody>">>,
@@ -2033,7 +2427,9 @@ render_schema_index_html(Data) ->
     Content =
         [
             <<"<p class=\"eyebrow\">Schema</p><h1>~">>, esc(DeviceID),
-            <<" schema</h1><table><thead><tr><th>Key</th><th>Description</th>"
+            <<" schema</h1>">>,
+            schema_source_note(Data),
+            <<"<table><thead><tr><th>Key</th><th>Description</th>"
                 "<th>Parameters</th></tr></thead><tbody>">>,
             schema_rows(DeviceID, Schema, SchemaOrder),
             <<"</tbody></table>">>
@@ -2993,8 +3389,12 @@ docs_sidebar(Items) ->
 
 device_info_path(DeviceID) ->
     <<"/~", DeviceID/binary, "/info">>.
+device_docs_route_path(DeviceID) ->
+    <<"/~", DeviceID/binary, "/docs">>.
 device_schema_path(DeviceID) ->
     <<"/~", DeviceID/binary, "/info/schema">>.
+device_direct_schema_path(DeviceID) ->
+    <<"/~", DeviceID/binary, "/schema">>.
 device_schema_key_path(DeviceID, Key) ->
     <<"/~", DeviceID/binary, "/info/schema/", Key/binary>>.
 device_spec_path(DeviceID) ->
@@ -3013,7 +3413,9 @@ device_schema_param_path(DeviceID, Key, Param) ->
 device_doc_links(DeviceID) ->
     #{
         <<"self">> => device_info_path(DeviceID),
+        <<"docs">> => device_docs_route_path(DeviceID),
         <<"schema">> => device_schema_path(DeviceID),
+        <<"schema-direct">> => device_direct_schema_path(DeviceID),
         <<"spec">> => device_spec_path(DeviceID),
         <<"recipes">> => device_recipes_path(DeviceID),
         <<"implementations">> => device_implementations_path(DeviceID)
@@ -3661,6 +4063,53 @@ device_section_index(SchemaOrder, Spec, Recipes) ->
         <<" imported pages</span></a>">>,
         <<"</nav>">>
     ].
+
+schema_source_note(Data) ->
+    case maps:get(<<"schema-source">>, Data, undefined) of
+        Source when is_map(Source) ->
+            [
+                <<"<p class=\"hb-docs-renderer-note\"><strong>Schema source:</strong> ">>,
+                esc(schema_source_label(Source)),
+                <<"</p>">>
+            ];
+        _ ->
+            []
+    end.
+
+schema_source_label(Source) ->
+    Mode = maps:get(<<"mode">>, Source, <<"unknown">>),
+    case Mode of
+        <<"implementation-derived">> ->
+            iolist_to_binary([
+                <<"implementation-derived via ">>,
+                maps:get(<<"extractor">>, Source, <<"hb_types:extract/2">>),
+                <<" (">>,
+                hb_util:bin(maps:get(<<"key-count">>, Source, 0)),
+                <<" keys)">>
+            ]);
+        <<"trusted-on-weave-fallback">> ->
+            iolist_to_binary([
+                <<"trusted on-weave fallback">>,
+                schema_source_status_suffix(Source)
+            ]);
+        <<"curated-plus-implementation-derived">> ->
+            iolist_to_binary([
+                <<"curated docs schema with implementation extraction status: ">>,
+                maps:get(
+                    <<"status">>,
+                    maps:get(<<"extract-status">>, Source, #{}),
+                    <<"unknown">>
+                )
+            ]);
+        _ ->
+            Mode
+    end.
+
+schema_source_status_suffix(Source) ->
+    case maps:get(<<"status">>, Source, <<>>) of
+        <<>> -> <<>>;
+        Status -> iolist_to_binary([<<" (">>, Status, <<")">>])
+    end.
 
 spec_index_label(Spec) ->
     case maps:get(<<"spec-status">>, Spec, <<"missing">>) of
@@ -5518,7 +5967,8 @@ node_info_contract_test() ->
     ?assertEqual(<<"/info/guides">>, maps:get(<<"boilerplate-link">>, Data)),
     ?assertEqual(20, length(maps:get(<<"pages">>, maps:get(<<"boilerplate">>, Data)))),
     ?assertEqual(<<"cookbook@1.0">>, maps:get(<<"device">>, maps:get(<<"renderer">>, Data))),
-    ?assertEqual(3, length(maps:get(<<"devices">>, Data))).
+    ExpectedDevices = 3 + length(canonical_spec_devices()) - 2,
+    ?assertEqual(ExpectedDevices, length(maps:get(<<"devices">>, Data))).
 
 node_sidebar_hierarchy_test() ->
     {ok, HTML} = node_info(#{ <<"accept">> => <<"text/html">> }, #{}),
@@ -5686,6 +6136,105 @@ schema_key_route_test() ->
     ?assert(binary:match(Body, <<"View All Node Info</a>">>) =/= nomatch),
     ?assert(binary:match(Body, <<"<li class=\"active\"><a href=\"/~message@1.0/info/schema/field\">">>) =/= nomatch),
     ?assertEqual(nomatch, binary:match(Body, <<"<li class=\"active\"><a href=\"/~message@1.0/info\">">>)).
+
+direct_schema_route_alias_test() ->
+    Msgs = hb_singleton:from(#{ <<"path">> => <<"/~message@1.0/schema/field">> }, #{}),
+    Req = #{ <<"accept">> => <<"text/html">> },
+    {true, {ok, HTML}} = maybe_info_request(Msgs, Req, #{}),
+    Body = maps:get(<<"body">>, HTML),
+    ?assert(binary:match(Body, <<"Schema Key">>) =/= nomatch),
+    ?assert(binary:match(Body, <<"Read any public message field">>) =/= nomatch),
+    ?assert(binary:match(Body, <<"data-active-path=\"/~message@1.0/info/schema/field\"">>) =/= nomatch).
+
+direct_docs_route_alias_test() ->
+    Msgs =
+        hb_singleton:from(
+            #{ <<"path">> => <<"/~message@1.0/docs/recipes/build-a-message-and-serialize-it">> },
+            #{}
+        ),
+    Req = #{ <<"accept">> => <<"text/html">> },
+    {true, {ok, HTML}} = maybe_info_request(Msgs, Req, #{}),
+    Body = maps:get(<<"body">>, HTML),
+    ?assert(binary:match(Body, <<"Recipe</p><h1>message@1.0">>) =/= nomatch),
+    ?assert(binary:match(Body, <<"data-active-path=\"/~message@1.0/info/recipes/build-a-message-and-serialize-it\"">>) =/= nomatch).
+
+node_docs_route_alias_test() ->
+    Msgs = hb_singleton:from(#{ <<"path">> => <<"/docs/schema">> }, #{}),
+    Req = #{ <<"accept">> => <<"application/json">> },
+    {true, {ok, JSON}} = maybe_info_request(Msgs, Req, #{}),
+    ?assertEqual(<<"node-schema-index">>, maps:get(<<"kind">>, JSON)).
+
+schema_source_contract_test() ->
+    Data = device_info_data(?MESSAGE_DEVICE, #{}),
+    Source = maps:get(<<"schema-source">>, Data),
+    ?assertEqual(<<"curated-plus-implementation-derived">>, maps:get(<<"mode">>, Source)),
+    ?assertEqual(<<"dev_message">>, maps:get(<<"implementation">>, Source)),
+    ?assertEqual(
+        <<"present">>,
+        maps:get(<<"status">>, maps:get(<<"extract-status">>, Source))
+    ),
+    Schema = maps:get(<<"schema">>, Data),
+    ?assert(maps:is_key(<<"docs">>, Schema)),
+    ?assert(maps:is_key(<<"schema">>, Schema)),
+    GeneratedKeys = maps:get(<<"keys">>, maps:get(<<"generated">>, Schema)),
+    ?assert(maps:is_key(<<"docs">>, GeneratedKeys)),
+    ?assert(maps:is_key(<<"schema">>, GeneratedKeys)),
+    ?assert(maps:is_key(<<"schema-direct">>, maps:get(<<"links">>, Data))),
+    {ok, HTML} = device_info(?MESSAGE_DEVICE, #{ <<"accept">> => <<"text/html">> }, #{}),
+    ?assert(binary:match(maps:get(<<"body">>, HTML), <<"Schema source:">>) =/= nomatch).
+
+canonical_specs_branch_registry_test() ->
+    ?assertEqual(33, length(canonical_spec_devices())),
+    ?assert(canonical_spec_device(<<"json@1.0">>)),
+    ?assert(canonical_spec_device(<<"ans104@1.0">>)),
+    ?assert(canonical_spec_device(<<"structured@1.0">>)),
+    ?assertNot(canonical_spec_device(<<"arweave@2.9">>)),
+    Data = device_info_data(<<"json@1.0">>, #{}),
+    ?assertEqual(<<"device-info">>, maps:get(<<"kind">>, Data)),
+    ?assertEqual(<<"json@1.0">>, maps:get(<<"device-id">>, Data)),
+    ?assertEqual(<<"present">>, maps:get(<<"spec-status">>, Data)),
+    ?assertEqual(
+        <<"specs-branch-canonical-spec">>,
+        maps:get(<<"mode">>, maps:get(<<"docs-source">>, Data))
+    ),
+    ?assertEqual(
+        <<"implementation-derived">>,
+        maps:get(<<"mode">>, maps:get(<<"schema-source">>, Data))
+    ),
+    ?assert(maps:get(<<"recipe-count">>, Data) >= 1),
+    MeteringData = device_info_data(<<"metering@1.0">>, #{}),
+    MeteringSchema = maps:get(<<"schema">>, MeteringData),
+    ?assertEqual(
+        <<"implementation-derived">>,
+        maps:get(<<"mode">>, maps:get(<<"schema-source">>, MeteringData))
+    ),
+    ?assert(maps:is_key(<<"estimate">>, MeteringSchema)),
+    ?assert(maps:is_key(<<"price">>, MeteringSchema)),
+    ?assertNot(maps:is_key(<<"consume">>, MeteringSchema)).
+
+on_weave_schema_source_fallback_test() ->
+    Payload = #{
+        <<"schema">> => #{
+            <<"quote">> => #{
+                <<"description">> => <<"Quote a price.">>,
+                <<"parameters">> => #{}
+            }
+        },
+        <<"schema-order">> => [<<"quote">>]
+    },
+    SchemaDoc = #{<<"status">> => <<"present">>, <<"txid">> => <<"schema-tx">>},
+    {Schema, Order, Source} =
+        docs_schema_for_device(
+            <<"unknown-device@1.0">>,
+            <<"spec-tx">>,
+            Payload,
+            SchemaDoc,
+            #{}
+        ),
+    ?assert(maps:is_key(<<"quote">>, Schema)),
+    ?assertEqual([<<"quote">>], Order),
+    ?assertEqual(<<"trusted-on-weave-fallback">>, maps:get(<<"mode">>, Source)),
+    ?assertEqual(<<"present">>, maps:get(<<"status">>, Source)).
 
 schema_parameter_route_test() ->
     {ok, HTML} = device_info_route(
@@ -5857,7 +6406,8 @@ node_component_routes_test() ->
     ?assert(binary:match(maps:get(<<"body">>, SchemaHTML), <<"Schema index">>) =/= nomatch),
     {ok, Recipes} = node_info_route([<<"recipes">>], #{ <<"accept">> => <<"application/json">> }, #{}),
     ?assertEqual(<<"node-recipes-index">>, maps:get(<<"kind">>, Recipes)),
-    ?assertEqual(3, length(maps:get(<<"devices">>, Recipes))).
+    ExpectedDevices = 3 + length(canonical_spec_devices()) - 2,
+    ?assertEqual(ExpectedDevices, length(maps:get(<<"devices">>, Recipes))).
 
 boilerplate_routes_test() ->
     {ok, Index} = node_info_route([<<"guides">>], #{ <<"accept">> => <<"application/json">> }, #{}),
@@ -6102,22 +6652,21 @@ docs_asset_route_test() ->
     ?assertEqual(<<"text/css; charset=utf-8">>, maps:get(<<"content-type">>, CSS)),
     ?assert(binary:match(maps:get(<<"body">>, CSS), <<"hb-runner">>) =/= nomatch).
 
-unsupported_device_info_route_test() ->
+canonical_and_unsupported_device_info_route_test() ->
     JSONMsgs = hb_singleton:from(#{ <<"path">> => <<"/~json@1.0/info">> }, #{}),
     {true, {ok, JSON}} =
         maybe_info_request(JSONMsgs, #{ <<"accept">> => <<"application/json">> }, #{}),
-    ?assertEqual(404, maps:get(<<"status">>, JSON)),
     ?assertEqual(<<"json@1.0">>, maps:get(<<"device-id">>, JSON)),
-    ?assertEqual(<<"not-documented">>, maps:get(<<"docs-status">>, JSON)),
+    ?assertEqual(<<"present">>, maps:get(<<"spec-status">>, JSON)),
+    ?assertEqual(<<"specs-branch-canonical-spec">>, maps:get(<<"mode">>, maps:get(<<"docs-source">>, JSON))),
     ?assertNotEqual(<<"message@1.0">>, maps:get(<<"device-id">>, JSON)),
 
     HTMLMsgs = hb_singleton:from(#{ <<"path">> => <<"/~ans104@1.0/info">> }, #{}),
     {true, {ok, HTML}} =
         maybe_info_request(HTMLMsgs, #{ <<"accept">> => <<"text/html">> }, #{}),
-    ?assertEqual(404, maps:get(<<"status">>, HTML)),
     ?assertEqual(<<"text/html; charset=utf-8">>, maps:get(<<"content-type">>, HTML)),
     Body = maps:get(<<"body">>, HTML),
-    ?assert(binary:match(Body, <<"~ans104@1.0 docs not available">>) =/= nomatch),
+    ?assert(binary:match(Body, <<"~ans104@1.0">>) =/= nomatch),
     ?assertEqual(nomatch, binary:match(Body, <<"Construct messages from URL fields">>)),
 
     {ok, StructuredSchema} = device_info_route(
@@ -6126,8 +6675,14 @@ unsupported_device_info_route_test() ->
         #{ <<"accept">> => <<"application/json">> },
         #{}
     ),
-    ?assertEqual(404, maps:get(<<"status">>, StructuredSchema)),
-    ?assertEqual(<<"structured@1.0">>, maps:get(<<"device-id">>, StructuredSchema)).
+    ?assert(maps:size(StructuredSchema) > 0),
+
+    UnknownMsgs = hb_singleton:from(#{ <<"path">> => <<"/~not-real@1.0/info">> }, #{}),
+    {true, {ok, Unknown}} =
+        maybe_info_request(UnknownMsgs, #{ <<"accept">> => <<"application/json">> }, #{}),
+    ?assertEqual(404, maps:get(<<"status">>, Unknown)),
+    ?assertEqual(<<"not-real@1.0">>, maps:get(<<"device-id">>, Unknown)),
+    ?assertEqual(<<"not-documented">>, maps:get(<<"docs-status">>, Unknown)).
 
 node_info_sidebar_context_test() ->
     Msgs = hb_singleton:from(#{ <<"path">> => <<"/info">> }, #{}),
