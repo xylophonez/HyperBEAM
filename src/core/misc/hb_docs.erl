@@ -643,7 +643,7 @@ on_weave_spec_markdown(SpecID, Opts) ->
         {ok, Markdown} when is_binary(Markdown) ->
             case text_payload(Markdown) of
                 true -> {ok, Markdown};
-                false -> gateway_item_data(SpecID, Opts)
+                false -> recover_spec_body(Markdown, SpecID, Opts)
             end;
         {ok, Other} ->
             case gateway_item_data(SpecID, Opts) of
@@ -659,6 +659,39 @@ on_weave_spec_markdown(SpecID, Opts) ->
 
 text_payload(Bin) ->
     binary:match(Bin, <<0>>) =:= nomatch.
+
+recover_spec_body(Raw, SpecID, Opts) ->
+    case ans104_body(Raw, Opts) of
+        {ok, Markdown} -> {ok, Markdown};
+        {error, DecodeReason} ->
+            case gateway_item_data(SpecID, Opts) of
+                {ok, Markdown} -> {ok, Markdown};
+                {error, GatewayReason} -> {error, {DecodeReason, GatewayReason}}
+            end
+    end.
+
+ans104_body(Raw, Opts) ->
+    try
+        Item = ar_bundles:deserialize(Raw),
+        Msg = hb_message:convert(
+            Item,
+            <<"structured@1.0">>,
+            <<"ans104@1.0">>,
+            Opts
+        ),
+        case hb_maps:get(<<"body">>, Msg, <<>>, Opts) of
+            Body when is_binary(Body) ->
+                case text_payload(Body) of
+                    true -> {ok, Body};
+                    false -> {error, non_text_ans104_body}
+                end;
+            Other ->
+                {error, {non_binary_ans104_body, Other}}
+        end
+    catch
+        Class:Reason:Stack ->
+            {error, {Class, Reason, Stack}}
+    end.
 
 gateway_item_data(ID, Opts) ->
     Req = #{
