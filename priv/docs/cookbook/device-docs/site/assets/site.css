@@ -2314,6 +2314,55 @@ div#app:empty::before {
     margin-bottom: 20px;
   }
 
+  .mobile-nav-search {
+    margin: 0 0 20px;
+  }
+
+  .mobile-nav-search-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    min-height: 42px;
+    padding: 0 14px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-pill);
+    background: var(--bg-muted);
+    box-sizing: border-box;
+  }
+
+  .mobile-nav-search-icon {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    color: var(--text-tertiary);
+  }
+
+  .mobile-nav-search-icon svg {
+    display: block;
+    width: 18px;
+    height: 18px;
+  }
+
+  .mobile-nav-search-input {
+    flex: 1 1 auto;
+    min-width: 0;
+    height: 40px;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: var(--text);
+    font: inherit;
+    font-size: 0.9375rem;
+  }
+
+  .mobile-nav-search-input::placeholder {
+    color: var(--text-tertiary);
+  }
+
   .mobile-nav-home,
   .mobile-nav-tab {
     display: inline-flex;
