@@ -1037,12 +1037,64 @@ fetch_json_doc(Node, Opts) ->
     ID = maps:get(<<"id">>, Node),
     case hb_client_gateway:data(ID, Opts) of
         {ok, Body} ->
-            try {ok, hb_json:decode(Body)}
-            catch Class:Reason:Stack ->
-                {error, {Class, Reason, Stack}}
+            case json_doc_body(Body) of
+                {ok, JSONBody} ->
+                    try {ok, hb_json:decode(JSONBody)}
+                    catch Class:Reason:Stack ->
+                        {error, {Class, Reason, Stack}}
+                    end;
+                {error, Reason} ->
+                    {error, Reason}
             end;
         Error ->
             Error
+    end.
+
+json_doc_body(Body) when is_binary(Body) ->
+    case json_payload(Body) of
+        true -> {ok, Body};
+        false -> embedded_json_body(Body)
+    end;
+json_doc_body(Other) ->
+    {error, {non_binary_json_body, Other}}.
+
+json_payload(Bin) ->
+    json_prefix(skip_ascii_ws(Bin)).
+
+json_prefix(<<"{", _/binary>>) ->
+    true;
+json_prefix(<<"[", _/binary>>) ->
+    true;
+json_prefix(_Bin) ->
+    false.
+
+embedded_json_body(Bin) ->
+    case binary:match(Bin, <<"ao-type">>) of
+        {Marker, _Len} ->
+            Tail = binary:part(Bin, Marker, byte_size(Bin) - Marker),
+            case embedded_json_start(Tail) of
+                {ok, Pos} ->
+                    Candidate0 = binary:part(Tail, Pos, byte_size(Tail) - Pos),
+                    Candidate = binary_before_nul(Candidate0),
+                    case json_payload(Candidate) of
+                        true -> {ok, Candidate};
+                        false -> {error, non_json_embedded_body}
+                    end;
+                error ->
+                    {error, missing_embedded_json_body}
+            end;
+        nomatch ->
+            {error, non_json_body}
+    end.
+
+embedded_json_start(Bin) ->
+    case binary:match(Bin, <<"{">>) of
+        {Pos, _Len} -> {ok, Pos};
+        nomatch ->
+            case binary:match(Bin, <<"[">>) of
+                {Pos, _Len} -> {ok, Pos};
+                nomatch -> error
+            end
     end.
 
 doc_item_metadata(Node, Opts) ->
@@ -5448,6 +5500,15 @@ raw_ans104_body_embedded_markdown_binary_test() ->
 raw_ans104_body_rejects_wrapper_binary_test() ->
     Item = #tx{data = <<131, 116, 0, 0, 0, 1, 100, 0, 4, "body">>},
     ?assertEqual({error, unsupported_ans104_shape}, raw_ans104_body(Item)).
+
+json_doc_body_plain_json_test() ->
+    JSON = <<"{\"schema\":{\"quote\":{}}}">>,
+    ?assertEqual({ok, JSON}, json_doc_body(JSON)).
+
+json_doc_body_embedded_binary_test() ->
+    JSON = <<"{\"schema\":{\"quote\":{}}}">>,
+    Wrapped = <<0, 0, "ao-type", 0, "binary", 0, JSON/binary>>,
+    ?assertEqual({ok, JSON}, json_doc_body(Wrapped)).
 
 node_info_contract_test() ->
     Data = node_info_data(#{ <<"port">> => 9999 }),
