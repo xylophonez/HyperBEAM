@@ -550,6 +550,36 @@ missing_on_weave_spec(Device, SpecID, Reason) ->
             }.
 
 on_weave_spec_markdown(SpecID, Opts) ->
+    case cached_spec_markdown(SpecID, Opts) of
+        {ok, Markdown} ->
+            {ok, Markdown};
+        {error, CacheReason} ->
+            case gateway_spec_markdown(SpecID, Opts) of
+                {ok, Markdown} -> {ok, Markdown};
+                {error, GatewayReason} -> {error, {CacheReason, GatewayReason}}
+            end
+    end.
+
+cached_spec_markdown(SpecID, Opts) ->
+    case hb_cache:read(SpecID, Opts) of
+        {ok, Item} -> cached_spec_body(Item, Opts);
+        {error, Reason} -> {error, {cache_read_failed, Reason}};
+        Other -> {error, {cache_read_unexpected, Other}}
+    end.
+
+cached_spec_body(Item, Opts) ->
+    case raw_ans104_body(Item) of
+        {ok, Markdown} ->
+            {ok, Markdown};
+        {error, RawReason} ->
+            case structured_ans104_body(Item, Opts) of
+                {ok, Markdown} -> {ok, Markdown};
+                {error, StructuredReason} ->
+                    {error, {cache_spec_body_unavailable, RawReason, StructuredReason}}
+            end
+    end.
+
+gateway_spec_markdown(SpecID, Opts) ->
     case hb_client_gateway:data(SpecID, Opts) of
         {ok, Markdown} when is_binary(Markdown) ->
             case text_payload(Markdown) of
@@ -726,18 +756,23 @@ gateway_item_data(ID, Opts) ->
         {ok, Data} when is_binary(Data) ->
             {ok, Data};
         {ok, Res} ->
-            Data =
-                case hb_maps:find(<<"data">>, Res, Opts) of
-                    {ok, D} -> D;
-                    _ -> hb_ao:get(<<"body">>, Res, <<>>, Opts)
-                end,
-            case Data of
-                Bin when is_binary(Bin) -> {ok, Bin};
-                Other -> {error, {non_binary_gateway_body, Other}}
-            end;
+            gateway_item_response_body(ID, Res, Opts);
         {error, Reason} ->
             {error, Reason}
     end.
+
+gateway_item_response_body(ID, Res, Opts) when is_map(Res) ->
+    Data =
+        case hb_maps:find(<<"data">>, Res, Opts) of
+            {ok, D} -> D;
+            _ -> hb_ao:get(<<"body">>, Res, <<>>, Opts)
+        end,
+    case Data of
+        Bin when is_binary(Bin) -> {ok, Bin};
+        Other -> {error, {non_binary_gateway_body, ID, Other}}
+    end;
+gateway_item_response_body(ID, Other, _Opts) ->
+    {error, {unexpected_gateway_item_response, ID, Other}}.
 
 on_weave_key_summaries(Device, Schema, Order) ->
     [
@@ -5088,6 +5123,29 @@ raw_ans104_body_embedded_markdown_binary_test() ->
 raw_ans104_body_rejects_wrapper_binary_test() ->
     Item = #tx{data = <<131, 116, 0, 0, 0, 1, 100, 0, 4, "body">>},
     ?assertEqual({error, unsupported_ans104_shape}, raw_ans104_body(Item)).
+
+cached_spec_body_markdown_test() ->
+    Markdown = <<"# Cached spec\n\nLoaded from the signed spec item.">>,
+    ?assertEqual({ok, Markdown}, cached_spec_body(#{ <<"body">> => Markdown }, #{})).
+
+gateway_item_response_shape_test() ->
+    ID = <<"gateway-item-test">>,
+    ?assertEqual(
+        {ok, <<"from-data">>},
+        gateway_item_response_body(ID, #{ <<"data">> => <<"from-data">> }, #{})
+    ),
+    ?assertEqual(
+        {ok, <<"from-body">>},
+        gateway_item_response_body(ID, #{ <<"body">> => <<"from-body">> }, #{})
+    ),
+    ?assertEqual(
+        {error, {non_binary_gateway_body, ID, checkout_timeout}},
+        gateway_item_response_body(ID, #{ <<"data">> => checkout_timeout }, #{})
+    ),
+    ?assertEqual(
+        {error, {unexpected_gateway_item_response, ID, checkout_timeout}},
+        gateway_item_response_body(ID, checkout_timeout, #{})
+    ).
 
 node_info_contract_test() ->
     Data = node_info_data(#{ <<"port">> => 9999 }),

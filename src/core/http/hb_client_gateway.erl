@@ -111,23 +111,32 @@ data(ID, Opts) ->
     case hb_http:request(Req, Opts) of
         {ok, Data} when is_binary(Data) -> {ok, Data};
         {ok, Res} ->
-            Data =
-                case hb_maps:find(<<"data">>, Res, Opts) of
-                    {ok, D} -> D;
-                    _ -> hb_ao:get(<<"body">>, Res, <<>>, Opts)
-                end,
-            ?event(gateway,
-                {data,
-                    {id, ID},
-                    {response, Res},
-                    {data, Data}
-                }
-            ),
-            {ok, Data};
+            extract_data_response(ID, Res, Opts);
         Res ->
             ?event(gateway, {request_error, {id, ID}, {response, Res}}),
             {error, no_viable_gateway}
     end.
+
+extract_data_response(ID, Res, Opts) when is_map(Res) ->
+    Data =
+        case hb_maps:find(<<"data">>, Res, Opts) of
+            {ok, D} -> D;
+            _ -> hb_ao:get(<<"body">>, Res, <<>>, Opts)
+        end,
+    ?event(gateway,
+        {data,
+            {id, ID},
+            {response, Res},
+            {data, Data}
+        }
+    ),
+    case Data of
+        Bin when is_binary(Bin) -> {ok, Bin};
+        Other -> {error, {non_binary_gateway_data, Other}}
+    end;
+extract_data_response(ID, Other, _Opts) ->
+    ?event(gateway, {unexpected_data_response, {id, ID}, {response, Other}}),
+    {error, {unexpected_gateway_data_response, Other}}.
 
 %% @doc Find the location of the scheduler based on its ID, through GraphQL.
 location(Address, Opts) ->
@@ -514,6 +523,25 @@ subindex_to_tags(Subindex) ->
     <<"[", ListInner/binary, "]">>.
 
 %%% Tests
+gateway_data_response_shape_test() ->
+    ID = <<"gateway-data-test">>,
+    ?assertEqual(
+        {ok, <<"from-data">>},
+        extract_data_response(ID, #{ <<"data">> => <<"from-data">> }, #{})
+    ),
+    ?assertEqual(
+        {ok, <<"from-body">>},
+        extract_data_response(ID, #{ <<"body">> => <<"from-body">> }, #{})
+    ),
+    ?assertEqual(
+        {error, {non_binary_gateway_data, checkout_timeout}},
+        extract_data_response(ID, #{ <<"data">> => checkout_timeout }, #{})
+    ),
+    ?assertEqual(
+        {error, {unexpected_gateway_data_response, checkout_timeout}},
+        extract_data_response(ID, checkout_timeout, #{})
+    ).
+
 device_valid_until_height_query_test() ->
     SpecID = <<"spec">>,
     Alice = <<"alice">>,
