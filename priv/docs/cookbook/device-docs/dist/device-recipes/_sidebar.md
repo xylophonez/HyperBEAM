@@ -1,6 +1,0 @@
-- Device Recipes
-  - [Overview](/device-recipes/index.md)
-  - [Evaluation Against Existing Recipes](/device-recipes/evaluation.md)
-  - [Tests That Are Not User-Level Recipes](/device-recipes/non-user-workflows.md)
-  - [Device Recipe Format](/device-recipes/recipe-format.md)
-  - [Test-Derived Recipe Matrix](/device-recipes/test-matrix.md)

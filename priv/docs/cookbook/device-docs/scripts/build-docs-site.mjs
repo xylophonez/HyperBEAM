@@ -13,7 +13,6 @@ const sectionOrder = [
   'devices',
   'forge',
   'recipes',
-  'device-recipes',
   'reference'
 ];
 
@@ -23,7 +22,6 @@ const sectionTitles = {
   devices: 'Devices',
   forge: 'Device Forge',
   recipes: 'Recipes',
-  'device-recipes': 'Device Recipes',
   reference: 'Reference'
 };
 
@@ -33,7 +31,6 @@ const sectionHomePaths = {
   devices: '/devices/index.md',
   forge: '/forge/index.md',
   recipes: '/recipes/index.md',
-  'device-recipes': '/device-recipes/index.md',
   reference: '/reference/glossary.md'
 };
 

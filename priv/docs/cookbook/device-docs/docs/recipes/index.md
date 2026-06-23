@@ -2,8 +2,6 @@
 
 Recipes shift from device reference to use cases. Each one combines devices into a concrete workflow and names the prerequisites that affect the result.
 
-For test-derived workflow candidates and the explicit list of tests that should not become user-level recipes, see [Device Recipes](/device-recipes/index.md).
-
 ## Local Basics
 
 - [Check node readiness](check-node-readiness.md)

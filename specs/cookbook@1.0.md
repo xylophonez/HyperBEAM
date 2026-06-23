@@ -15,8 +15,7 @@ device instead of relying only on a meta-route special case.
 The device is intentionally thin. It does not own the long-term information
 architecture or replace the full HyperBuddy documentation shell. It dispatches
 renderer keys to `hb_docs`, which supplies schemas, specs, recipes, component
-indexes, HTML rendering, JSON payloads, and imported `~/Dev/device-docs` recipe
-content.
+indexes, HTML rendering, JSON payloads, and on-weave recipe artifact discovery.
 
 ## 2. Device interface
 
@@ -25,10 +24,10 @@ content.
 | `info` | none | Return documentation for `cookbook@1.0` itself. |
 | `index` | none | Render the node-level `/info` documentation index. |
 | `node` | none | Alias of `index`. |
-| `device` | `for` | Render the `/~device@version/info` page for the requested device. |
-| `schema` | `for` | Render the schema page for the requested device. |
-| `spec` | `for` | Render the spec page for the requested device. |
-| `recipes` | `for` | Render the recipes page for the requested device. |
+| `device` | optional `for` | Render the `/~device@version/info` page for the requested device. |
+| `schema` | optional `for` | Render the schema page for the requested device. |
+| `spec` | optional `for` | Render the spec page for the requested device. |
+| `recipes` | optional `for` | Render the recipes page for the requested device. |
 
 If `for` is missing on a device-scoped key, the renderer MUST default to
 `message@1.0`. A leading `~` on the `for` value MUST be accepted and stripped

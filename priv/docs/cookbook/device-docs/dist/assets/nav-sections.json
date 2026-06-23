@@ -463,38 +463,6 @@
       ]
     },
     {
-      "id": "device-recipes",
-      "label": "Device Recipes",
-      "home": "/device-recipes/index.md",
-      "items": [
-        {
-          "title": "Overview",
-          "href": "/device-recipes/index.md",
-          "description": "Overview of this documentation section"
-        },
-        {
-          "title": "Evaluation Against Existing Recipes",
-          "href": "/device-recipes/evaluation.md",
-          "description": "Evaluation"
-        },
-        {
-          "title": "Tests That Are Not User-Level Recipes",
-          "href": "/device-recipes/non-user-workflows.md",
-          "description": "Non User Workflows"
-        },
-        {
-          "title": "Device Recipe Format",
-          "href": "/device-recipes/recipe-format.md",
-          "description": "Recipe Format"
-        },
-        {
-          "title": "Test-Derived Recipe Matrix",
-          "href": "/device-recipes/test-matrix.md",
-          "description": "Test Matrix"
-        }
-      ]
-    },
-    {
       "id": "reference",
       "label": "Reference",
       "home": "/reference/glossary.md",

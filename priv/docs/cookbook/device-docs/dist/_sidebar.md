@@ -5,5 +5,4 @@
 - [Devices](/devices/index.md)
 - [Device Forge](/forge/index.md)
 - [Recipes](/recipes/index.md)
-- [Device Recipes](/device-recipes/index.md)
 - [Reference](/reference/glossary.md)
