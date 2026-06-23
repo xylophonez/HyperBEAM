@@ -7,6 +7,7 @@
 %%% resolver. Additionally, a post-processor can be set, which is executed after
 %%% the AO-Core resolver has returned a result.
 -module(dev_meta).
+-specification("../../../specs/meta@1.0.md").
 -export([info/1, info/3, build/3, handle/2, adopt_node_message/2, is/2, is/3]).
 -export([is_operator/3]).
 -export([is_operator/2]).

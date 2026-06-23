@@ -4,6 +4,7 @@
 %%% renderer-facing contract: HTML negotiation, page dispatch, and the
 %%% protocol-native cookbook surface.
 -module(dev_cookbook).
+-specification("../../../specs/cookbook@1.0.md").
 -implements(<<"cookbook@1.0">>).
 -export([info/1, info/3]).
 -export([index/3, node/3, device/3, schema/3, spec/3, recipes/3]).
@@ -29,7 +30,7 @@ info(_Opts) ->
 %% @doc Return docs for the cookbook renderer itself.
 -spec info(#{ _ => _ }, #{ _ => _ }, #{ _ => _ }) -> {ok, _} | {error, _}.
 info(_Base, Req, Opts) ->
-    {ok, hb_docs_cookbook:render(device, hb_docs:device_info_data(<<"cookbook@1.0">>, Opts), Req)}.
+    hb_docs:device_info(<<"cookbook@1.0">>, Req, Opts).
 
 %% @doc Render the node documentation index.
 -spec index(#{ _ => _ }, #{ _ => _ }, #{ _ => _ }) -> {ok, _} | {error, _}.
@@ -45,7 +46,7 @@ node(Base, Req, Opts) ->
 -spec device(#{ _ => _ }, #{ 'for' => binary(), _ => _ }, #{ _ => _ }) ->
     {ok, _} | {error, _}.
 device(_Base, Req, Opts) ->
-    {ok, hb_docs_cookbook:render(device, hb_docs:device_info_data(requested_device(Req, Opts), Opts), Req)}.
+    hb_docs:device_info(requested_device(Req, Opts), Req, Opts).
 
 %% @doc Render schema for the device named in the `for' parameter.
 -spec schema(#{ _ => _ }, #{ 'for' => binary(), _ => _ }, #{ _ => _ }) ->

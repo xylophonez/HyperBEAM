@@ -110,14 +110,9 @@ supported_device(Device) ->
     supported_device(Device, #{}).
 
 supported_device(Device, Opts) ->
-    case canonical_spec_device(Device) of
-        true ->
-            true;
-        false ->
-            case docs_resolve_spec(Device, Opts) of
-                {ok, _SpecID} -> true;
-                _ -> false
-            end
+    case docs_resolve_spec(Device, Opts) of
+        {ok, SpecID} -> loaded_device_for_spec(Device, SpecID, Opts);
+        _ -> false
     end.
 
 node_info(Req, Opts) ->
@@ -125,8 +120,13 @@ node_info(Req, Opts) ->
     {ok, hb_docs_cookbook:render(node, Data, Req)}.
 
 device_info(Device, Req, Opts) ->
-    Data = device_info_data(Device, Opts),
-    {ok, hb_docs_cookbook:render(device, Data, Req)}.
+    case supported_device(Device, Opts) of
+        true ->
+            Data = device_info_data(Device, Opts),
+            {ok, hb_docs_cookbook:render(device, Data, Req)};
+        false ->
+            {ok, unsupported_device_info_response(Device, Req)}
+    end.
 
 node_info_route([], Req, Opts) ->
     node_info(Req, Opts);
@@ -321,7 +321,7 @@ node_info_data(Opts) ->
                 "runtime device inventory prototype.">>,
         <<"renderer">> => cookbook_renderer(),
         <<"boilerplate-link">> => <<"/info/guides">>,
-        <<"devices">> => canonical_spec_node_devices(Opts) ++ on_weave_node_devices(Opts),
+        <<"devices">> => on_weave_node_devices(Opts),
         <<"boilerplate">> => boilerplate_index(),
         <<"concepts">> => #{
             <<"hyperbeam">> =>
@@ -340,151 +340,26 @@ node_info_data(Opts) ->
     }).
 
 device_info_data(Device, Opts) ->
-    case canonical_spec_device(Device) of
-        true ->
-            canonical_spec_info_data(Device, Opts);
-        false ->
-            case docs_resolve_spec(Device, Opts) of
-                {ok, SpecID} ->
-                    on_weave_info_data(Device, SpecID, Opts);
-                _ ->
-                    #{
-                        <<"kind">> => <<"device-info">>,
-                        <<"device">> => #{ <<"id">> => Device },
-                        <<"status">> => <<"not-implemented">>,
-                        <<"summary">> => <<"No prototype docs payload exists for this device.">>
-                    }
-            end
-    end.
-
-canonical_spec_node_devices(Opts) ->
-    [
-        canonical_spec_node_device(Device, Opts)
-    || Device <- canonical_spec_devices()
-    ].
-
-canonical_spec_node_device(Device, _Opts) ->
-    {Name, Version} = split_device_id(Device),
-    Spec = device_spec_status(Device),
-    Summary =
-        maps:get(
-            <<"summary">>,
-            Spec,
-            <<"Canonical device documented by specs-branch source.">>
-        ),
-    prototype_node_device(Device, Name, Version, Summary).
-
-canonical_spec_info_data(Device, Opts) ->
-    Spec = device_spec_status(Device),
-    Module = canonical_device_module(Device),
-    {Schema, SchemaOrder, SchemaSource} = canonical_spec_schema(Device, Module, Opts),
-    Recipes = canonical_spec_recipes(Spec, Opts),
-    {Name, Version} = split_device_id(Device),
-    Summary =
-        maps:get(
-            <<"summary">>,
-            Spec,
-            <<"Canonical device documented by the specs branch.">>
-        ),
-    maps:merge(device_doc_link_fields(Device), #{
-        <<"kind">> => <<"device-info">>,
-        <<"device">> => #{
-            <<"name">> => Name,
-            <<"version">> => Version,
-            <<"id">> => Device,
-            <<"spec-id">> => Device
-        },
-        <<"device-id">> => Device,
-        <<"device-name">> => Name,
-        <<"device-version">> => Version,
-        <<"summary">> => Summary,
-        <<"renderer">> => cookbook_renderer(),
-        <<"keys">> => on_weave_key_summaries(Device, Schema, SchemaOrder),
-        <<"schema">> => Schema,
-        <<"schema-order">> => SchemaOrder,
-        <<"schema-source">> => SchemaSource,
-        <<"spec">> => Spec,
-        <<"recipes">> => Recipes,
-        <<"recipe-count">> => map_size(Recipes),
-        <<"implementations">> => canonical_spec_implementations(Module),
-        <<"coverage">> => #{
-            <<"spec">> => maps:get(<<"source-path">>, Spec, <<>>),
-            <<"spec-status">> => maps:get(<<"spec-status">>, Spec, <<"missing">>),
-            <<"schema-source">> => maps:get(<<"mode">>, SchemaSource, <<"unknown">>),
-            <<"recipes">> => <<"on-weave Device-Recipe artifacts only">>,
-            <<"source">> => <<"specs-branch">>
-        },
-        <<"dependencies">> => [],
-        <<"docs-source">> => #{
-            <<"mode">> => <<"specs-branch-canonical-spec">>,
-            <<"spec-path">> => maps:get(<<"source-path">>, Spec, <<>>),
-            <<"schema-source">> => SchemaSource,
-            <<"recipe-display-rule">> =>
-                <<"on-weave Device-Recipe messages tagged recipe-for-device=<spec-txid>; "
-                    "no packaged or repo-local recipe files are attached">>,
-            <<"production-note">> =>
-                <<"Canonical devices in this demo are rooted in the specs branch. "
-                    "External/custom devices still use on-weave spec-ID discovery.">>
-        },
-        <<"spec-status">> => maps:get(<<"spec-status">>, Spec, <<"missing">>)
-    }).
-
-canonical_spec_schema(Device, undefined, _Opts) ->
-    {
-        #{},
-        [],
-        #{
-            <<"mode">> => <<"implementation-derived-unavailable">>,
-            <<"device">> => Device,
-            <<"status">> => <<"missing-module">>
-        }
-    };
-canonical_spec_schema(Device, Module, Opts) ->
-    case implementation_derived_schema(Device, Opts) of
-        {ok, Schema, SchemaOrder, Source} ->
-            {
-                Schema,
-                SchemaOrder,
-                Source#{
-                    <<"mode">> => <<"implementation-derived">>,
-                    <<"device">> => Device,
-                    <<"source-module">> => atom_to_binary(Module, utf8),
-                    <<"spec-source">> => <<"specs-branch">>
-                }
-            };
-        {error, Reason} ->
-            {
-                #{},
-                [],
-                #{
-                    <<"mode">> => <<"implementation-derived-unavailable">>,
-                    <<"device">> => Device,
-                    <<"module">> => atom_to_binary(Module, utf8),
-                    <<"status">> => <<"unavailable">>,
-                    <<"reason">> => format_reason(Reason)
-                }
-            }
-    end.
-
-canonical_spec_recipes(Spec, Opts) ->
-    case maps:get(<<"txid">>, Spec, <<>>) of
-        SpecID when ?IS_ID(SpecID) ->
-            on_weave_recipe_docs(SpecID, maps:get(<<"signer">>, Spec, <<>>), Opts);
+    case docs_resolve_spec(Device, Opts) of
+        {ok, SpecID} ->
+            case loaded_device_for_spec(Device, SpecID, Opts) of
+                true -> on_weave_info_data(Device, SpecID, Opts);
+                false -> unsupported_device_info_data(Device)
+            end;
         _ ->
-            #{}
+            unsupported_device_info_data(Device)
     end.
 
-canonical_spec_implementations(undefined) ->
-    [];
-canonical_spec_implementations(Module) ->
-    [
-        #{
-            <<"name">> => atom_to_binary(Module, utf8),
-            <<"module">> => atom_to_binary(Module, utf8),
-            <<"source">> => <<"preloaded-device-module">>,
-            <<"status">> => <<"preloaded-source">>
-        }
-    ].
+unsupported_device_info_data(Device) ->
+    #{
+        <<"kind">> => <<"device-info">>,
+        <<"device">> => #{ <<"id">> => Device },
+        <<"device-id">> => Device,
+        <<"status">> => <<"not-implemented">>,
+        <<"docs-status">> => <<"not-documented">>,
+        <<"summary">> =>
+            <<"No on-weave spec-loaded documentation is available for this device.">>
+    }.
 
 canonical_spec_device(Device) ->
     lists:member(Device, canonical_spec_devices()).
@@ -502,16 +377,6 @@ canonical_spec_devices() ->
 canonical_spec_filename(Spec) ->
     Name = hb_util:bin(filename:rootname(filename:basename(Spec))),
     binary:match(Name, <<"@">>) =/= nomatch.
-
-canonical_device_module(Device) ->
-    {Name, _Version} = split_device_id(Device),
-    ModuleBin = canonical_device_module_name(Name),
-    list_to_atom(binary_to_list(ModuleBin)).
-
-canonical_device_module_name(<<"wasm-64">>) ->
-    <<"dev_wasm">>;
-canonical_device_module_name(Name) ->
-    <<"dev_", (binary:replace(Name, <<"-">>, <<"_">>, [global]))/binary>>.
 
 on_weave_node_devices(Opts) ->
     NameResolvers = hb_opts:get(<<"name-resolvers">>, [], Opts),
@@ -532,7 +397,17 @@ on_weave_node_devices(Opts) ->
                 ?IS_ID(SpecID)
             ]
         ),
-    [on_weave_node_device(DeviceID, SpecID) || {DeviceID, SpecID} <- Pairs].
+    [
+        on_weave_node_device(DeviceID, SpecID)
+    || {DeviceID, SpecID} <- Pairs,
+        loaded_device_for_spec(DeviceID, SpecID, Opts)
+    ].
+
+loaded_device_for_spec(_DeviceID, SpecID, Opts) ->
+    case hb_device_load:reference(SpecID, Opts) of
+        {ok, Module} when is_atom(Module) -> true;
+        _ -> false
+    end.
 
 on_weave_node_device(DeviceID, SpecID) ->
     {Name, Version} = split_device_id(DeviceID),
@@ -1918,8 +1793,8 @@ render_unsupported_device_html(Device) ->
         [
             <<"<p class=\"eyebrow\">Device</p><h1>">>,
             esc(device_marked_id(Device)),
-            <<" docs not available</h1><p>No prototype /info documentation is "
-                "wired for this device yet.</p><p><a href=\"/info\">View All Node Info</a></p>">>
+            <<" docs not available</h1><p>No on-weave spec-loaded documentation is "
+                "available for this device.</p><p><a href=\"/info\">View All Node Info</a></p>">>
         ],
     docs_page_html(<<"HyperBEAM Device Docs Not Available">>, ActivePath, node_sidebar([], ActivePath), Content).
 
@@ -4966,11 +4841,11 @@ summary_from_lines([Line | Rest]) ->
 
 summary_line_usable(<<>>) ->
     false;
-summary_line_usable(<<"- **Device name:", _/binary>>) ->
+summary_line_usable(<<"- **Device name", _/binary>>) ->
     false;
-summary_line_usable(<<"- **Depends-on:", _/binary>>) ->
+summary_line_usable(<<"- **Depends-on", _/binary>>) ->
     false;
-summary_line_usable(<<"- **Status:", _/binary>>) ->
+summary_line_usable(<<"- **Status", _/binary>>) ->
     false;
 summary_line_usable(<<"Source tests:", _/binary>>) ->
     false;
@@ -5208,7 +5083,7 @@ node_info_contract_test() ->
     ?assertEqual(<<"/info/guides">>, maps:get(<<"boilerplate-link">>, Data)),
     ?assertEqual(20, length(maps:get(<<"pages">>, maps:get(<<"boilerplate">>, Data)))),
     ?assertEqual(<<"cookbook@1.0">>, maps:get(<<"device">>, maps:get(<<"renderer">>, Data))),
-    ?assertEqual(length(canonical_spec_devices()), length(maps:get(<<"devices">>, Data))).
+    ?assertEqual([], maps:get(<<"devices">>, Data)).
 
 node_sidebar_hierarchy_test() ->
     {ok, HTML} = node_info(#{ <<"accept">> => <<"text/html">> }, #{}),
@@ -5237,14 +5112,11 @@ arweave_without_spec_is_unsupported_test() ->
 message_info_contract_test() ->
     Data = device_info_data(?MESSAGE_DEVICE, #{}),
     ?assertEqual(<<"device-info">>, maps:get(<<"kind">>, Data)),
-    ?assertEqual(<<"/~message@1.0/info/schema">>, maps:get(<<"schema-link">>, Data)),
-    ?assertEqual(<<"present">>, maps:get(<<"spec-status">>, maps:get(<<"spec">>, Data))),
-    Schema = maps:get(<<"schema">>, Data),
-    ?assert(maps:is_key(<<"docs">>, Schema)),
-    ?assert(maps:is_key(<<"schema">>, Schema)),
-    ?assertNot(maps:is_key(<<"field">>, Schema)),
-    ?assertEqual(0, maps:get(<<"recipe-count">>, Data)),
-    ?assertEqual(#{}, maps:get(<<"recipes">>, Data)).
+    ?assertEqual(<<"message@1.0">>, maps:get(<<"device-id">>, Data)),
+    ?assertEqual(<<"not-implemented">>, maps:get(<<"status">>, Data)),
+    ?assertEqual(<<"not-documented">>, maps:get(<<"docs-status">>, Data)),
+    ?assertNot(maps:is_key(<<"schema">>, Data)),
+    ?assertNot(maps:is_key(<<"recipes">>, Data)).
 
 packaged_device_docs_root_test() ->
     Root = hb_util:bin(packaged_device_docs_root()),
@@ -5253,25 +5125,18 @@ packaged_device_docs_root_test() ->
 
 html_negotiation_test() ->
     {ok, JSON} = device_info(<<"json@1.0">>, #{ <<"accept">> => <<"application/json">> }, #{}),
+    ?assertEqual(404, maps:get(<<"status">>, JSON)),
     ?assertEqual(<<"application/json">>, maps:get(<<"content-type">>, JSON)),
-    ?assertNot(maps:is_key(<<"body">>, decoded_json_response(JSON))),
+    ?assertEqual(<<"not-documented">>, maps:get(<<"docs-status">>, decoded_json_response(JSON))),
     {ok, HTML} = device_info(<<"json@1.0">>, #{ <<"accept">> => <<"text/html">> }, #{}),
+    ?assertEqual(404, maps:get(<<"status">>, HTML)),
     ?assertEqual(<<"text/html; charset=utf-8">>, maps:get(<<"content-type">>, HTML)),
     Body = maps:get(<<"body">>, HTML),
     ?assert(binary:match(Body, <<"~json@1.0">>) =/= nomatch),
-    ?assert(binary:match(Body, <<"<h2 id=\"schema\">Schema</h2><table>">>) =/= nomatch),
+    ?assertEqual(nomatch, binary:match(Body, <<"<h2 id=\"schema\">Schema</h2><table>">>)),
     ?assertEqual(nomatch, binary:match(Body, <<"<h2 id=\"actions\">Actions</h2>">>)),
     ?assertEqual(nomatch, binary:match(Body, <<"hb-docs-action-grid">>)),
-    ?assert(binary:match(Body, <<"/info/assets/site.css">>) =/= nomatch),
-    ?assert(binary:match(Body, <<"/info/assets/prism-core.min.js">>) =/= nomatch),
-    ?assert(binary:match(Body, <<"mobile-menu-toggle">>) =/= nomatch),
-    ?assert(binary:match(Body, <<"site-header-home\" href=\"/info\">View All Node Info">>) =/= nomatch),
-    ?assert(binary:match(Body, <<"mobile-nav-drawer">>) =/= nomatch),
-    ?assert(binary:match(Body, <<"mobile-nav-search-input">>) =/= nomatch),
-    ?assert(binary:match(Body, <<"HBDocsMobileNav">>) =/= nomatch),
-    ?assert(binary:match(Body, <<"HBDocsFooterNav">>) =/= nomatch),
-    ?assert(binary:match(Body, <<"docs-footer-link prev">>) =/= nomatch),
-    ?assert(binary:match(Body, <<"data-active-path=\"/~json@1.0/info\"">>) =/= nomatch),
+    ?assert(binary:match(Body, <<"docs not available">>) =/= nomatch),
     ?assertEqual(nomatch, binary:match(Body, <<"href=\"/~json@1.0/info/recipes/serialize-message-to-json\"">>)),
     ?assertEqual(nomatch, binary:match(Body, <<"id=\"recipe-">>)),
     {ok, MissingRecipe} = device_info_route(
@@ -5283,7 +5148,7 @@ html_negotiation_test() ->
     ?assertEqual(404, maps:get(<<"status">>, MissingRecipe)).
 
 spec_sections_test() ->
-    Spec = maps:get(<<"spec">>, device_info_data(?MESSAGE_DEVICE, #{})),
+    Spec = device_spec_status(?MESSAGE_DEVICE),
     Sections = spec_sections(Spec),
     ?assert(length(Sections) >= 8),
     ?assertEqual(<<"1-overview">>, element(1, hd(Sections))),
@@ -5297,27 +5162,7 @@ spec_sections_test() ->
     )).
 
 message_markdown_rendering_test() ->
-    {ok, HTML} = device_info(?MESSAGE_DEVICE, #{ <<"accept">> => <<"text/html">> }, #{}),
-    Body = maps:get(<<"body">>, HTML),
-    ?assert(binary:match(Body, <<"hb-docs-section-index">>) =/= nomatch),
-    ?assert(binary:match(Body, <<"<h2 id=\"schema\">Schema</h2><table>">>) =/= nomatch),
-    ?assertEqual(nomatch, binary:match(Body, <<"data-template=\"/~message@1.0/{field}\"">>)),
-    ?assertEqual(nomatch, binary:match(Body, <<"<h2 id=\"actions\">Actions</h2>">>)),
-    ?assertEqual(nomatch, binary:match(Body, <<"hb-docs-action-grid">>)),
-    ?assertEqual(nomatch, binary:match(Body, <<"Open full spec">>)),
-    ?assertEqual(nomatch, binary:match(Body, <<"**Device name">>)),
-    ?assert(binary:match(Body, <<"<strong>Device name:</strong>">>) =/= nomatch),
-    ?assert(binary:match(Body, <<"<strong>Dispatch shape">>) =/= nomatch),
-    ?assertEqual(nomatch, binary:match(Body, <<"**Dispatch shape">>)),
-    ?assertEqual(nomatch, binary:match(Body, <<"PRESENT">>)),
-    ?assertEqual(nomatch, binary:match(Body, <<"specs/message@1.0.md">>)),
-    {ok, SpecHTML} = device_info_route(
-        ?MESSAGE_DEVICE,
-        [<<"spec">>],
-        #{ <<"accept">> => <<"text/html">> },
-        #{}
-    ),
-    SpecBody = maps:get(<<"body">>, SpecHTML),
+    SpecBody = iolist_to_binary(render_spec_body(device_spec_status(?MESSAGE_DEVICE))),
     ?assert(binary:match(SpecBody, <<"<strong>Device name:</strong>">>) =/= nomatch),
     ?assert(binary:match(SpecBody, <<"<strong>Dispatch shape">>) =/= nomatch),
     ?assertEqual(nomatch, binary:match(SpecBody, <<"**Dispatch shape">>)),
@@ -5325,12 +5170,7 @@ message_markdown_rendering_test() ->
     ?assertEqual(nomatch, binary:match(SpecBody, <<"specs/message@1.0.md">>)),
     ?assert(binary:match(SpecBody, <<"<h4 id=\"1-overview\">Overview</h4>">>) =/= nomatch),
     ?assertEqual(nomatch, binary:match(SpecBody, <<"<h4 id=\"1-overview\">1. Overview</h4>">>)),
-    ?assert(binary:match(SpecBody, <<"<li class=\"active\"><a href=\"/~message@1.0/info/spec\">">>) =/= nomatch),
-    ?assert(binary:match(SpecBody, <<"href=\"/~message@1.0/info/spec/1-overview\"">>) =/= nomatch),
-    ?assert(binary:match(SpecBody, <<"href=\"/~message@1.0/info/spec/4-resolved-keys-normative\"">>) =/= nomatch),
-    ?assertEqual(nomatch, binary:match(SpecBody, <<"href=\"/~message@1.0/info/spec#">>)),
-    ?assert(binary:match(Body, <<"<table><thead>">>) =/= nomatch),
-    ?assertEqual(nomatch, binary:match(Body, <<"| Key | What it does |">>)).
+    ?assertEqual(nomatch, binary:match(SpecBody, <<"href=\"/~message@1.0/info/spec#">>)).
 
 schema_key_route_test() ->
     Msgs = [
@@ -5340,29 +5180,14 @@ schema_key_route_test() ->
         #{ <<"path">> => <<"docs">> }
     ],
     Req = #{ <<"accept">> => <<"text/html">> },
-    {true, {ok, HTML}} = maybe_info_request(Msgs, Req, #{}),
-    ?assertEqual(<<"text/html; charset=utf-8">>, maps:get(<<"content-type">>, HTML)),
-    Body = maps:get(<<"body">>, HTML),
-    ?assert(binary:match(Body, <<"Schema Key">>) =/= nomatch),
-    ?assert(binary:match(Body, <<"data-active-path=\"/~message@1.0/info/schema/docs\"">>) =/= nomatch),
-    ?assertEqual(nomatch, binary:match(Body, <<"Read any public message field">>)),
-    ?assert(binary:match(Body, <<"<p class=\"eyebrow\">You are viewing</p>">>) =/= nomatch),
-    ?assert(binary:match(Body, <<"sidebar-viewing-device\" href=\"/~message@1.0/info\">~message@1.0</a>">>) =/= nomatch),
-    ?assert(binary:match(Body, <<"sidebar-viewing-back\" href=\"/info/schema\">">>) =/= nomatch),
-    ?assert(binary:match(Body, <<"sidebar-viewing-back-icon">>) =/= nomatch),
-    ?assert(binary:match(Body, <<"View All Devices</a>">>) =/= nomatch),
-    ?assert(binary:match(Body, <<"View All Node Info</a>">>) =/= nomatch),
-    ?assert(binary:match(Body, <<"<li class=\"active\"><a href=\"/~message@1.0/info/schema/docs\">">>) =/= nomatch),
-    ?assertEqual(nomatch, binary:match(Body, <<"<li class=\"active\"><a href=\"/~message@1.0/info\">">>)).
+    {true, {ok, Response}} = maybe_info_request(Msgs, Req, #{}),
+    ?assertEqual(404, maps:get(<<"status">>, Response)).
 
 direct_schema_route_alias_test() ->
     Msgs = hb_singleton:from(#{ <<"path">> => <<"/~message@1.0/schema/docs">> }, #{}),
     Req = #{ <<"accept">> => <<"text/html">> },
-    {true, {ok, HTML}} = maybe_info_request(Msgs, Req, #{}),
-    Body = maps:get(<<"body">>, HTML),
-    ?assert(binary:match(Body, <<"Schema Key">>) =/= nomatch),
-    ?assertEqual(nomatch, binary:match(Body, <<"Read any public message field">>)),
-    ?assert(binary:match(Body, <<"data-active-path=\"/~message@1.0/info/schema/docs\"">>) =/= nomatch).
+    {true, {ok, Response}} = maybe_info_request(Msgs, Req, #{}),
+    ?assertEqual(404, maps:get(<<"status">>, Response)).
 
 direct_docs_route_alias_test() ->
     Msgs =
@@ -5371,10 +5196,8 @@ direct_docs_route_alias_test() ->
             #{}
         ),
     Req = #{ <<"accept">> => <<"text/html">> },
-    {true, {ok, HTML}} = maybe_info_request(Msgs, Req, #{}),
-    Body = maps:get(<<"body">>, HTML),
-    ?assert(binary:match(Body, <<"Schema Key">>) =/= nomatch),
-    ?assert(binary:match(Body, <<"data-active-path=\"/~message@1.0/info/schema/docs\"">>) =/= nomatch).
+    {true, {ok, Response}} = maybe_info_request(Msgs, Req, #{}),
+    ?assertEqual(404, maps:get(<<"status">>, Response)).
 
 node_docs_route_alias_test() ->
     Msgs = hb_singleton:from(#{ <<"path">> => <<"/docs/schema">> }, #{}),
@@ -5384,21 +5207,20 @@ node_docs_route_alias_test() ->
     ?assertEqual(<<"node-schema-index">>, maps:get(<<"kind">>, JSON)).
 
 schema_source_contract_test() ->
-    Data = device_info_data(?MESSAGE_DEVICE, #{}),
-    Source = maps:get(<<"schema-source">>, Data),
+    {Schema, _Order, Source} =
+        docs_schema_for_device(
+            ?MESSAGE_DEVICE,
+            <<"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa">>,
+            #{}
+        ),
     ?assertEqual(<<"implementation-derived">>, maps:get(<<"mode">>, Source)),
-    ?assertEqual(<<"dev_message">>, maps:get(<<"source-module">>, Source)),
     ?assertEqual(<<"present">>, maps:get(<<"status">>, Source)),
-    Schema = maps:get(<<"schema">>, Data),
     ?assert(maps:is_key(<<"docs">>, Schema)),
     ?assert(maps:is_key(<<"schema">>, Schema)),
     DocsSchema = maps:get(<<"docs">>, Schema),
     ?assertEqual(<<"none">>, maps:get(<<"description-source">>, DocsSchema)),
     ?assertNot(maps:is_key(<<"description">>, DocsSchema)),
-    ?assertNot(maps:is_key(<<"generated">>, Schema)),
-    ?assert(maps:is_key(<<"schema-direct">>, maps:get(<<"links">>, Data))),
-    {ok, HTML} = device_info(?MESSAGE_DEVICE, #{ <<"accept">> => <<"text/html">> }, #{}),
-    ?assert(binary:match(maps:get(<<"body">>, HTML), <<"Schema source:">>) =/= nomatch).
+    ?assertNot(maps:is_key(<<"generated">>, Schema)).
 
 json_safe_schema_payload_test() ->
     ?assertEqual(
@@ -5415,8 +5237,9 @@ json_safe_schema_payload_test() ->
             1 => <<"arity-key">>
         })
     ),
-    Data = device_info_data(?MESSAGE_DEVICE, #{}),
-    DocsSchema = maps:get(<<"docs">>, maps:get(<<"schema">>, Data)),
+    {ok, Schema, _Order, _Source} =
+        implementation_derived_schema(?MESSAGE_DEVICE, #{}),
+    DocsSchema = maps:get(<<"docs">>, Schema),
     DocsRequest = maps:get(<<"request">>, maps:get(<<"type-schema">>, DocsSchema)),
     DocsWildcard = maps:get(<<"wildcard">>, DocsRequest),
     ?assertEqual(<<"optional">>, maps:get(<<"presence">>, DocsWildcard)).
@@ -5430,35 +5253,24 @@ canonical_specs_branch_registry_test() ->
     Data = device_info_data(<<"json@1.0">>, #{}),
     ?assertEqual(<<"device-info">>, maps:get(<<"kind">>, Data)),
     ?assertEqual(<<"json@1.0">>, maps:get(<<"device-id">>, Data)),
-    ?assertEqual(<<"present">>, maps:get(<<"spec-status">>, Data)),
-    ?assertEqual(
-        <<"specs-branch-canonical-spec">>,
-        maps:get(<<"mode">>, maps:get(<<"docs-source">>, Data))
-    ),
-    ?assertEqual(
-        <<"implementation-derived">>,
-        maps:get(<<"mode">>, maps:get(<<"schema-source">>, Data))
-    ),
-    JsonRecipes = maps:get(<<"recipes">>, Data),
-    ?assertEqual(0, maps:get(<<"recipe-count">>, Data)),
-    ?assertEqual(#{}, JsonRecipes),
-    ?assertEqual(
-        <<"on-weave Device-Recipe artifacts only">>,
-        maps:get(<<"recipes">>, maps:get(<<"coverage">>, Data))
-    ),
-    MeteringData = device_info_data(<<"metering@1.0">>, #{}),
-    MeteringSchema = maps:get(<<"schema">>, MeteringData),
-    ?assertEqual(
-        <<"implementation-derived">>,
-        maps:get(<<"mode">>, maps:get(<<"schema-source">>, MeteringData))
-    ),
-    ?assert(maps:is_key(<<"estimate">>, MeteringSchema)),
-    ?assert(maps:is_key(<<"price">>, MeteringSchema)),
-    ?assertNot(maps:is_key(<<"consume">>, MeteringSchema)).
+    ?assertEqual(<<"not-documented">>, maps:get(<<"docs-status">>, Data)),
+    ?assertNot(maps:is_key(<<"schema">>, Data)),
+    SpecID = <<"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa">>,
+    Opts = #{
+        <<"forge-bootstrap">> => #{SpecID => dev_json},
+        <<"forge_bootstrap">> => #{SpecID => dev_json},
+        forge_bootstrap => #{SpecID => dev_json},
+        <<"name-resolvers">> => [#{<<"json@1.0">> => SpecID}]
+    },
+    Listed = maps:get(<<"devices">>, node_info_data(Opts)),
+    ?assertEqual(1, length(Listed)),
+    [Device] = Listed,
+    ?assertEqual(<<"json">>, maps:get(<<"name">>, Device)),
+    ?assertEqual(<<"/~json@1.0/info">>, maps:get(<<"href">>, Device)).
 
 derived_schema_description_source_test() ->
-    Data = device_info_data(<<"json@1.0">>, #{}),
-    Schema = maps:get(<<"schema">>, Data),
+    {ok, Schema, _Order, _Source} =
+        implementation_derived_schema(<<"json@1.0">>, #{}),
     ToSchema = maps:get(<<"to">>, Schema),
     ?assertNot(maps:is_key(<<"description">>, ToSchema)),
     ?assertEqual(<<"none">>, maps:get(<<"description-source">>, ToSchema)),
@@ -5484,11 +5296,7 @@ schema_parameter_route_test() ->
         #{ <<"accept">> => <<"text/html">> },
         #{}
     ),
-    ?assertEqual(<<"text/html; charset=utf-8">>, maps:get(<<"content-type">>, HTML)),
-    Body = maps:get(<<"body">>, HTML),
-    ?assert(binary:match(Body, <<"Schema Parameter">>) =/= nomatch),
-    ?assert(binary:match(Body, <<"target">>) =/= nomatch),
-    ?assertEqual(nomatch, binary:match(Body, <<"Return only transaction headers">>)).
+    ?assertEqual(404, maps:get(<<"status">>, HTML)).
 
 recipes_index_route_test() ->
     {ok, HTML} = device_info_route(
@@ -5497,13 +5305,7 @@ recipes_index_route_test() ->
         #{ <<"accept">> => <<"text/html">> },
         #{}
     ),
-    Body = maps:get(<<"body">>, HTML),
-    ?assert(binary:match(Body, <<"message@1.0 recipes">>) =/= nomatch),
-    ?assertEqual(nomatch, binary:match(Body, <<"href=\"/~message@1.0/info/recipes/build-a-message-and-serialize-it\"">>)),
-    ?assert(binary:match(Body, <<"<li class=\"active\"><a href=\"/~message@1.0/info/recipes\">">>) =/= nomatch),
-    ?assertEqual(nomatch, binary:match(Body, <<"id=\"recipe-">>)),
-    ?assertEqual(nomatch, binary:match(Body, <<"href=\"/~message@1.0/info/recipes/">>)),
-    ?assertEqual(nomatch, binary:match(Body, <<"Runnable Workflows">>)).
+    ?assertEqual(404, maps:get(<<"status">>, HTML)).
 
 recipe_route_test() ->
     Msgs =
@@ -5525,10 +5327,7 @@ footer_nav_test() ->
         #{ <<"accept">> => <<"text/html">> },
         #{}
     ),
-    SpecBody = maps:get(<<"body">>, SpecSectionHTML),
-    ?assert(binary:match(SpecBody, <<"data-active-path=\"/~message@1.0/info/spec/1-overview\"">>) =/= nomatch),
-    ?assert(binary:match(SpecBody, <<"<a href=\"/~message@1.0/info/spec\">All spec</a>">>) =/= nomatch),
-    ?assert(binary:match(SpecBody, <<"<a href=\"/~message@1.0/info/spec/2-concepts-terminology\">">>) =/= nomatch).
+    ?assertEqual(404, maps:get(<<"status">>, SpecSectionHTML)).
 
 spec_section_route_test() ->
     Msgs =
@@ -5540,14 +5339,7 @@ spec_section_route_test() ->
         ),
     Req = #{ <<"accept">> => <<"text/html">> },
     {true, {ok, HTML}} = maybe_info_request(Msgs, Req, #{}),
-    Body = maps:get(<<"body">>, HTML),
-    ?assert(binary:match(Body, <<"Specification</p><h1>message@1.0 / Overview">>) =/= nomatch),
-    ?assert(binary:match(Body, <<">Overview</a>">>) =/= nomatch),
-    ?assertEqual(nomatch, binary:match(Body, <<">1. Overview</a>">>)),
-    ?assert(binary:match(Body, <<"data-active-path=\"/~message@1.0/info/spec/1-overview\"">>) =/= nomatch),
-    ?assert(binary:match(Body, <<"<li class=\"active\"><a href=\"/~message@1.0/info/spec/1-overview\">">>) =/= nomatch),
-    ?assert(binary:match(Body, <<"identity device">>) =/= nomatch),
-    ?assertEqual(nomatch, binary:match(Body, <<"href=\"/~message@1.0/info/spec#">>)),
+    ?assertEqual(404, maps:get(<<"status">>, HTML)),
     {ok, NotFound} = device_info_route(
         ?MESSAGE_DEVICE,
         [<<"spec">>, <<"missing-section">>],
@@ -5558,8 +5350,9 @@ spec_section_route_test() ->
 
 device_recipes_summary_test() ->
     {ok, HTML} = device_info(?MESSAGE_DEVICE, #{ <<"accept">> => <<"text/html">> }, #{}),
+    ?assertEqual(404, maps:get(<<"status">>, HTML)),
     Body = maps:get(<<"body">>, HTML),
-    ?assert(binary:match(Body, <<"<h2 id=\"recipes\">Recipes</h2>">>) =/= nomatch),
+    ?assertEqual(nomatch, binary:match(Body, <<"<h2 id=\"recipes\">Recipes</h2>">>)),
     ?assertEqual(nomatch, binary:match(Body, <<"href=\"/~message@1.0/info/recipes/build-a-typed-message-and-read-fields\"">>)),
     ?assertEqual(nomatch, binary:match(Body, <<"href=\"/~message@1.0/info/recipes/">>)),
     ?assertEqual(nomatch, binary:match(Body, <<"id=\"recipe-">>)),
@@ -5634,9 +5427,7 @@ implementations_route_test() ->
         #{ <<"accept">> => <<"text/html">> },
         #{}
     ),
-    Body = maps:get(<<"body">>, HTML),
-    ?assert(binary:match(Body, <<"dev_message">>) =/= nomatch),
-    ?assert(binary:match(Body, <<"preloaded-device-module">>) =/= nomatch).
+    ?assertEqual(404, maps:get(<<"status">>, HTML)).
 
 node_component_routes_test() ->
     {ok, SchemaHTML} = node_info_route([<<"schema">>], #{ <<"accept">> => <<"text/html">> }, #{}),
@@ -5644,7 +5435,7 @@ node_component_routes_test() ->
     {ok, RecipesResponse} = node_info_route([<<"recipes">>], #{ <<"accept">> => <<"application/json">> }, #{}),
     Recipes = decoded_json_response(RecipesResponse),
     ?assertEqual(<<"node-recipes-index">>, maps:get(<<"kind">>, Recipes)),
-    ?assertEqual(length(canonical_spec_devices()), length(maps:get(<<"devices">>, Recipes))).
+    ?assertEqual([], maps:get(<<"devices">>, Recipes)).
 
 boilerplate_routes_test() ->
     {ok, IndexResponse} = node_info_route([<<"guides">>], #{ <<"accept">> => <<"application/json">> }, #{}),
@@ -5742,7 +5533,7 @@ boilerplate_routes_test() ->
     PathingBody = maps:get(<<"body">>, PathingHTML),
     ?assert(binary:match(PathingBody, <<"Pathing in AO-Core">>) =/= nomatch),
     ?assertEqual(nomatch, binary:match(PathingBody, <<"Merged from the HyperBEAM">>)),
-    ?assert(binary:match(PathingBody, <<"href=\"/~message@1.0/info\"">>) =/= nomatch),
+    ?assertEqual(nomatch, binary:match(PathingBody, <<"href=\"/~message@1.0/info\"">>)),
     ?assert(binary:match(PathingBody, <<"<code>~process@1.0</code>">>) =/= nomatch),
     ?assert(binary:match(PathingBody, <<"<code>~patch@1.0</code>">>) =/= nomatch),
     ?assertEqual(nomatch, binary:match(PathingBody, <<"/devices/">>)),
@@ -5842,11 +5633,8 @@ boilerplate_routes_test() ->
 cookbook_device_contract_test() ->
     Data = device_info_data(?COOKBOOK_DEVICE, #{}),
     ?assertEqual(<<"device-info">>, maps:get(<<"kind">>, Data)),
-    ?assertEqual(<<"prototype-renderer-device">>, maps:get(<<"status">>, maps:get(<<"renderer">>, Data))),
-    Spec = maps:get(<<"spec">>, Data),
-    ?assertEqual(<<"present">>, maps:get(<<"spec-status">>, Spec)),
-    ?assertEqual(<<"specs/cookbook@1.0.md">>, maps:get(<<"source-path">>, Spec)),
-    Schema = maps:get(<<"schema">>, Data),
+    ?assertEqual(<<"not-documented">>, maps:get(<<"docs-status">>, Data)),
+    {ok, Schema, _Order, _Source} = implementation_derived_schema(?COOKBOOK_DEVICE, #{}),
     ?assert(maps:is_key(<<"device">>, Schema)),
     DeviceKey = maps:get(<<"device">>, Schema),
     ?assertEqual(<<"for">>, maps:get(<<"parameter-names">>, DeviceKey)),
@@ -5881,7 +5669,7 @@ device_card_label_test() ->
     {true, {ok, HTML}} = maybe_info_request(Msgs, Req, #{}),
     Body = maps:get(<<"body">>, HTML),
     ?assertEqual(nomatch, binary:match(Body, <<"hb-docs-device-card-id\">~arweave@2.9</span>">>)),
-    ?assert(binary:match(Body, <<"hb-docs-device-card-id\">~message@1.0</span>">>) =/= nomatch),
+    ?assertEqual(nomatch, binary:match(Body, <<"hb-docs-device-card-id\">~message@1.0</span>">>)),
     ?assertEqual(nomatch, binary:match(Body, <<"hb-docs-device-card-header">>)).
 
 docs_asset_route_test() ->
@@ -5901,14 +5689,15 @@ canonical_and_unsupported_device_info_route_test() ->
     {true, {ok, JSONResponse}} =
         maybe_info_request(JSONMsgs, #{ <<"accept">> => <<"application/json">> }, #{}),
     JSON = decoded_json_response(JSONResponse),
+    ?assertEqual(404, maps:get(<<"status">>, JSONResponse)),
     ?assertEqual(<<"json@1.0">>, maps:get(<<"device-id">>, JSON)),
-    ?assertEqual(<<"present">>, maps:get(<<"spec-status">>, JSON)),
-    ?assertEqual(<<"specs-branch-canonical-spec">>, maps:get(<<"mode">>, maps:get(<<"docs-source">>, JSON))),
+    ?assertEqual(<<"not-documented">>, maps:get(<<"docs-status">>, JSON)),
     ?assertNotEqual(<<"message@1.0">>, maps:get(<<"device-id">>, JSON)),
 
     HTMLMsgs = hb_singleton:from(#{ <<"path">> => <<"/~ans104@1.0/info">> }, #{}),
     {true, {ok, HTML}} =
         maybe_info_request(HTMLMsgs, #{ <<"accept">> => <<"text/html">> }, #{}),
+    ?assertEqual(404, maps:get(<<"status">>, HTML)),
     ?assertEqual(<<"text/html; charset=utf-8">>, maps:get(<<"content-type">>, HTML)),
     Body = maps:get(<<"body">>, HTML),
     ?assert(binary:match(Body, <<"~ans104@1.0">>) =/= nomatch),
@@ -5921,7 +5710,8 @@ canonical_and_unsupported_device_info_route_test() ->
         #{}
     ),
     StructuredSchema = decoded_json_response(StructuredSchemaResponse),
-    ?assert(maps:size(StructuredSchema) > 0),
+    ?assertEqual(404, maps:get(<<"status">>, StructuredSchemaResponse)),
+    ?assertEqual(<<"not-documented">>, maps:get(<<"docs-status">>, StructuredSchema)),
 
     UnknownMsgs = hb_singleton:from(#{ <<"path">> => <<"/~not-real@1.0/info">> }, #{}),
     {true, {ok, UnknownResponse}} =

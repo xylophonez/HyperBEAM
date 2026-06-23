@@ -14,6 +14,7 @@
 %%% retrieved. If no such prefix is present, the `Request' message is checked
 %%% first, and the `Base' message is checked second.
 -module(dev_apply).
+-specification("../../../specs/apply@1.0.md").
 -export([info/1, pair/3, default/4]).
 -include_lib("eunit/include/eunit.hrl").
 -include("include/hb.hrl").

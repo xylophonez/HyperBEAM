@@ -35,8 +35,9 @@ unsupported_device_response(Device, Req) ->
                     <<"device">> => #{ <<"id">> => Device },
                     <<"device-id">> => Device,
                     <<"docs-status">> => <<"not-documented">>,
+                    <<"status">> => <<"not-implemented">>,
                     <<"summary">> =>
-                        <<"No prototype /info documentation is wired for this device.">>
+                        <<"No on-weave spec-loaded documentation is available for this device.">>
                 }
             )
     end.
