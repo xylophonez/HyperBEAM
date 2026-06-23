@@ -714,16 +714,14 @@ on_weave_node_device(DeviceID, SpecID) ->
 on_weave_info_data(Device, SpecID, Opts) ->
     Spec = on_weave_spec_status(Device, SpecID, Opts),
     SpecSigner = maps:get(<<"signer">>, Spec, <<>>),
-    SchemaDoc = on_weave_official_json_doc(<<"Device-Schema">>, <<"schema-for-device">>, SpecID, SpecSigner, Opts),
-    SchemaPayload = docs_payload(SchemaDoc),
     {Schema, SchemaOrder, SchemaSource} =
-        docs_schema_for_device(Device, SpecID, SchemaPayload, SchemaDoc, Opts),
+        docs_schema_for_device(Device, SpecID, Opts),
     Recipes = on_weave_recipe_docs(SpecID, SpecSigner, Opts),
     Summary =
         maps:get(
             <<"summary">>,
-            SchemaPayload,
-            maps:get(<<"summary">>, Spec, <<"On-weave device docs discovered from the device spec ID.">>)
+            Spec,
+            <<"On-weave device docs discovered from the device spec ID.">>
         ),
     {Name, Version} = split_device_id(Device),
     maps:merge(device_doc_link_fields(Device), #{
@@ -749,29 +747,26 @@ on_weave_info_data(Device, SpecID, Opts) ->
         <<"implementations">> => on_weave_implementations(SpecID, Opts),
         <<"coverage">> => #{
             <<"spec">> => SpecID,
-            <<"schema">> => maps:get(<<"txid">>, SchemaDoc, <<>>),
-            <<"schema-status">> => maps:get(<<"status">>, SchemaDoc, <<"missing">>),
+            <<"schema">> => maps:get(<<"mode">>, SchemaSource, <<"unknown">>),
+            <<"schema-status">> => maps:get(<<"status">>, SchemaSource, <<"unknown">>),
             <<"schema-source">> => maps:get(<<"mode">>, SchemaSource, <<"unknown">>),
             <<"recipes">> => <<"recipe-for-device graph query">>,
             <<"source">> => <<"on-weave">>
         },
-        <<"dependencies">> => maps:get(<<"dependencies">>, SchemaPayload, []),
+        <<"dependencies">> => [],
         <<"docs-source">> => #{
             <<"mode">> => <<"on-weave-by-spec-id">>,
             <<"spec-id">> => SpecID,
             <<"spec-signer">> => SpecSigner,
             <<"schema-source">> => SchemaSource,
             <<"schema-display-rule">> =>
-                <<"prefer implementation-derived schema; fall back to latest "
-                    "Device-Schema where owner is the spec signer">>,
+                <<"implementation-derived schema from the loaded device; "
+                    "Device-Schema artifacts are ignored">>,
             <<"recipe-display-rule">> =>
                 <<"Device-Recipe messages tagged recipe-for-device, any owner">>
         },
         <<"spec-status">> => maps:get(<<"spec-status">>, Spec, <<"missing">>)
     }).
-
-docs_payload(Doc) ->
-    maps:get(<<"payload">>, Doc, #{}).
 
 split_device_id(DeviceID) ->
     case binary:split(DeviceID, <<"@">>) of
@@ -793,32 +788,6 @@ docs_resolve_spec(Ref, Opts) ->
     of
         {ok, SpecID} when ?IS_ID(SpecID) -> {ok, SpecID};
         _ -> {error, <<"device-name-not-resolvable">>}
-    end.
-
-on_weave_official_json_doc(_Type, _TagName, _SpecID, <<>>, _Opts) ->
-    #{<<"status">> => <<"missing">>, <<"reason">> => <<"spec-signer-unavailable">>};
-on_weave_official_json_doc(Type, TagName, SpecID, SpecSigner, Opts) ->
-    on_weave_json_doc(Type, TagName, SpecID, [SpecSigner], Opts).
-
-on_weave_json_doc(Type, TagName, SpecID, Owners, Opts) ->
-    case on_weave_doc_items(Type, TagName, SpecID, Owners, 1, Opts) of
-        {ok, [Node | _]} ->
-            case fetch_json_doc(Node, Opts) of
-                {ok, Payload} ->
-                    maps:merge(doc_item_metadata(Node, Opts), #{
-                        <<"status">> => <<"present">>,
-                        <<"payload">> => Payload
-                    });
-                {error, Reason} ->
-                    maps:merge(doc_item_metadata(Node, Opts), #{
-                        <<"status">> => <<"invalid">>,
-                        <<"reason">> => format_reason(Reason)
-                    })
-            end;
-        {ok, []} ->
-            #{<<"status">> => <<"missing">>};
-        {error, Reason} ->
-            #{<<"status">> => <<"missing">>, <<"reason">> => format_reason(Reason)}
     end.
 
 on_weave_spec_status(Device, SpecID, Opts) ->
@@ -1049,29 +1018,6 @@ gateway_item_data(ID, Opts) ->
             {error, Reason}
     end.
 
-on_weave_schema(Device, Payload) ->
-    Schema0 = maps:get(<<"schema">>, Payload, #{}),
-    maps:from_list(
-        [
-            {Key, on_weave_schema_key(Device, Key, KeySchema)}
-        || {Key, KeySchema} <- maps:to_list(Schema0)
-        ]
-    ).
-
-on_weave_schema_key(Device, Key, KeySchema) ->
-    Params = maps:get(<<"parameters">>, KeySchema, #{}),
-    Desc = maps:get(<<"description">>, KeySchema, <<>>),
-    maps:merge(
-        schema_key(Device, Key, Desc, Params),
-        KeySchema#{<<"parameters">> => Params}
-    ).
-
-on_weave_schema_order(Payload, Schema) ->
-    case maps:get(<<"schema-order">>, Payload, undefined) of
-        Order when is_list(Order) -> Order;
-        _ -> lists:sort(maps:keys(Schema))
-    end.
-
 on_weave_key_summaries(Device, Schema, Order) ->
     [
         device_key_summary(
@@ -1254,70 +1200,6 @@ on_weave_doc_items(Type, TagName, SpecID, Owners, First, Opts) ->
             {error, Reason}
     end.
 
-fetch_json_doc(Node, Opts) ->
-    ID = maps:get(<<"id">>, Node),
-    case hb_client_gateway:data(ID, Opts) of
-        {ok, Body} ->
-            case json_doc_body(Body) of
-                {ok, JSONBody} ->
-                    try {ok, hb_json:decode(JSONBody)}
-                    catch Class:Reason:Stack ->
-                        {error, {Class, Reason, Stack}}
-                    end;
-                {error, Reason} ->
-                    {error, Reason}
-            end;
-        Error ->
-            Error
-    end.
-
-json_doc_body(Body) when is_binary(Body) ->
-    case json_payload(Body) of
-        true -> {ok, Body};
-        false -> embedded_json_body(Body)
-    end;
-json_doc_body(Other) ->
-    {error, {non_binary_json_body, Other}}.
-
-json_payload(Bin) ->
-    json_prefix(skip_ascii_ws(Bin)).
-
-json_prefix(<<"{", _/binary>>) ->
-    true;
-json_prefix(<<"[", _/binary>>) ->
-    true;
-json_prefix(_Bin) ->
-    false.
-
-embedded_json_body(Bin) ->
-    case binary:match(Bin, <<"ao-type">>) of
-        {Marker, _Len} ->
-            Tail = binary:part(Bin, Marker, byte_size(Bin) - Marker),
-            case embedded_json_start(Tail) of
-                {ok, Pos} ->
-                    Candidate0 = binary:part(Tail, Pos, byte_size(Tail) - Pos),
-                    Candidate = binary_before_nul(Candidate0),
-                    case json_payload(Candidate) of
-                        true -> {ok, Candidate};
-                        false -> {error, non_json_embedded_body}
-                    end;
-                error ->
-                    {error, missing_embedded_json_body}
-            end;
-        nomatch ->
-            {error, non_json_body}
-    end.
-
-embedded_json_start(Bin) ->
-    case binary:match(Bin, <<"{">>) of
-        {Pos, _Len} -> {ok, Pos};
-        nomatch ->
-            case binary:match(Bin, <<"[">>) of
-                {Pos, _Len} -> {ok, Pos};
-                nomatch -> error
-            end
-    end.
-
 doc_item_metadata(Node, Opts) ->
     #{
         <<"txid">> => maps:get(<<"id">>, Node, <<>>),
@@ -1454,7 +1336,7 @@ curated_schema_source(Device, Module, Order, Opts) ->
         <<"extract-status">> => ExtractStatus
     }.
 
-docs_schema_for_device(Device, SpecID, SchemaPayload, SchemaDoc, Opts) ->
+docs_schema_for_device(Device, SpecID, Opts) ->
     case implementation_derived_schema(Device, Opts) of
         {ok, Schema, SchemaOrder, Source} ->
             {
@@ -1462,26 +1344,21 @@ docs_schema_for_device(Device, SpecID, SchemaPayload, SchemaDoc, Opts) ->
                 SchemaOrder,
                 Source#{
                     <<"mode">> => <<"implementation-derived">>,
-                    <<"spec-id">> => SpecID,
-                    <<"fallback-status">> => maps:get(<<"status">>, SchemaDoc, <<"missing">>),
-                    <<"fallback-txid">> => maps:get(<<"txid">>, SchemaDoc, <<>>)
+                    <<"spec-id">> => SpecID
                 }
             };
         {error, Reason} ->
-            Schema = on_weave_schema(Device, SchemaPayload),
-            SchemaOrder = on_weave_schema_order(SchemaPayload, Schema),
             {
-                Schema,
-                SchemaOrder,
+                #{},
+                [],
                 #{
-                    <<"mode">> => <<"trusted-on-weave-fallback">>,
+                    <<"mode">> => <<"implementation-derived-unavailable">>,
+                    <<"device">> => Device,
                     <<"spec-id">> => SpecID,
-                    <<"status">> => maps:get(<<"status">>, SchemaDoc, <<"missing">>),
-                    <<"txid">> => maps:get(<<"txid">>, SchemaDoc, <<>>),
-                    <<"implementation-derived-status">> => <<"unavailable">>,
-                    <<"implementation-derived-reason">> => format_reason(Reason),
+                    <<"status">> => <<"unavailable">>,
+                    <<"reason">> => format_reason(Reason),
                     <<"display-rule">> =>
-                        <<"latest Device-Schema where owner is the spec signer">>
+                        <<"schema must be derived from the loaded implementation">>
                 }
             }
     end.
@@ -1524,14 +1401,13 @@ implementation_schema_key(Device, Key, KeySchema) ->
     Params = implementation_request_params(maps:get(<<"request">>, KeySchema, #{})),
     Return = implementation_type_label(maps:get(<<"return">>, KeySchema, #{})),
     maps:merge(
-        schema_key(
-            DeviceID,
-            Key,
-            <<"Implementation-derived type schema extracted from the loaded device.">>,
-            Params
+        maps:without(
+            [<<"description">>],
+            schema_key(DeviceID, Key, <<>>, Params)
         ),
         #{
             <<"source">> => <<"hb_types:extract/2">>,
+            <<"description-source">> => <<"none">>,
             <<"derived">> => true,
             <<"returns">> => Return,
             <<"type-schema">> => json_safe(KeySchema)
@@ -1544,19 +1420,27 @@ implementation_request_params(#{ <<"kind">> := <<"message">>, <<"keys">> := Keys
         [
             {
                 Name,
-                param(
-                    Name,
-                    implementation_required(Presence),
-                    implementation_type_label(Type),
-                    <<"Request field extracted from implementation type metadata.">>,
-                    <<"">>
-                )
+                implementation_param(Name, Presence, Type)
             }
         || {Name, #{ <<"presence">> := Presence, <<"type">> := Type }} <- maps:to_list(Keys)
         ]
     );
 implementation_request_params(_Schema) ->
     #{}.
+
+implementation_param(Name, Presence, Type) ->
+    (maps:without(
+        [<<"description">>, <<"example">>],
+        param(
+            Name,
+            implementation_required(Presence),
+            implementation_type_label(Type),
+            <<>>,
+            <<>>
+        )
+    ))#{
+        <<"description-source">> => <<"none">>
+    }.
 
 implementation_required(required) -> true;
 implementation_required(<<"required">>) -> true;
@@ -4114,9 +3998,9 @@ schema_source_label(Source) ->
                 hb_util:bin(maps:get(<<"key-count">>, Source, 0)),
                 <<" keys)">>
             ]);
-        <<"trusted-on-weave-fallback">> ->
+        <<"implementation-derived-unavailable">> ->
             iolist_to_binary([
-                <<"trusted on-weave fallback">>,
+                <<"implementation-derived unavailable">>,
                 schema_source_status_suffix(Source)
             ]);
         <<"curated-plus-implementation-derived">> ->
@@ -5982,15 +5866,6 @@ raw_ans104_body_rejects_wrapper_binary_test() ->
     Item = #tx{data = <<131, 116, 0, 0, 0, 1, 100, 0, 4, "body">>},
     ?assertEqual({error, unsupported_ans104_shape}, raw_ans104_body(Item)).
 
-json_doc_body_plain_json_test() ->
-    JSON = <<"{\"schema\":{\"quote\":{}}}">>,
-    ?assertEqual({ok, JSON}, json_doc_body(JSON)).
-
-json_doc_body_embedded_binary_test() ->
-    JSON = <<"{\"schema\":{\"quote\":{}}}">>,
-    Wrapped = <<0, 0, "ao-type", 0, "binary", 0, JSON/binary>>,
-    ?assertEqual({ok, JSON}, json_doc_body(Wrapped)).
-
 node_info_contract_test() ->
     Data = node_info_data(#{ <<"port">> => 9999 }),
     ?assertEqual(<<"node-info">>, maps:get(<<"kind">>, Data)),
@@ -6268,29 +6143,26 @@ canonical_specs_branch_registry_test() ->
     ?assert(maps:is_key(<<"price">>, MeteringSchema)),
     ?assertNot(maps:is_key(<<"consume">>, MeteringSchema)).
 
-on_weave_schema_source_fallback_test() ->
-    Payload = #{
-        <<"schema">> => #{
-            <<"quote">> => #{
-                <<"description">> => <<"Quote a price.">>,
-                <<"parameters">> => #{}
-            }
-        },
-        <<"schema-order">> => [<<"quote">>]
-    },
-    SchemaDoc = #{<<"status">> => <<"present">>, <<"txid">> => <<"schema-tx">>},
+derived_schema_description_source_test() ->
+    Data = device_info_data(<<"json@1.0">>, #{}),
+    Schema = maps:get(<<"schema">>, Data),
+    ToSchema = maps:get(<<"to">>, Schema),
+    ?assertNot(maps:is_key(<<"description">>, ToSchema)),
+    ?assertEqual(<<"none">>, maps:get(<<"description-source">>, ToSchema)),
+    ?assertEqual(<<"hb_types:extract/2">>, maps:get(<<"source">>, ToSchema)).
+
+on_weave_schema_source_unavailable_test() ->
     {Schema, Order, Source} =
         docs_schema_for_device(
             <<"unknown-device@1.0">>,
             <<"spec-tx">>,
-            Payload,
-            SchemaDoc,
             #{}
         ),
-    ?assert(maps:is_key(<<"quote">>, Schema)),
-    ?assertEqual([<<"quote">>], Order),
-    ?assertEqual(<<"trusted-on-weave-fallback">>, maps:get(<<"mode">>, Source)),
-    ?assertEqual(<<"present">>, maps:get(<<"status">>, Source)).
+    ?assertEqual(#{}, Schema),
+    ?assertEqual([], Order),
+    ?assertEqual(<<"implementation-derived-unavailable">>, maps:get(<<"mode">>, Source)),
+    ?assertEqual(<<"unavailable">>, maps:get(<<"status">>, Source)),
+    ?assert(maps:is_key(<<"reason">>, Source)).
 
 schema_parameter_route_test() ->
     {ok, HTML} = device_info_route(
