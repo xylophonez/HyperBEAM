@@ -533,7 +533,7 @@ canonical_spec_info_data(Device, Opts) ->
     Spec = device_spec_status(Device),
     Module = canonical_device_module(Device),
     {Schema, SchemaOrder, SchemaSource} = canonical_spec_schema(Device, Module, Opts),
-    Recipes = canonical_spec_recipes(Module),
+    Recipes = canonical_spec_recipes(Device, Module),
     {Name, Version} = split_device_id(Device),
     Summary =
         maps:get(
@@ -566,7 +566,7 @@ canonical_spec_info_data(Device, Opts) ->
             <<"spec">> => maps:get(<<"source-path">>, Spec, <<>>),
             <<"spec-status">> => maps:get(<<"spec-status">>, Spec, <<"missing">>),
             <<"schema-source">> => maps:get(<<"mode">>, SchemaSource, <<"unknown">>),
-            <<"recipes">> => <<"device-docs module recipe page when available">>,
+            <<"recipes">> => <<"device-docs examples directory when available">>,
             <<"source">> => <<"specs-branch">>
         },
         <<"dependencies">> => [],
@@ -575,7 +575,8 @@ canonical_spec_info_data(Device, Opts) ->
             <<"spec-path">> => maps:get(<<"source-path">>, Spec, <<>>),
             <<"schema-source">> => SchemaSource,
             <<"recipe-display-rule">> =>
-                <<"packaged device-docs module recipe page for the implementation">>,
+                <<"packaged device-docs example recipe files for the device; "
+                    "module pages are fallback only">>,
             <<"production-note">> =>
                 <<"Canonical devices in this demo are rooted in the specs branch. "
                     "External/custom devices still use on-weave spec-ID discovery.">>
@@ -620,16 +621,38 @@ canonical_spec_schema(Device, Module, Opts) ->
             }
     end.
 
-canonical_spec_recipes(undefined) ->
+canonical_spec_recipes(_Device, undefined) ->
     #{};
-canonical_spec_recipes(Module) ->
-    RelPath = canonical_module_recipe_relpath(Module),
-    case filelib:is_file(binary_to_list(device_docs_path(RelPath))) of
-        true ->
-            recipes_from_sources([{<<"implementation-notes">>, RelPath}]);
-        false ->
-            #{}
+canonical_spec_recipes(Device, Module) ->
+    case canonical_device_recipe_sources(Device) of
+        [] ->
+            RelPath = canonical_module_recipe_relpath(Module),
+            case filelib:is_file(binary_to_list(device_docs_path(RelPath))) of
+                true ->
+                    recipes_from_sources([{<<"implementation-notes">>, RelPath}]);
+                false ->
+                    #{}
+            end;
+        Sources ->
+            recipes_from_sources(Sources)
     end.
+
+canonical_device_recipe_sources(Device) ->
+    RelDir = <<"docs/device-recipes/examples/", Device/binary>>,
+    AbsDir = device_docs_path(RelDir),
+    Paths = filelib:wildcard(filename:join(binary_to_list(AbsDir), "*.md")),
+    [
+        {canonical_recipe_slug(Path), canonical_recipe_relpath(Device, Path)}
+    || Path <- lists:sort(Paths),
+        canonical_recipe_slug(Path) =/= <<"index">>
+    ].
+
+canonical_recipe_slug(Path) ->
+    hb_util:bin(filename:rootname(filename:basename(Path))).
+
+canonical_recipe_relpath(Device, Path) ->
+    Slug = canonical_recipe_slug(Path),
+    <<"docs/device-recipes/examples/", Device/binary, "/", Slug/binary, ".md">>.
 
 canonical_spec_implementations(undefined) ->
     [];
@@ -6132,7 +6155,21 @@ canonical_specs_branch_registry_test() ->
         <<"implementation-derived">>,
         maps:get(<<"mode">>, maps:get(<<"schema-source">>, Data))
     ),
-    ?assert(maps:get(<<"recipe-count">>, Data) >= 1),
+    JsonRecipes = maps:get(<<"recipes">>, Data),
+    ?assertEqual(2, maps:get(<<"recipe-count">>, Data)),
+    ?assert(maps:is_key(<<"serialize-message-to-json">>, JsonRecipes)),
+    ?assert(maps:is_key(<<"deserialize-json-field">>, JsonRecipes)),
+    ?assertNot(maps:is_key(<<"implementation-notes">>, JsonRecipes)),
+    SerializeRecipe = maps:get(<<"serialize-message-to-json">>, JsonRecipes),
+    {ok, SerializeMarkdown} = file:read_file(binary_to_list(maps:get(<<"source">>, SerializeRecipe))),
+    ?assertEqual(
+        nomatch,
+        binary:match(SerializeMarkdown, <<"Recipe Candidates">>)
+    ),
+    ?assertEqual(
+        nomatch,
+        binary:match(SerializeMarkdown, <<"Existing curated recipe overlap">>)
+    ),
     MeteringData = device_info_data(<<"metering@1.0">>, #{}),
     MeteringSchema = maps:get(<<"schema">>, MeteringData),
     ?assertEqual(
