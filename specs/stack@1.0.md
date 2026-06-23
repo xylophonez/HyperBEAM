@@ -1,6 +1,5 @@
 # `stack@1.0` — the device-composition (pipeline) device
 
-- **Device name:** `stack@1.0`
 - **Depends-on:** `message@1.0` (identity reads, `keys`, `set`, prefix bookkeeping), `multipass@1.0` (an example producer of the repass signal this device interprets). Both specs are provided to reimplementers.
 - **Status:** Draft
 

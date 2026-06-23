@@ -1,6 +1,5 @@
 # `relay@1.0` — relay/proxy a request to another node or HTTP endpoint
 
-- **Device name:** `relay@1.0`
 - **Depends-on:** `message@1.0` (target selection, `commit`/`verify`, identity-key semantics), `httpsig@1.0` (default commitment device used when re-signing a relayed request). Both specs are provided to reimplementers.
 - **Status:** Draft
 

@@ -1,6 +1,5 @@
 # `structured@1.0` — typed-message ⇄ TABM codec
 
-- **Device name:** `structured@1.0`
 - **Depends-on:** `httpsig@1.0` (its `commit`/`verify` keys delegate there). `message@1.0` for the surrounding message model.
 - **Status:** Draft
 

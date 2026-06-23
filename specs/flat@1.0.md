@@ -1,6 +1,5 @@
 # `flat@1.0` — flat path-delimited ⇄ TABM codec
 
-- **Device name:** `flat@1.0`
 - **Depends-on:** `structured@1.0` (the canonical TABM codec these values are drawn from / round-tripped through), `message@1.0` (the surrounding message model), `httpsig@1.0` (its `commit`/`verify` keys delegate there). All three specs are provided to reimplementers.
 - **Status:** Draft
 

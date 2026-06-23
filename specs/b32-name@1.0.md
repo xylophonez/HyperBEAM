@@ -1,6 +1,5 @@
 # `b32-name@1.0` — base32 self-certifying name resolver
 
-- **Device name:** `b32-name@1.0`
 - **Depends-on:** `name@1.0` (the resolver-dispatch device that invokes this device), `message@1.0` (base identity device for non-handled keys). Both specs are provided to reimplementers.
 - **Status:** Draft
 

@@ -1,6 +1,5 @@
 # `apply@1.0` — the resolution / indirection device
 
-- **Device name:** `apply@1.0`
 - **Depends-on:** `message@1.0` (the base device against which all of this device's reads and the excluded mutation/inspection keys resolve). The `message@1.0` spec is provided to reimplementers.
 - **Status:** Draft
 

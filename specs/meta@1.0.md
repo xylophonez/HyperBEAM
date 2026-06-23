@@ -1,6 +1,5 @@
 # `meta@1.0` — the node entry-point device
 
-- **Device name:** `meta@1.0`
 - **Depends-on:** `message@1.0` (the base device against which results are
   forced into messages, commitments are read/written, and signers are
   determined). The `message@1.0` spec is provided to reimplementers. This device

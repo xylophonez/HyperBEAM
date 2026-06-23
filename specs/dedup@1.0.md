@@ -1,6 +1,5 @@
 # `dedup@1.0` — once-only message deduplication in an evaluation stream
 
-- **Device name:** `dedup@1.0`
 - **Depends-on:** `message@1.0` (ID derivation, `set`/`keys` delegation, the `as`/identity behaviour), `trie@1.0` (the seen-subjects set), `stack@1.0` (the `skip`/`pass` control-flow contract this device emits into). All three specs are provided to reimplementers.
 - **Status:** Draft
 

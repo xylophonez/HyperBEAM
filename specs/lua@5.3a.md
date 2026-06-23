@@ -1,6 +1,5 @@
 # `lua@5.3a` — Lua 5.3 execution device
 
-- **Device name:** `lua@5.3a`
 - **Depends-on:** `message@1.0` (message model, reserved keys, commitments, `id`/`committers`, TABM conversion via `structured@1.0`). Relates to `process@1.0` (the orchestrator that drives this device as a process `execution-device`), `json@1.0` (the JSON codec a script may invoke through the host library), and `stack@1.0` (this device may be one member of an execution stack). All `Depends-on` specs are provided to reimplementers.
 - **Status:** Draft
 

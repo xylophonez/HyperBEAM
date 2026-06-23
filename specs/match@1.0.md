@@ -1,6 +1,5 @@
 # `match@1.0` — a reverse index for finding message IDs by key/value
 
-- **Device name:** `match@1.0`
 - **Depends-on:** `message@1.0` (identity/base device, content-ID derivation), `structured@1.0` (TABM conversion of values and of the base message). Both specs are provided to reimplementers.
 - **Status:** Draft
 

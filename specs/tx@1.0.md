@@ -1,6 +1,5 @@
 # `tx@1.0` — Arweave L1 transaction codec & commitment device
 
-- **Device name:** `tx@1.0`
 - **Depends-on:** `structured@1.0` (TABM ⇄ rich conversion), `message@1.0` (the surrounding message / commitment model). Both specs are provided to reimplementers.
 - **Status:** Draft
 

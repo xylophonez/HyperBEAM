@@ -1,6 +1,5 @@
 # `cookbook@1.0` - docs renderer device
 
-- **Device name:** `cookbook@1.0`
 - **Depends-on:** `message@1.0` for normal message dispatch and `hb_docs` for the shared documentation object.
 - **Status:** Prototype
 

@@ -3202,7 +3202,7 @@ device_section_index(SchemaOrder, Spec, Recipes) ->
         <<"</span></a>">>,
         <<"<a href=\"#recipes\"><strong>Recipes</strong><span>">>,
         esc(hb_util:bin(map_size(Recipes))),
-        <<" imported pages</span></a>">>,
+        <<" on-weave recipes</span></a>">>,
         <<"</nav>">>
     ].
 
@@ -5177,7 +5177,7 @@ spec_sections_test() ->
 
 message_markdown_rendering_test() ->
     SpecBody = iolist_to_binary(render_spec_body(device_spec_status(?MESSAGE_DEVICE))),
-    ?assert(binary:match(SpecBody, <<"<strong>Device name:</strong>">>) =/= nomatch),
+    ?assertEqual(nomatch, binary:match(SpecBody, <<"<strong>Device name:</strong>">>)),
     ?assert(binary:match(SpecBody, <<"<strong>Dispatch shape">>) =/= nomatch),
     ?assertEqual(nomatch, binary:match(SpecBody, <<"**Dispatch shape">>)),
     ?assertEqual(nomatch, binary:match(SpecBody, <<"PRESENT">>)),

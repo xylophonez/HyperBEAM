@@ -1,6 +1,5 @@
 # `json-iface@1.0` — JSON bridge between AO messages and legacy compute units
 
-- **Device name:** `json-iface@1.0`
 - **Depends-on:** `message@1.0` (message model, commitments, `id`/`committers`, TABM conversion via `structured@1.0`), `json@1.0` (the JSON codec used to serialise/parse the structures). Relates to `process@1.0` (the orchestrator that places this device in a compute stack) and `multipass@1.0` / `stack@1.0` (the pass mechanism it keys off). All `Depends-on` specs are provided to reimplementers.
 - **Status:** Draft
 

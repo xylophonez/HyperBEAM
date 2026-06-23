@@ -1,6 +1,5 @@
 # `message@1.0` — the identity / base message device
 
-- **Device name:** `message@1.0`
 - **Depends-on:** `httpsig@1.0` (default commitment & ID device), `structured@1.0` (TABM conversion). Both specs are provided to reimplementers.
 - **Status:** Draft
 

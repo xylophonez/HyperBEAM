@@ -1,6 +1,5 @@
 # `scheduler@1.0` — the slot-assignment / ordering authority for AO processes
 
-- **Device name:** `scheduler@1.0`
 - **Depends-on:** `message@1.0` (commitment / ID / verification surface), `httpsig@1.0` (default commitment device for assignments), `structured@1.0` (TABM conversion that underpins IDs and the bundle wire form). Optionally interacts with `location@1.0` (scheduler-location discovery), `json-iface@1.0` and `ans104@1.0` (legacy interop). The first three specs are provided to reimplementers; the rest are referenced by `name@version` only.
 - **Status:** Draft
 

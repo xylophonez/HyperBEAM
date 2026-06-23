@@ -40,11 +40,17 @@ reference(Ref, Opts) when is_binary(Ref) ->
     end.
 
 resolve_cached(Ref, Opts) ->
-    case resolve(Ref, Opts) of
-        {cached, Mod} -> {ok, Mod};
-        {ok, Mod} = Ok -> put_resolved_device(Ref, Mod, Opts), Ok;
-        {error, Err} -> {error, Err}
-    end.
+    device_load_result(resolve(Ref, Opts), Ref, Opts).
+
+device_load_result({cached, Mod}, _Ref, _Opts) ->
+    {ok, Mod};
+device_load_result({ok, Mod} = Ok, Ref, Opts) ->
+    put_resolved_device(Ref, Mod, Opts),
+    Ok;
+device_load_result({error, Err}, _Ref, _Opts) ->
+    {error, Err};
+device_load_result(Other, _Ref, _Opts) ->
+    {error, {unexpected_device_load_result, Other}}.
 
 %% @doc The resolved-device store, then the high-trust sources, then the
 %% low-trust sources. The first `{ok, _}' wins; a real error from a
@@ -262,7 +268,8 @@ lazy_first(F, [], [Next | Rest]) ->
 lazy_first(F, [X | Xs], Iterators) ->
     case F(X) of
         {ok, _} = Ok -> Ok;
-        {error, _} -> lazy_first(F, Xs, Iterators)
+        {error, _} -> lazy_first(F, Xs, Iterators);
+        _Other -> lazy_first(F, Xs, Iterators)
     end.
 
 %%% --------------------------------------------------------------------
@@ -381,6 +388,12 @@ trusted_signer_devices_test() ->
                 ]
             }
         )
+    ).
+
+unexpected_loader_result_returns_error_test() ->
+    ?assertMatch(
+        {error, {unexpected_device_load_result, {failure, failure}}},
+        device_load_result({failure, failure}, <<"REF">>, #{})
     ).
 
 %% @doc Every `requires-*' key must match this machine's `system_info'.
