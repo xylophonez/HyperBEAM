@@ -568,15 +568,57 @@ cached_spec_markdown(SpecID, Opts) ->
     end.
 
 cached_spec_body(Item, Opts) ->
-    case raw_ans104_body(Item) of
+    case cached_item_body_markdown(Item, Opts) of
         {ok, Markdown} ->
             {ok, Markdown};
-        {error, RawReason} ->
-            case structured_ans104_body(Item, Opts) of
+        {error, BodyReason} ->
+            case raw_ans104_body(Item) of
                 {ok, Markdown} -> {ok, Markdown};
-                {error, StructuredReason} ->
-                    {error, {cache_spec_body_unavailable, RawReason, StructuredReason}}
+                {error, RawReason} ->
+                    case safe_structured_ans104_body(Item, Opts) of
+                        {ok, Markdown} -> {ok, Markdown};
+                        {error, StructuredReason} ->
+                            {error,
+                                {cache_spec_body_unavailable,
+                                    BodyReason,
+                                    RawReason,
+                                    StructuredReason
+                                }}
+                    end
             end
+    end.
+
+cached_item_body_markdown(Item, Opts) when is_map(Item) ->
+    case maps:get(<<"body">>, Item, undefined) of
+        undefined ->
+            {error, cache_body_missing};
+        Body ->
+            load_markdown_body(Body, Opts)
+    end;
+cached_item_body_markdown(_Item, _Opts) ->
+    {error, cache_item_not_map}.
+
+load_markdown_body(Body, Opts) ->
+    case find_markdown_body(Body) of
+        {ok, Markdown} ->
+            {ok, Markdown};
+        error ->
+            try hb_cache:ensure_loaded(Body, Opts) of
+                Loaded ->
+                    case find_markdown_body(Loaded) of
+                        {ok, Markdown} -> {ok, Markdown};
+                        error -> {error, cache_body_not_markdown}
+                    end
+            catch
+                Class:Reason -> {error, {cache_body_load_failed, Class, Reason}}
+            end
+    end.
+
+safe_structured_ans104_body(Item, Opts) ->
+    try structured_ans104_body(Item, Opts) of
+        Result -> Result
+    catch
+        Class:Reason -> {error, {Class, Reason}}
     end.
 
 gateway_spec_markdown(SpecID, Opts) ->
