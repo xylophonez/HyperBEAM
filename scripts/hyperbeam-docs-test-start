@@ -7,35 +7,201 @@ cd "$ROOT"
 EVAL='
 application:ensure_all_started(hackney),
 Base = (hb_opts:default_message_with_env())#{<<"prometheus">> => false},
+KaySigner = <<"kaYP9bJtpqON8Kyy3RbqnqdtDBDUsPTQTNUCvZtKiFI">>,
 DeviceSpecs =
     [
         {
-            <<"arweave-byte-pricing@1.1">>,
-            <<"tzrA1PzAUWeQ3eN7OjS86gCDDkFNzw1cHydCJ-4iFYU">>
+            <<"ans104@1.0">>,
+            <<"Ad7UwfbGECFrw5PYZC_kYY9F1qk1l_4EpdwuafZvlPM">>,
+            <<"7lcJV7ZwVzzDpMVRFNVJqfrf_wBoQis9AQ_UfQMua-0">>
         },
         {
-            <<"simple-oracle@1.0">>,
-            <<"DdNdjRB9Mg4BG6mpSbE98TXsIUI75P_g5INkbUJVTv4">>
+            <<"apply@1.0">>,
+            <<"czfdijrxSh_D0mOl6MXH_oU6bD58SxP2o17K7JrBlYM">>,
+            <<"evWv0CSvqwSFyARJCXHCeUEm6MB2F9uv8BO3DYCSv8Y">>
+        },
+        {
+            <<"b32-name@1.0">>,
+            <<"zpkW4VuYpc84OgAU53TEGUXxNpsXN8bidH8C-5m-_v8">>,
+            <<"h5O_iMZdDV4ZPFa_mIYSbOX6uKc88D6k2VZ-sgPX6yI">>
+        },
+        {
+            <<"cookbook@1.0">>,
+            <<"S9VNAX5-2Fr93a7IXF9yQR_fU5qRjfgGRaz0NqrPmzc">>,
+            <<"XaloayDgdE-or2zzLVGBcGVsK4zeFIuikZ1UkMTYEVw">>
+        },
+        {
+            <<"dedup@1.0">>,
+            <<"Eo33DnQK_U9rKgw9f7OPcBBga9FgbndCXBlnQK_ndvc">>,
+            <<"VmcraBGMqduKrXSNOOlJ4quFHKmaaEU32NLZaljabJ8">>
+        },
+        {
+            <<"delegated-compute@1.0">>,
+            <<"oLkwew-LUpSzn7ZTi4TyOfkSJXZILwWFW4Mc0YEVBVI">>,
+            <<"X-J3wuG4z2iAmoxauoUOebK2r93HHsLVU9oN21R-ovg">>
+        },
+        {
+            <<"flat@1.0">>,
+            <<"bP694GHIDh0PWLPWQKsMdOSRrQp9HjSITjpYEbtZa_k">>,
+            <<"0WaiatEBvQBZV2VPBQAWHaCHFWpfQP2hP8sGu_eijz4">>
+        },
+        {
+            <<"genesis-wasm@1.0">>,
+            <<"fxR-vI6aSgKh4sQoeXM_jgcH3b5EEfwo8RqGQwCIYR0">>,
+            <<"LV3jTVdkYbgsn-SwH-sVEeILYUg82mLsqG5nQzaho6g">>
+        },
+        {
+            <<"gzip@1.0">>,
+            <<"ScBPV--ajNIgHJkltgPK5f07Z60TQ6Qaxa67ZAg9Ync">>,
+            <<"7ybXDRnLhSmORpCjQCwJe2FzqJY0zmBeEaA3pUraV20">>
+        },
+        {
+            <<"httpsig@1.0">>,
+            <<"uHuqH6fGH_6Tro0iYddK3Ns1Ex4aoLIPB8Mhk-VZbvs">>,
+            <<"JYxmF7maLMAV6Fji--ScpxLxhnILtlct1-qLYY4VejI">>
+        },
+        {
+            <<"json@1.0">>,
+            <<"rKie5SbXSYT_efeV2-lRwzXS8TcsKMl54KGwrBdTNWs">>,
+            <<"cLFpMp7Crhb-W-_8tbRA6NRiKDSWtWDQ6iXuNAP41Cs">>
+        },
+        {
+            <<"json-iface@1.0">>,
+            <<"Zm4L2-jy3_lFCRwYv5-aUeOQmLWkbbO4_BWnE9E4raY">>,
+            <<"K5KY6k0DGVm7S4JSK4JR1drnxmwrNkWNbfa3Sbwr4s4">>
+        },
+        {
+            <<"local-name@1.0">>,
+            <<"PxYdXi3yogeWVPCUuFxrtKq1ld8Djq4-Hvo3P151tdM">>,
+            <<"J-PJ1oFgDSQRAmkNTlqsVLOVgdmQdjVSx2ZxqLYk9PE">>
+        },
+        {
+            <<"lua@5.3a">>,
+            <<"hy0bzduO3MmBiKj6Q25zu5HIQvwjE_nS_K6TRXrptY4">>,
+            <<"swOsV1nRwBvnRtm-nu4jtM23zyf8AgEueDngaj_nMgs">>
+        },
+        {
+            <<"match@1.0">>,
+            <<"3zt15V3YlHb7Ra0qUApmXspHYWEJZZgTHw_dD6hPEJ8">>,
+            <<"sb4gsWN0t6IB1XQZTi2DN6RZ-_qxQ08zgg8zOIrGADM">>
+        },
+        {
+            <<"message@1.0">>,
+            <<"SFRwa06aEpCmnU3l2UJyGkan7TqDQC1ClFxMe9-nC2I">>,
+            <<"OsNf0zCkl2d8Q_sms6_IJbIO7K69NQcWKCpHOtd1df0">>
+        },
+        {
+            <<"meta@1.0">>,
+            <<"ASs77weDXyXAvo0GA-s9aIdbGyrbB2xbpCYdkjXmdus">>,
+            <<"rG1OZ56vjZtaZyo1SuqD4Lub_Ux4WFV2-meA6ayYidk">>
+        },
+        {
+            <<"metering@1.0">>,
+            <<"ULFWfYl-Sqangn_C1ER7sATtybwRGBn6Vhex21P7T3Q">>,
+            <<"BMzyvkWHaq4D-NRjmMFfcCodQvjQQLGpMo2gvZF9pdc">>
+        },
+        {
+            <<"multipass@1.0">>,
+            <<"95UXGWbaeZgqm4bUdMPN24qZ0X--z7XKQfb93YLbq4U">>,
+            <<"xvYQm90Kol76CCY0GCCr9LBK6zVw1UAtAWHg1b5zFps">>
+        },
+        {
+            <<"name@1.0">>,
+            <<"NERjjv0NRPIETMB_H7lDFCSQQT_mxRSBBzbYPUtVODY">>,
+            <<"LEWVjLEiFjEjuqcf6UNqWliVfv_LBK-c4JRP3u0PTj0">>
+        },
+        {
+            <<"node-process@1.0">>,
+            <<"ai3FAyAJKeiQ6JtXBblS9DIlQ4IPaiW6gIcRbrGrT5A">>,
+            <<"apVXGKaTDKPXGSLG_0K6LVBo6cithreywOAQjq5DxvY">>
+        },
+        {
+            <<"p4@1.0">>,
+            <<"C4HZMYu4jc9bIVWMuzTFA-eoueT5JvZRYUBTZ1aE43Y">>,
+            <<"BUI7A8sdzZl0A93-PXV7ZOmq3m4s0HyqVn1oWSPwUlY">>
+        },
+        {
+            <<"patch@1.0">>,
+            <<"niuYy6aqvUq-PLx1RQijDQEnB9gt1Me6D82LwWwsw4Q">>,
+            <<"JShhBhI9LicR4kUYnNhuYva9D2JsRkCfU4X5MXVm1pQ">>
+        },
+        {
+            <<"push@1.0">>,
+            <<"H5PWLmaFo5nIF5VN1celUxn8Z6Mgm4cIqKwazwrMnMM">>,
+            <<"hzg2tmLC0yEOLaLECgQS5GppXENNVSNna4g69lMnez8">>
+        },
+        {
+            <<"relay@1.0">>,
+            <<"X04vtTbIMVdWNf0_Q8lnXocmyWjzkPPf6sihxhmbXKQ">>,
+            <<"gwRTC8rgTEJUJzpguBaTvc7qUo-GfjnvjCgORiq4Z6o">>
+        },
+        {
+            <<"router@1.0">>,
+            <<"7kJrF9ODvQ0GLV8RX4WH-fTFcHgdgLmERX2pVXJjLpA">>,
+            <<"Z8w8VC6usZcPu2njUV5ZAdZvqC4sNaff9NFVqQr8sS0">>
+        },
+        {
+            <<"scheduler@1.0">>,
+            <<"RI4788l2ieqVHGRsXJfqnzm-XF8wMO3UXlS3RqAFtEI">>,
+            <<"uyZ8GjwhuLI4sUmDzKv-IxvKUPDWbgmdoJ688iBte8A">>
+        },
+        {
+            <<"stack@1.0">>,
+            <<"EIdHQBSKRv5Yi9zoNXpWjlEsf3BD5sAKoKOii30MYak">>,
+            <<"wl5_GSYtqlQBPsbgJTj05XVey7mbFMHuYCktGnx1DVI">>
+        },
+        {
+            <<"structured@1.0">>,
+            <<"a4zo82u8BvItKws_UnFhA1TolFWmCDGVyCU0klad5ak">>,
+            <<"Zxkld8TzAoCsaME9Hav5bgCdRdM03kursdfBv_1x3g4">>
+        },
+        {
+            <<"trie@1.0">>,
+            <<"eitTi1-0WRYScrPn674jqp7bEgbxpAhk0gACV_Tv0gw">>,
+            <<"CJDBulae5ali-d87V0OE6bYIrGt9J4OSfFHZ7__keAs">>
+        },
+        {
+            <<"tx@1.0">>,
+            <<"WYCf0QC5V_rAvhfucrgZwd0HAA_pQ7GrBxSvOfkcmkE">>,
+            <<"RVxTd4vLBtBZ8FfOF5nqE7mHJUTAVbZpdd_CUApnvzE">>
+        },
+        {
+            <<"wasi@1.0">>,
+            <<"40ruRWmNNldQU92zvQA_WEFLTmAfnzxvUjfowr937kM">>,
+            <<"p7dp5tWit4vST2ffD5C7uMoR7r_8EAtdZNNyFWZdNFI">>
+        },
+        {
+            <<"wasm-64@1.0">>,
+            <<"V8LrbR69a4av6coDXlVtEYJotkjl1wDU2LhJyf9oamk">>,
+            <<"BUYz1rZLSyrxJXbXroplDmPuO52y71CcgHCH4kc1Wmc">>
         }
     ],
 NameResolvers =
     [
-        maps:from_list(DeviceSpecs)
+        maps:from_list([
+            {Device, Spec}
+        || {Device, Spec, _Impl} <- DeviceSpecs
+        ])
         | hb_opts:get(<<"name-resolvers">>, [], Base)
     ],
-SpecSigner =
-    fun(Spec) ->
-        {ok, SpecMsg} = hb_client_gateway:read(Spec, Base),
-        [Signer | _] = hb_message:signers(SpecMsg, Base),
-        Signer
-    end,
+TrustedDevices =
+    maps:merge(
+        hb_opts:get(<<"trusted-devices">>, #{}, Base),
+        maps:from_list([
+            {Spec, Impl}
+        || {_Device, Spec, Impl} <- DeviceSpecs
+        ])
+    ),
 TrustedSigners =
     [
         #{
-            <<"address">> => SpecSigner(Spec),
-            <<"devices">> => [Device, Spec]
+            <<"address">> => KaySigner,
+            <<"devices">> =>
+                lists:flatmap(
+                    fun({Device, Spec, _Impl}) -> [Device, Spec] end,
+                    DeviceSpecs
+                )
         }
-    || {Device, Spec} <- DeviceSpecs
     ] ++ [
         Signer
     || Signer <- hb_opts:get(<<"trusted-device-signers">>, [], Base)
@@ -49,6 +215,7 @@ Opts =
         <<"process-sampler">> => false,
         <<"load-remote-devices">> => true,
         <<"name-resolvers">> => NameResolvers,
+        <<"trusted-devices">> => TrustedDevices,
         <<"trusted-device-signers">> => TrustedSigners
     },
 Url = hb_http_server:start_node(Opts),

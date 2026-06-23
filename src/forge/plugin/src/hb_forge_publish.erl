@@ -45,27 +45,31 @@ do_run(State) ->
         {error, {already_started, _}} -> ok
     end,
     NodeOpts = hb_forge_seed:with_forge_bootstrap(Opts, fun(Seed) -> Seed end),
+    UploadOpts =
+        (without_forge_bootstrap(NodeOpts))#{
+            <<"linkify-mode">> => false
+        },
     % Sign and upload each package.
     lists:foreach(
         fun(Pkg) ->
             % Sign and upload the specification message.
             Spec =
-                hb_message:commit(
+                commit_for_publish(
                     hb_packager:spec_message(Pkg, NodeOpts),
                     NodeOpts,
                     PublishCodec
                 ),
-            {ok, _} = hb_client_remote:upload(Spec, NodeOpts, PublishCodec),
-            SpecID = hb_message:id(Spec, all, NodeOpts),
+            {ok, _} = hb_client_remote:upload(Spec, UploadOpts, PublishCodec),
+            SpecID = hb_message:id(Spec, all, UploadOpts),
             % Sign and upload the implementation message.
             Impl =
-                hb_message:commit(
+                commit_for_publish(
                     hb_packager:impl_message(Pkg, SpecID, NodeOpts),
                     NodeOpts,
                     PublishCodec
                 ),
-            {ok, _} = hb_client_remote:upload(Impl, NodeOpts, PublishCodec),
-            ImplID = hb_message:id(Impl, all, NodeOpts),
+            {ok, _} = hb_client_remote:upload(Impl, UploadOpts, PublishCodec),
+            ImplID = hb_message:id(Impl, all, UploadOpts),
             rebar_api:info(
                 "device publish: ~s spec=~s impl=~s",
                 [maps:get(device_name, Pkg), SpecID, ImplID]
@@ -77,6 +81,40 @@ do_run(State) ->
         )
     ),
     {ok, State}.
+
+%% @doc Forge publishes permanent, standalone data items. `message@1.0'
+%% deliberately offloads nested signed messages for normal runtime commits;
+%% publishing instead signs through the selected codec directly with linkifying
+%% disabled so the resulting ANS-104 item carries its own payload.
+commit_for_publish(Msg, Opts, PublishCodec) ->
+    CommitOpts = Opts#{ <<"linkify-mode">> => false },
+    Loaded = hb_message:convert(Msg, tabm, CommitOpts),
+    {ok, Committed} =
+        hb_ao:raw(
+            PublishCodec,
+            <<"commit">>,
+            Loaded,
+            #{
+                <<"commitment-device">> => PublishCodec,
+                <<"type">> => <<"signed">>
+            },
+            CommitOpts
+        ),
+    hb_message:convert(
+        Committed,
+        <<"structured@1.0">>,
+        tabm,
+        CommitOpts
+    ).
+
+%% @doc Upload runs through runtime devices such as `arweave@2.9'. The
+%% Forge seed bootstrap is intentionally narrow and must not intercept
+%% runtime device resolution after the package has been signed.
+without_forge_bootstrap(Opts) ->
+    maps:remove(
+        forge_bootstrap,
+        maps:remove(<<"forge-bootstrap">>, Opts)
+    ).
 
 %% @doc Render provider failures for rebar3.
 format_error(Reason) ->

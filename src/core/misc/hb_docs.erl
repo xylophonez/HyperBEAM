@@ -498,29 +498,43 @@ docs_resolve_spec(Ref, Opts) ->
     end.
 
 on_weave_spec_status(Device, SpecID, Opts) ->
-    case on_weave_item_by_id(SpecID, Opts) of
-        {ok, Node} ->
-            case on_weave_spec_markdown(SpecID, Opts) of
-                {ok, Markdown} ->
-                    maps:merge(doc_item_metadata(Node, Opts), #{
-                        <<"kind">> => <<"device-spec">>,
-                        <<"href">> => <<"/~", Device/binary, "/info/spec">>,
-                        <<"spec-status">> => <<"present">>,
-                        <<"coverage-status">> => <<"present">>,
-                        <<"source-path">> => <<>>,
-                        <<"source">> => <<"on-weave">>,
-                        <<"txid">> => SpecID,
-                        <<"title">> => markdown_title(Markdown, Device),
-                        <<"summary">> => markdown_summary(Markdown),
-                        <<"markdown-bytes">> => byte_size(Markdown),
-                        <<"markdown">> => Markdown
-                    });
-                {error, Reason} ->
-                    missing_on_weave_spec(Device, SpecID, Reason)
-            end;
+    Metadata = on_weave_item_by_id(SpecID, Opts),
+    case on_weave_spec_markdown(SpecID, Opts) of
+        {ok, Markdown} ->
+            maps:merge(on_weave_spec_metadata(Metadata, SpecID, Opts), #{
+                <<"kind">> => <<"device-spec">>,
+                <<"href">> => <<"/~", Device/binary, "/info/spec">>,
+                <<"spec-status">> => <<"present">>,
+                <<"coverage-status">> => <<"present">>,
+                <<"source-path">> => <<>>,
+                <<"source">> => <<"on-weave">>,
+                <<"txid">> => SpecID,
+                <<"title">> => markdown_title(Markdown, Device),
+                <<"summary">> => markdown_summary(Markdown),
+                <<"markdown-bytes">> => byte_size(Markdown),
+                <<"markdown">> => Markdown
+            });
         {error, Reason} ->
-            missing_on_weave_spec(Device, SpecID, Reason)
+            missing_on_weave_spec(
+                Device,
+                SpecID,
+                {metadata, Metadata, markdown, Reason}
+            )
     end.
+
+on_weave_spec_metadata({ok, Node}, _SpecID, Opts) ->
+    (doc_item_metadata(Node, Opts))#{
+        <<"metadata-status">> => <<"present">>
+    };
+on_weave_spec_metadata({error, Reason}, SpecID, _Opts) ->
+    #{
+        <<"txid">> => SpecID,
+        <<"signer">> => <<>>,
+        <<"block-height">> => <<>>,
+        <<"block-timestamp">> => <<>>,
+        <<"metadata-status">> => <<"missing">>,
+        <<"metadata-error">> => format_reason(Reason)
+    }.
 
 missing_on_weave_spec(Device, SpecID, Reason) ->
             #{
