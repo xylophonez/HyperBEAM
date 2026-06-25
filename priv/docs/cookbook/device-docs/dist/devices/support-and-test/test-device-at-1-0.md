@@ -28,7 +28,7 @@ Expected: `i like HyperBEAM!`. This is a simple deterministic target for resolve
 ### Inspect the helper paths
 
 ```bash
-curl -sS "http://localhost:8734/~test-device@1.0/info/~json@1.0/serialize" | head -c 1200
+curl -sS "http://localhost:8734/~test-device@1.0/info/~json@1.0/serialize"
 ```
 
 Expected: a JSON message whose `body` links to a helper-path description including `info`, `compute`, `init`, `snapshot`, and `append`.
@@ -37,7 +37,7 @@ Expected: a JSON message whose `body` links to a helper-path description includi
 
 ```bash
 TASK=$(curl -sS "http://localhost:8734/~cron@1.0/once?cron-path=/~test-device@1.0/delay")
-curl -sS "http://localhost:8734/~cron@1.0/stop?task=$TASK" | head -c 1600
+curl -sS "http://localhost:8734/~cron@1.0/stop?task=$TASK"
 ```
 
 Expected: the one-shot task is registered, then stopped before the delayed target finishes.

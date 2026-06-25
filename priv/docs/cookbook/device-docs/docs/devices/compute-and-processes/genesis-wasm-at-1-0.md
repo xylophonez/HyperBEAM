@@ -33,7 +33,7 @@ cat > /tmp/genesis-process.json <<'JSON'
 }
 JSON
 curl -sS -X POST -H 'content-type: application/json' --data-binary @/tmp/genesis-process.json \
-  "http://localhost:8734/~process@1.0/now/~json@1.0/serialize" | head -c 1200
+  "http://localhost:8734/~process@1.0/now/~json@1.0/serialize"
 ```
 
 Expected: on a node with the referenced WASM module available, process evaluation initializes legacy Genesis WASM state.
@@ -44,7 +44,7 @@ Expected: on a node with the referenced WASM module available, process evaluatio
 PROCESS_ID="<process-definition-id>"
 curl -sS -X POST "http://localhost:8734/$PROCESS_ID~process@1.0/compute" \
   -H 'action: Eval' \
-  --data-binary 'return 1 + 1' | head -c 1200
+  --data-binary 'return 1 + 1'
 ```
 
 Expected: the process stack invokes the Genesis WASM execution device with the posted message.

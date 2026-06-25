@@ -30,7 +30,7 @@ cat > /tmp/manifest.json <<'JSON'
 }
 JSON
 curl -sS -X POST --data-binary @/tmp/manifest.json \
-  "$HB/~manifest@1.0/index/~json@1.0/serialize" | head -c 1200
+  "$HB/~manifest@1.0/index/~json@1.0/serialize"
 ```
 
 Expected: `index` follows the manifest's `index.path` to `paths/index.html` and returns the linked message if it is available in cache.
@@ -40,7 +40,7 @@ Expected: `index` follows the manifest's `index.path` to `paths/index.html` and 
 ```bash
 HB="<local-node-with-manifest-cache>"
 curl -sS -X POST --data-binary @/tmp/manifest.json \
-  "$HB/~manifest@1.0/index.html/~json@1.0/serialize" | head -c 1200
+  "$HB/~manifest@1.0/index.html/~json@1.0/serialize"
 ```
 
 Expected: the manifest device maps `index.html` to its configured ID. If the ID is not in local cache, load it through `~arweave@2.9` or copycat first.
@@ -50,8 +50,8 @@ Expected: the manifest device maps `index.html` to its configured ID. If the ID 
 ```bash
 HB="<local-node-with-manifest-cache>"
 MANIFEST_ID="<manifest_tx_id>"
-curl -sS "$HB/$MANIFEST_ID/index" | head -c 1200
-curl -sS "$HB/$MANIFEST_ID/assets/app.js" | head -c 1200
+curl -sS "$HB/$MANIFEST_ID/index"
+curl -sS "$HB/$MANIFEST_ID/assets/app.js"
 ```
 
 Expected: the request hook casts cached `application/x.arweave-manifest` data to `manifest@1.0`, then routes the remaining path through the manifest.

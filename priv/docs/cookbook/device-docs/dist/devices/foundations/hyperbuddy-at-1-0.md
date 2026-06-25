@@ -20,7 +20,7 @@ A human-readable formatter for HyperBEAM messages. It is useful while exploring 
 ### Render a message for a human
 
 ```bash
-curl -sS "http://localhost:8734/~message@1.0&greeting=hello&count+integer=42/format~hyperbuddy@1.0" | head -80
+curl -sS "http://localhost:8734/~message@1.0&greeting=hello&count+integer=42/format~hyperbuddy@1.0"
 ```
 
 Expected: an HTML/text human-readable representation of the message and its typed fields.
@@ -36,7 +36,7 @@ Expected: a local query count. Use Hyperbuddy for structured messages; plain sca
 ### Use JSON when a program consumes the result
 
 ```bash
-curl -sS "http://localhost:8734/~message@1.0&greeting=hello&count+integer=42/~json@1.0/serialize" | head -c 1600
+curl -sS "http://localhost:8734/~message@1.0&greeting=hello&count+integer=42/~json@1.0/serialize"
 ```
 
 Expected: use `hyperbuddy` for operator eyes and `json@1.0` for scripts.

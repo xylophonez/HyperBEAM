@@ -6,7 +6,7 @@
 
 ```bash
 curl -sS "http://localhost:8734/~meta@1.0/info/preloaded-devices-index"
-curl -sS "http://localhost:8734/~meta@1.0/info/format~hyperbuddy@1.0" | grep -i -E 'store|cache|match|index' | head -120
+curl -sS "http://localhost:8734/~meta@1.0/info/format~hyperbuddy@1.0" | grep -i -E 'store|cache|match|index'
 ```
 
 ## Count Local Index Entries
@@ -33,7 +33,7 @@ Return modes:
 
 ```bash
 curl -sS "http://localhost:8734/~copycat@1.0/arweave?from=1936565&to=1936565&mode=write"
-curl -sS "http://localhost:8734/~copycat@1.0/arweave?from=1936565&to=1936565&mode=list" | head -c 1600
+curl -sS "http://localhost:8734/~copycat@1.0/arweave?from=1936565&to=1936565&mode=list"
 ```
 
 Expected: copycat imports one real Arweave block, then lists the transaction IDs it indexed. Use that list with `~arweave@2.9/tx` or `~arweave@2.9/raw` for deterministic reads. Narrow key/value query filters are node-index dependent; validate them on your operator node before publishing them as application paths.

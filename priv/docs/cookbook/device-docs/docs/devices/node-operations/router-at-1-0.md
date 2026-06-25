@@ -33,7 +33,7 @@ Expected: `Route added.` when signed by an authorized route owner; otherwise `no
 ### Match a request against the route table
 
 ```bash
-curl -sS "http://localhost:8734/~router@1.0/match?route-path=/~meta@1.0/info/address" | head -c 1600
+curl -sS "http://localhost:8734/~router@1.0/match?route-path=/~meta@1.0/info/address"
 ```
 
 Expected: the route that would handle the local meta path, including node/strategy fields when a matching route is configured.
@@ -43,7 +43,7 @@ Expected: the route that would handle the local meta path, including node/strate
 ```bash
 curl -sS -G "http://localhost:8734/~router@1.0/route" \
   --data-urlencode 'route-path=/PROCESS_ID~process@1.0/compute' \
-  --data-urlencode 'route-by=PROCESS_ID' | head -c 1600
+  --data-urlencode 'route-by=PROCESS_ID'
 ```
 
 Expected: the same process/hashpath consistently maps to the same worker when a `By-Base` route is configured.

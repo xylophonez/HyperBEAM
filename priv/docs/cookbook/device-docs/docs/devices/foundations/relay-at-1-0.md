@@ -29,7 +29,7 @@ Expected: the same address returned by a direct `~meta@1.0/info/address` call.
 ### Inspect route policy before relaying external URLs
 
 ```bash
-curl -sS "http://localhost:8734/~meta@1.0/info/routes/format~hyperbuddy@1.0" | head -80
+curl -sS "http://localhost:8734/~meta@1.0/info/routes/format~hyperbuddy@1.0"
 ```
 
 Expected: the route configuration visible in the node message. Operator route policy controls which remote URLs may be relayed, so inspect policy before using relay for external APIs.

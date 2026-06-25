@@ -48,7 +48,7 @@ Expected: the latest exported balance without performing a fresh dry run.
 ```text
 curl -sS -X POST -H 'content-type: application/json' \
   --data-binary '{"cache":{"profile":{"name":"alice","role":"operator"}}}' \
-  "http://localhost:8734/~patch@1.0/all/~json@1.0/serialize" | head -c 1600
+  "http://localhost:8734/~patch@1.0/all/~json@1.0/serialize"
 ```
 
 Expected: patch merges the supplied cache fragment into the target message/state according to the patch definition.
@@ -58,7 +58,7 @@ Expected: patch merges the supplied cache fragment into the target message/state
 ```text
 curl -sS -X POST -H 'content-type: application/json' \
   --data-binary '{"cache":{"orders":{"order-123":{"status":"paid"}}}}' \
-  "http://localhost:8734/~patch@1.0/all/~json@1.0/serialize" | head -c 1600
+  "http://localhost:8734/~patch@1.0/all/~json@1.0/serialize"
 ```
 
 Expected: only `orders/order-123/status` needs to be exported; clients can read that key directly through the process cache path.

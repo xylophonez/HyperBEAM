@@ -38,7 +38,7 @@ Expected: the hook refreshes the provider, parses newline-delimited IDs, and sto
 
 ```bash
 BLACKLIST_NODE="<node-with-blacklist-hook>"
-curl -sS "$BLACKLIST_NODE/BAD_MESSAGE_ID_1/~message@1.0/id" | head -c 1200
+curl -sS "$BLACKLIST_NODE/BAD_MESSAGE_ID_1/~message@1.0/id"
 ```
 
 Expected: once initialized, a matching request is rejected before normal resolution. Non-matching requests continue.

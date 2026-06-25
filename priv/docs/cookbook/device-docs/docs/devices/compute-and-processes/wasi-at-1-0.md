@@ -39,7 +39,7 @@ Expected: when `wasm-64@1.0` runs the module, `wasi@1.0` supplies args/env and c
 
 ```bash
 PROCESS_ID="<wasi-process-id>"
-curl -sS "http://localhost:8734/$PROCESS_ID~process@1.0/compute/results/stdout" | head -c 1000
+curl -sS "http://localhost:8734/$PROCESS_ID~process@1.0/compute/results/stdout"
 ```
 
 Expected: bytes written by the WASM module to stdout, if the module and process definition use WASI.
@@ -48,7 +48,7 @@ Expected: bytes written by the WASM module to stdout, if the module and process 
 
 ```bash
 curl -sS "http://localhost:8734/~meta@1.0/info/format~hyperbuddy@1.0" \
-  | grep -i -E 'wasm|wasi' | head -40
+  | grep -i -E 'wasm|wasi'
 ```
 
 Expected: confirm the node's WASM/WASI-related runtime settings before testing modules that expect filesystem or socket access.

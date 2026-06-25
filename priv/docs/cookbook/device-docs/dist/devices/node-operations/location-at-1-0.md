@@ -21,7 +21,7 @@ A peer-location device. It creates, caches, and reads signed location records th
 ### Publish this node's current location record
 
 ```bash
-curl -sS "http://localhost:8734/~location@1.0/node/~json@1.0/serialize" | head -c 1600
+curl -sS "http://localhost:8734/~location@1.0/node/~json@1.0/serialize"
 ```
 
 Expected: a signed location message for this node address and URL/nonce. Nodes use this so peers know where an address can be reached.
@@ -30,7 +30,7 @@ Expected: a signed location message for this node address and URL/nonce. Nodes u
 
 ```bash
 ADDR=$(curl -sS "http://localhost:8734/~meta@1.0/info/address")
-curl -sS "http://localhost:8734/~location@1.0/$ADDR/~json@1.0/serialize" | head -c 1600
+curl -sS "http://localhost:8734/~location@1.0/$ADDR/~json@1.0/serialize"
 ```
 
 Expected: the latest cached location record for that address, if one has been registered.
@@ -38,7 +38,7 @@ Expected: the latest cached location record for that address, if one has been re
 ### List all known local locations
 
 ```bash
-curl -sS "http://localhost:8734/~location@1.0/all/~json@1.0/serialize" | head -c 1600
+curl -sS "http://localhost:8734/~location@1.0/all/~json@1.0/serialize"
 ```
 
 Expected: all location records currently known to this node.

@@ -35,7 +35,7 @@ Expected: the default response codec includes `signature`, `signature-input`, an
 curl -sS -X POST \
   -H 'content-type: application/json' \
   --data-binary '{"body":"hello signed by secret","purpose":"demo"}' \
-  "http://localhost:8734/~message@1.0/commit&commitment-device=httpsig@1.0&type=hmac-sha256&scheme=secret&secret=s3cr3t/~json@1.0/serialize" | head -c 1600
+  "http://localhost:8734/~message@1.0/commit&commitment-device=httpsig@1.0&type=hmac-sha256&scheme=secret&secret=s3cr3t/~json@1.0/serialize"
 ```
 
 Expected: the result has a `httpsig@1.0` HMAC commitment. Use `proxy-commit` when another auth device, such as `cookie@1.0` or `http-auth@1.0`, owns the secret.

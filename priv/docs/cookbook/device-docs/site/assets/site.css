@@ -1410,7 +1410,6 @@ body.close .content {
 }
 
 .markdown-section a.anchor:hover,
-.markdown-section .hb-docs-section-index a:hover,
 .markdown-section a.hb-docs-card:hover,
 .markdown-section a.hb-docs-guide-list-link:hover,
 .markdown-section a.docs-footer-link:hover {

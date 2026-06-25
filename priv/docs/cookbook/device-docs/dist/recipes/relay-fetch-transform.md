@@ -27,11 +27,11 @@ curl -sS -G "$HB/~relay@1.0/call" \
 ```bash
 curl -sS -G "http://localhost:8734/~relay@1.0/call" \
   --data-urlencode 'relay-method=GET' \
-  --data-urlencode 'relay-path=https://example.com' | head
+  --data-urlencode 'relay-path=https://example.com'
 ```
 
 Remote access depends on route policy. If the node refuses the route, check routes:
 
 ```bash
-curl -sS "http://localhost:8734/~meta@1.0/info/routes/format~hyperbuddy@1.0" | head -80
+curl -sS "http://localhost:8734/~meta@1.0/info/routes/format~hyperbuddy@1.0"
 ```

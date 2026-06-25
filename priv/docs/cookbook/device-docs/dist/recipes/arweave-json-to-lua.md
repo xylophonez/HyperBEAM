@@ -26,7 +26,7 @@ Expected:
 List the transactions that copycat indexed from that block:
 
 ```bash
-curl -sS "http://localhost:8734/~copycat@1.0/arweave?from=$BLOCK&to=$BLOCK&mode=list" | head -c 2000
+curl -sS "http://localhost:8734/~copycat@1.0/arweave?from=$BLOCK&to=$BLOCK&mode=list"
 ```
 
 Expected: JSON with the copied block height and an `indexed` list. The list should include `wKzEejXI5AlypYl82NYzgtBNIAOg10Ui0EWM4bkYRN4`.
@@ -67,9 +67,7 @@ You can also serialize that transaction message as JSON:
 
 ```bash
 curl -sS \
-  "http://localhost:8734/~arweave@2.9/tx=$TXID/serialize~json@1.0?exclude-data=true" \
-  -o /tmp/hb-arweave-json-tx.json
-head -c 1000 /tmp/hb-arweave-json-tx.json
+  "http://localhost:8734/~arweave@2.9/tx=$TXID/serialize~json@1.0?exclude-data=true"
 ```
 
 Expected: a JSON object containing transaction fields such as `appname`, `author`, `content-type`, `data_size`, `postslug`, and `commitments`.
@@ -80,9 +78,7 @@ On current edge nodes that have the transaction data bytes available, parse the 
 
 ```bash
 curl -sS \
-  "http://localhost:8734/~arweave@2.9/tx=$TXID/deserialize~json@1.0&target=data/serialize~json@1.0" \
-  -o /tmp/hb-arweave-json-payload.json
-head -c 1000 /tmp/hb-arweave-json-payload.json
+  "http://localhost:8734/~arweave@2.9/tx=$TXID/deserialize~json@1.0&target=data/serialize~json@1.0"
 ```
 
 Expected: the JSON data payload decoded as a HyperBEAM message and serialized back to JSON for inspection. If the node has only indexed the transaction header so far, the command fails with a missing `data` target; the transaction header path above is still usable, and the Lua step below computes over that Arweave-derived JSON message.
@@ -98,7 +94,7 @@ sed 's#^{#{"device":"lua@5.3a","module":{"content-type":"application/lua","body"
 curl -sS -X POST \
   -H 'content-type: application/json' \
   --data-binary @/tmp/hb-arweave-json-lua.json \
-  "http://localhost:8734/summarize/serialize~json@1.0?txid=$TXID" | head -c 1200
+  "http://localhost:8734/summarize/serialize~json@1.0?txid=$TXID"
 ```
 
 Expected:
@@ -120,7 +116,7 @@ sed 's#^{#{"device":"lua@5.3a","module":{"content-type":"application/lua","body"
 curl -sS -X POST \
   -H 'content-type: application/json' \
   --data-binary @/tmp/hb-arweave-payload-lua.json \
-  "http://localhost:8734/summarize/serialize~json@1.0?txid=$TXID" | head -c 1200
+  "http://localhost:8734/summarize/serialize~json@1.0?txid=$TXID"
 ```
 
 That version computes over the transaction's JSON payload instead of its transaction header message.

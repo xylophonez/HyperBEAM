@@ -46,7 +46,7 @@ Expected: `true` or `false`. This mode is useful for hooks and route policies th
 
 ```bash
 curl -sS "http://localhost:8734/~copycat@1.0/arweave?from=1936565&to=1936565&mode=write"
-curl -sS "http://localhost:8734/~copycat@1.0/arweave?from=1936565&to=1936565&mode=list" | head -c 1600
+curl -sS "http://localhost:8734/~copycat@1.0/arweave?from=1936565&to=1936565&mode=list"
 ```
 
 Expected: copycat imports a real block, then lists the transaction IDs it indexed. Use those IDs with `~arweave@2.9/tx` or `~arweave@2.9/raw`. Narrow key/value filters depend on the indexes available on the operator node, so validate them before treating them as application API paths.

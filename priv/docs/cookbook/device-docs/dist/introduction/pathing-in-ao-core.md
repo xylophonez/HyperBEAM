@@ -71,7 +71,7 @@ To get the complete, real-time state of a process identified by `<procId>`, use 
 
 ```bash
 PROC_ID="<process-id>"
-curl -sS "http://localhost:8734/$PROC_ID~process@1.0/now" | head -c 1600
+curl -sS "http://localhost:8734/$PROC_ID~process@1.0/now"
 ```
 
 This instructs the AO-Core node to load the process and execute the `now` function on the [`~process@1.0`](/devices/compute-and-processes/process-at-1-0.md) device.
@@ -82,7 +82,7 @@ If a process maintains its state in a map and you want to access a specific fiel
 
 ```bash
 PROC_ID="<process-id>"
-curl -sS "http://localhost:8734/$PROC_ID~process@1.0/compute/cache" | head -c 1600
+curl -sS "http://localhost:8734/$PROC_ID~process@1.0/compute/cache"
 ```
 
 This accesses the `compute` key on the [`~process@1.0`](/devices/compute-and-processes/process-at-1-0.md) device and then navigates to the `cache` key within the resulting state map. Using this path, you will see the latest 'cache' of your process (the number of interactions it has received). Every piece of relevant information about your process can be accessed similarly, effectively providing a native API.
@@ -109,7 +109,7 @@ curl -sS 'http://localhost:8734/~message@1.0&greeting="Hello"&count+integer=42/c
 The same path model works without a process ID. This request builds a transient message with `~message@1.0`, then serializes that message with `~json@1.0`:
 
 ```bash
-curl -sS 'http://localhost:8734/~message@1.0&greeting="Hello"&count+integer=42/~json@1.0/serialize' | head -c 1200
+curl -sS 'http://localhost:8734/~message@1.0&greeting="Hello"&count+integer=42/~json@1.0/serialize'
 ```
 
 The output of the message device becomes the input to the JSON device. For a larger version of the same idea, see [Compute over Arweave JSON with Lua](/recipes/arweave-json-to-lua.md), which copies Arweave data locally, serializes it through HyperBEAM, and computes over it with Lua.

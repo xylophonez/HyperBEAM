@@ -20,7 +20,7 @@ A JSON codec for serializing and deserializing HyperBEAM messages.
 ### Serialize a constructed message
 
 ```bash
-curl -sS "http://localhost:8734/~message@1.0&greeting=hello&count+integer=42/~json@1.0/serialize" | head -c 1600
+curl -sS "http://localhost:8734/~message@1.0&greeting=hello&count+integer=42/~json@1.0/serialize"
 ```
 
 Expected: JSON with `greeting` as a string and `count` as a number.
@@ -30,7 +30,7 @@ Expected: JSON with `greeting` as a string and `count` as a number.
 ```bash
 curl -sS -X POST \
   --data-binary '{"greeting":"hello","count":42}' \
-  "http://localhost:8734/~json@1.0/deserialize/serialize~json@1.0" | head -c 1600
+  "http://localhost:8734/~json@1.0/deserialize/serialize~json@1.0"
 ```
 
 Expected: `deserialize` turns JSON body bytes into message keys, and the trailing `serialize~json@1.0` makes the decoded message visible to HTTP clients as JSON. Without the serialize step, the fields still exist on the message, but a browser-facing request may render the node's default HTML body.
@@ -38,7 +38,7 @@ Expected: `deserialize` turns JSON body bytes into message keys, and the trailin
 ### Use JSON as an API format for another device
 
 ```bash
-curl -sS "http://localhost:8734/~meta@1.0/info/~json@1.0/serialize" | head -c 1600
+curl -sS "http://localhost:8734/~meta@1.0/info/~json@1.0/serialize"
 ```
 
 Expected: a JSON-serialized node message. The point is the boundary: `~meta@1.0` returns a HyperBEAM message, and `~json@1.0` turns it into a client-readable body.

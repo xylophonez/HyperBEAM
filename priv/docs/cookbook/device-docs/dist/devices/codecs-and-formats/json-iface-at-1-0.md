@@ -24,7 +24,7 @@ The JSON interface used by WASM and delegated compute engines to exchange proces
 ADDR=$(curl -sS "http://localhost:8734/~meta@1.0/info/address")
 curl -sS -X POST -H 'content-type: application/json' \
   --data-binary "{\"data\":\"return 1 + 1\",\"action\":\"Eval\",\"target\":\"$ADDR\",\"from-process\":\"$ADDR\"}" \
-  "http://localhost:8734/~json-iface@1.0/to/~json@1.0/serialize" | head -c 1600
+  "http://localhost:8734/~json-iface@1.0/to/~json@1.0/serialize"
 ```
 
 Expected: a JSON-interface object with fields such as `Id`, `Owner`, `Target`, `Tags`, and `Data`. This is the shape expected by AOS/WASM handlers.
@@ -34,7 +34,7 @@ Expected: a JSON-interface object with fields such as `Id`, `Owner`, `Target`, `
 ```bash
 curl -sS -X POST -H 'content-type: application/json' \
   --data-binary '{"Output":{"data":"2"},"Messages":[],"Spawns":[],"Assignments":[]}' \
-  "http://localhost:8734/~json-iface@1.0/from/~json@1.0/serialize" | head -c 1600
+  "http://localhost:8734/~json-iface@1.0/from/~json@1.0/serialize"
 ```
 
 Expected: a HyperBEAM message carrying normalized result fields. In a full WASM process, pass 1 writes JSON into the VM environment and pass 2 reads this result back out.

@@ -23,7 +23,7 @@ The local cache read/write device. It reads IDs or store paths, honors requested
 
 ```bash
 ID=$(curl -sS "http://localhost:8734/~meta@1.0/info/preloaded-devices-index")
-curl -sS "http://localhost:8734/~cache@1.0/read&path=$ID/~json@1.0/serialize" | head -c 1200
+curl -sS "http://localhost:8734/~cache@1.0/read&path=$ID/~json@1.0/serialize"
 ```
 
 Expected: the cached preloaded device index if present in this node's store.
@@ -33,7 +33,7 @@ Expected: the cached preloaded device index if present in this node's store.
 ```text
 curl -sS -X POST -H 'content-type: application/json' \
   --data-binary '{"device":"message@1.0","body":"cache me","kind":"demo"}' \
-  "http://localhost:8734/~cache@1.0/write/~json@1.0/serialize" | head -c 1600
+  "http://localhost:8734/~cache@1.0/write/~json@1.0/serialize"
 ```
 
 Expected: success only if the signer is in `cache_writers`; otherwise the response rejects the write. Cache writes are operator-controlled because they affect what future queries can find.
@@ -42,7 +42,7 @@ Expected: success only if the signer is in `cache_writers`; otherwise the respon
 
 ```text
 curl -sS "http://localhost:8734/~cache@1.0/link?from=<source-cache-path>&to=aliases/demo-message"
-curl -sS "http://localhost:8734/~cache@1.0/read?path=aliases/demo-message" | head -c 1200
+curl -sS "http://localhost:8734/~cache@1.0/read?path=aliases/demo-message"
 ```
 
 Expected: the alias path resolves to the same cached value after an authorized link operation.

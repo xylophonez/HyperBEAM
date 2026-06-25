@@ -33,7 +33,7 @@ If `~recorder@1.0` returns `device_not_loadable` or `device-name-not-resolvable`
 ### Record one target request
 
 ```bash
-curl -sS "http://localhost:8734/~recorder@1.0/record?request=/~meta@1.0/info/address&format=text" | head -80
+curl -sS "http://localhost:8734/~recorder@1.0/record?request=/~meta@1.0/info/address&format=text"
 ```
 
 Expected: a text flight log showing the request, device calls, and response path for the target resolution.
@@ -42,7 +42,7 @@ Expected: a text flight log showing the request, device calls, and response path
 
 ```bash
 RECORDER_NODE="<local-node-with-recorder>"
-curl -sS "$RECORDER_NODE/~recorder@1.0/take-off/~message@1.0&body=hello/body/land~recorder@1.0?format=text" | head -80
+curl -sS "$RECORDER_NODE/~recorder@1.0/take-off/~message@1.0&body=hello/body/land~recorder@1.0?format=text"
 ```
 
 Expected: recorder captures the intermediate flight while the path runs, then `land` returns the captured report.
@@ -50,7 +50,7 @@ Expected: recorder captures the intermediate flight while the path runs, then `l
 ### Return JSON for tooling
 
 ```bash
-curl -sS "http://localhost:8734/~recorder@1.0/record?request=/~query@1.0/all%3Freturn%3Dcount&format=json" | head -c 1600
+curl -sS "http://localhost:8734/~recorder@1.0/record?request=/~query@1.0/all%3Freturn%3Dcount&format=json"
 ```
 
 Expected: structured recorder events that can be filtered in scripts.

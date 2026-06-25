@@ -34,7 +34,7 @@ cat > /tmp/dedup-stack.json <<'JSON'
 }
 JSON
 curl -sS -X POST --data-binary @/tmp/dedup-stack.json \
-  "$HB/append&bin=_/~json@1.0/serialize" | head -c 1200
+  "$HB/append&bin=_/~json@1.0/serialize"
 ```
 
 Expected: the first request is allowed through and records the request subject in the `dedup` trie. Replaying the same request against the resulting state returns `skip` instead of executing downstream devices again.
@@ -45,7 +45,7 @@ Expected: the first request is allowed through and records the request subject i
 HB="<local-node-with-dedup-stack>"
 curl -sS -X POST -H 'content-type: application/json' \
   --data-binary '{"device":"dedup@1.0","dedup-subject":"body","body":{"id":"same-work"}}' \
-  "$HB/run/~json@1.0/serialize" | head -c 1200
+  "$HB/run/~json@1.0/serialize"
 ```
 
 Expected: messages with the same `body` hash are treated as the same work item even if other request keys differ.

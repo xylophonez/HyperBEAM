@@ -13,10 +13,4 @@ Focused references:
 - [Trusted signers and pins](trusted-signers-and-pins.md)
 - [Operator configuration](operator-configuration.md)
 
-Quick check for a node's device-loading policy:
-
-```bash
-curl -sS "http://localhost:8734/~meta@1.0/info/load-remote-devices"
-curl -sS "http://localhost:8734/~meta@1.0/info/trusted-device-signers"
-curl -sS "http://localhost:8734/~meta@1.0/info/format~hyperbuddy@1.0" | grep -i -E 'trusted|remote|preloaded' | head -60
-```
+Device loading is an operator policy decision. The relevant policy keys are `preloaded-devices-index`, `load-remote-devices`, `trusted-device-signers`, and `trusted-devices`; inspect them on the node you operate rather than assuming a public docs node exposes live policy values.

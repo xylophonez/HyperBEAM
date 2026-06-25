@@ -21,7 +21,7 @@ A resolver device for turning names into values through configured resolver mess
 ### Inspect configured name resolvers
 
 ```bash
-curl -sS "http://localhost:8734/~meta@1.0/info/name-resolvers/~json@1.0/serialize" | head -c 1200
+curl -sS "http://localhost:8734/~meta@1.0/info/name-resolvers/~json@1.0/serialize"
 ```
 
 Expected: the resolver configuration for this node when present, or a clear missing-key response if the operator has not configured name resolvers. Configure resolvers before expecting arbitrary names to resolve.

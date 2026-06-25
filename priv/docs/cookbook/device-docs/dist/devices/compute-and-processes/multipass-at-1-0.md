@@ -30,7 +30,7 @@ cat > /tmp/multipass-stack.json <<'JSON'
 }
 JSON
 curl -sS -X POST --data-binary @/tmp/multipass-stack.json \
-  "$HB/counter/~json@1.0/serialize" | head -c 1200
+  "$HB/counter/~json@1.0/serialize"
 ```
 
 Expected: `multipass@1.0` asks the resolver to run another pass until the pass count reaches `passes`.

@@ -51,7 +51,7 @@ printf 'not a signed data item' >/tmp/not-an-item.bin
 curl -sS -i -X POST \
   -H 'content-type: application/octet-stream' \
   --data-binary @/tmp/not-an-item.bin \
-  "http://localhost:8734/~bundler@1.0/item?codec-device=ans104@1.0" | head -40
+  "http://localhost:8734/~bundler@1.0/item?codec-device=ans104@1.0"
 ```
 
 Expected: a `400`-style invalid or unsigned item response. That failure is useful: it proves the bundler is checking commitments before accepting items into a bundle.

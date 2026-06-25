@@ -23,7 +23,7 @@ An indexing orchestrator. It copies messages from foreign sources into the local
 
 ```bash
 curl -sS "http://localhost:8734/~copycat@1.0/arweave?from=1749502&to=1749502&mode=write"
-curl -sS "http://localhost:8734/~copycat@1.0/arweave?from=1749502&to=1749502&mode=list" | head -c 1600
+curl -sS "http://localhost:8734/~copycat@1.0/arweave?from=1749502&to=1749502&mode=list"
 ```
 
 Expected: `mode=write` fetches the block header and writes transaction/data-item offsets into the node's Arweave index; `mode=list` reports indexed and not-yet-indexed transactions for that block. This is the central copycat use case: it brings network facts into the node so later reads can be local/index-backed.
@@ -41,7 +41,7 @@ Expected: copycat walks backwards from the current block and stops when it reach
 
 ```bash
 curl -sS "http://localhost:8734/~copycat@1.0/arweave?from=1936565&to=1936565&mode=write"
-curl -sS "http://localhost:8734/~copycat@1.0/arweave?from=1936565&to=1936565&mode=list" | head -c 1600
+curl -sS "http://localhost:8734/~copycat@1.0/arweave?from=1936565&to=1936565&mode=list"
 ```
 
 Expected: the first command imports one real Arweave block into local indexes; the second command lists the transaction IDs now indexed for that block. This is the basic operator loop: copy data first, then read or compute over known IDs.

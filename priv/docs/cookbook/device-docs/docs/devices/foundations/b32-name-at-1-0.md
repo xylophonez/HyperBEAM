@@ -21,7 +21,7 @@ A name resolver for base32 subdomains that point at Arweave message IDs.
 
 ```bash
 B32_HOST="<52-character-base32-id>.localhost"
-curl -sS -H "Host: $B32_HOST" "http://localhost:8734/index.html" | head -c 1200
+curl -sS -H "Host: $B32_HOST" "http://localhost:8734/index.html"
 ```
 
 Expected: `b32-name@1.0` decodes the subdomain into the original 43-character Arweave/HyperBEAM ID and resolves the remaining path against that message.
@@ -31,7 +31,7 @@ Expected: `b32-name@1.0` decodes the subdomain into the original 43-character Ar
 ```bash
 HB="<node-with-b32-name-resolver>"
 ID="<decoded-43-character-id>"
-curl -sS "$HB/$ID/index.html" | head -c 1200
+curl -sS "$HB/$ID/index.html"
 ```
 
 Expected: the subdomain and explicit-ID forms resolve to the same content when resolver configuration and manifest data are available.

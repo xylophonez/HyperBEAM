@@ -64,7 +64,7 @@ Use this from a node/operator context where `Opts` carries the operator wallet. 
 
 ```bash
 OPERATOR_NODE="<operator-node-you-control>"
-curl -sS "$OPERATOR_NODE/~local-name@1.0/lookup?key=demo-service" | head -c 1200
+curl -sS "$OPERATOR_NODE/~local-name@1.0/lookup?key=demo-service"
 ```
 
 Expected after a successful operator registration: the message registered under `demo-service`.

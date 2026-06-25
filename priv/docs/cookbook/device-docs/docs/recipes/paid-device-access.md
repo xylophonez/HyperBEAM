@@ -5,7 +5,7 @@ HyperBEAM payment devices let an operator wrap ordinary requests with pricing an
 ## Check Payment Configuration
 
 ```bash
-curl -sS "http://localhost:8734/~meta@1.0/info/format~hyperbuddy@1.0" | grep -i -E 'p4|simple.pay|simple_pay|meter|price|ledger|topup|faff' | head -160
+curl -sS "http://localhost:8734/~meta@1.0/info/format~hyperbuddy@1.0" | grep -i -E 'p4|simple.pay|simple_pay|meter|price|ledger|topup|faff'
 ```
 
 ## Estimate A Simple-Pay Request
@@ -21,14 +21,14 @@ curl -sS \
 
 ```bash
 TARGET="AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
-curl -sS "http://localhost:8734/~simple-pay@1.0/balance?target=$TARGET" | head -80
-curl -sS "http://localhost:8734/~p4@1.0/balance?target=$TARGET" | head -80
+curl -sS "http://localhost:8734/~simple-pay@1.0/balance?target=$TARGET"
+curl -sS "http://localhost:8734/~p4@1.0/balance?target=$TARGET"
 ```
 
 ## Meter A Resource
 
 ```bash
-curl -sS "http://localhost:8734/~meta@1.0/info/metering-rates/format~hyperbuddy@1.0" | head -80
+curl -sS "http://localhost:8734/~meta@1.0/info/metering-rates/format~hyperbuddy@1.0"
 curl -sS "http://localhost:8734/~metering@1.0/estimate"
 curl -sS "http://localhost:8734/~metering@1.0/price"
 ```

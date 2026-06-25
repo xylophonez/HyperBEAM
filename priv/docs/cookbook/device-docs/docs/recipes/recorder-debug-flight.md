@@ -12,13 +12,13 @@ curl -sS "http://localhost:8734/~meta@1.0/info/format~hyperbuddy@1.0" \
 ## Try A Short Flight
 
 ```bash
-curl -m 5 -sS "http://localhost:8734/~recorder@1.0/record?request=/~meta@1.0/info/address&format=text" | head -80
+curl -m 5 -sS "http://localhost:8734/~recorder@1.0/record?request=/~meta@1.0/info/address&format=text"
 ```
 
 ## Record A Target Request
 
 ```bash
-curl -m 5 -sS "http://localhost:8734/~recorder@1.0/record?request=/~meta@1.0/info" | head -80
+curl -m 5 -sS "http://localhost:8734/~recorder@1.0/record?request=/~meta@1.0/info"
 ```
 
 ## Use During Forge Tests

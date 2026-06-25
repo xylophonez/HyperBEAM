@@ -24,7 +24,7 @@ A codec that flattens nested TABM messages into path-keyed maps and can expand t
 HB="<local-node-with-flat-codec>"
 curl -sS -X POST -H 'content-type: application/json' \
   --data-binary '{"user":{"name":"alice","role":"operator"},"count":3}' \
-  "$HB/~flat@1.0/to/~json@1.0/serialize" | head -c 1200
+  "$HB/~flat@1.0/to/~json@1.0/serialize"
 ```
 
 Expected: keys such as `user/name` and `user/role` appear in the result. This is useful for config files and simple line-oriented review.
@@ -35,7 +35,7 @@ Expected: keys such as `user/name` and `user/role` appear in the result. This is
 HB="<local-node-with-flat-codec>"
 printf 'user/name: alice\nuser/role: operator\ncount: 3\n' >/tmp/demo.flat
 curl -sS -X POST --data-binary @/tmp/demo.flat \
-  "$HB/~flat@1.0/deserialize/~json@1.0/serialize" | head -c 1200
+  "$HB/~flat@1.0/deserialize/~json@1.0/serialize"
 ```
 
 Expected: a nested message equivalent to `{"user":{"name":"alice","role":"operator"},"count":"3"}`. Use `structured@1.0` when numeric type recovery matters.

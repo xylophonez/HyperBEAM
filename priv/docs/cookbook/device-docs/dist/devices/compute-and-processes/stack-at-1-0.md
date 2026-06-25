@@ -34,7 +34,7 @@ cat > /tmp/stack.json <<'JSON'
 }
 JSON
 curl -sS -X POST --data-binary @/tmp/stack.json \
-  "$HB/zip/serialize" | head -c 1200
+  "$HB/zip/serialize"
 ```
 
 Expected: the request first executes gzip behavior, then JSON serialization over the result.
@@ -57,7 +57,7 @@ Expected: incoming requests pass through rate limiting before auth signing. Stac
 HB="<local-node-with-stack-device>"
 curl -sS -X POST -H 'content-type: application/json' \
   --data-binary '{"device":"stack@1.0","mode":"map","device-stack":{"1":"message@1.0","2":"json@1.0"},"body":"hello"}' \
-  "$HB/body/~json@1.0/serialize" | head -c 1200
+  "$HB/body/~json@1.0/serialize"
 ```
 
 Expected: map mode combines each device's result into one message instead of treating the stack as a strict pipeline.

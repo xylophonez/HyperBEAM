@@ -22,7 +22,7 @@ A process-output propagation device. It evaluates messages or slots and recursiv
 
 ```bash
 PROCESS_ID="<process-id>"
-curl -sS "http://localhost:8734/$PROCESS_ID~process@1.0/compute&slot+integer=1/outbox/~push@1.0/all/~json@1.0/serialize" | head -c 1600
+curl -sS "http://localhost:8734/$PROCESS_ID~process@1.0/compute&slot+integer=1/outbox/~push@1.0/all/~json@1.0/serialize"
 ```
 
 Expected: after compute produces an outbox, `push@1.0` assigns or forwards those messages according to the process push configuration.
@@ -32,7 +32,7 @@ Expected: after compute produces an outbox, `push@1.0` assigns or forwards those
 ```bash
 curl -sS -X POST -H 'content-type: application/json' \
   --data-binary '{"target":"<recipient-process>","data":"hello"}' \
-  "http://localhost:8734/~push@1.0/one/~json@1.0/serialize" | head -c 1200
+  "http://localhost:8734/~push@1.0/one/~json@1.0/serialize"
 ```
 
 Expected: the device wraps the target message into an assignment/push result when process context is configured.

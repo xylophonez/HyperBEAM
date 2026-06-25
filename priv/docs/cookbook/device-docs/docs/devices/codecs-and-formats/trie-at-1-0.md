@@ -21,7 +21,7 @@ A radix trie device with implicit leaves. It is useful for path-indexed data and
 ### Set values in a committed trie
 
 ```bash
-curl -sS "http://localhost:8734/~trie@1.0/set&car+integer=31337&card+integer=90210/~json@1.0/serialize" | tee /tmp/trie.json | head -c 1200
+curl -sS "http://localhost:8734/~trie@1.0/set&car+integer=31337&card+integer=90210/~json@1.0/serialize" | tee /tmp/trie.json
 ```
 
 Expected: a trie message containing both keys. The radix trie shares prefixes, so `car` and `card` occupy a compact committed structure.
@@ -41,7 +41,7 @@ Expected: `get?key=car` and default lookup `/card` return the stored values once
 
 ```bash
 curl -sS -X POST -H 'content-type: application/json' --data-binary @/tmp/trie.json \
-  "http://localhost:8734/~trie@1.0/keys/~json@1.0/serialize" | head -c 1600
+  "http://localhost:8734/~trie@1.0/keys/~json@1.0/serialize"
 ```
 
 Expected: the set of keys stored in the trie.

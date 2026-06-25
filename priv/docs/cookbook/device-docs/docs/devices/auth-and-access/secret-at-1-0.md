@@ -24,7 +24,7 @@ A node-hosted secret and wallet device. It can generate, import, export, list, s
 ### List node-hosted secret references
 
 ```bash
-curl -sS "http://localhost:8734/~secret@1.0/list/~json@1.0/serialize" | head -c 1200
+curl -sS "http://localhost:8734/~secret@1.0/list/~json@1.0/serialize"
 ```
 
 Expected: a JSON message containing secret references, not private key material. A default node usually has at least its operator wallet available as a node-hosted signing secret.

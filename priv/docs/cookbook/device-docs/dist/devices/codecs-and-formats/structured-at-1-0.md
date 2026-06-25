@@ -24,7 +24,7 @@ A rich structured codec for typed HyperBEAM messages, including integers, floats
 ```bash
 curl -sS -X POST -H 'content-type: application/json' \
   --data-binary '{"count":42,"ratio":1.5,"items":["a","b"],"ok":true}' \
-  "http://localhost:8734/~structured@1.0/from/~json@1.0/serialize" | head -c 1600
+  "http://localhost:8734/~structured@1.0/from/~json@1.0/serialize"
 ```
 
 Expected: scalar values become TABM-safe binaries and `ao-types` records which keys were integers, floats, atoms, or lists.
@@ -34,7 +34,7 @@ Expected: scalar values become TABM-safe binaries and `ao-types` records which k
 ```bash
 curl -sS -X POST -H 'content-type: application/json' \
   --data-binary '{"count":"42","ok":"true","ao-types":"count=\"integer\", ok=\"atom\""}' \
-  "http://localhost:8734/~structured@1.0/to/~json@1.0/serialize" | head -c 1600
+  "http://localhost:8734/~structured@1.0/to/~json@1.0/serialize"
 ```
 
 Expected: `count` is an integer and `ok` is an atom/boolean-like value after decoding.
@@ -44,7 +44,7 @@ Expected: `count` is an integer and `ok` is an atom/boolean-like value after dec
 ```text
 curl -sS -X POST -H 'content-type: application/json' \
   --data-binary '{"count":42,"ratio":1.5,"items":["a","b"]}' \
-  "http://localhost:8734/~structured@1.0/from&encode-types=integer,list/~json@1.0/serialize" | head -c 1600
+  "http://localhost:8734/~structured@1.0/from&encode-types=integer,list/~json@1.0/serialize"
 ```
 
 Expected: only selected rich types are encoded into `ao-types`; others pass through according to downstream codec behavior.

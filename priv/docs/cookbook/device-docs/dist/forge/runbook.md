@@ -142,13 +142,7 @@ A node can load non-core devices by direct pin, trusted signer, or a local prelo
 | `load-remote-devices` | Enables fetching unmatched devices from the configured gateway. |
 | `admissible-devices` | Optional per-execution allowlist, used by sandboxed execution. |
 
-Check the current node policy:
-
-```bash
-curl -sS "http://localhost:8734/~meta@1.0/info/load-remote-devices"
-curl -sS "http://localhost:8734/~meta@1.0/info/trusted-device-signers"
-curl -sS "http://localhost:8734/~meta@1.0/info/format~hyperbuddy@1.0" | grep -i -E 'trusted|remote|preloaded' | head -60
-```
+Inspect the current policy on the node you operate. For device loading, the important keys are `preloaded-store`, `preloaded-devices-index`, `trusted-devices`, `trusted-device-signers`, `load-remote-devices`, and `admissible-devices`.
 
 ## Operator Pattern
 

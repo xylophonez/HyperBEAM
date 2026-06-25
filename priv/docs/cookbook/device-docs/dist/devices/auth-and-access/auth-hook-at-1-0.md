@@ -36,7 +36,7 @@ Start a disposable node with that config, then send a request with Basic auth:
 ```bash
 AUTH=$(printf 'alice:correct-horse' | base64 | tr -d '\n')
 curl -sS -i -H "Authorization: Basic $AUTH" \
-  "http://localhost:8734/~message@1.0&body=needs-node-signature/~json@1.0/serialize" | head -80
+  "http://localhost:8734/~message@1.0&body=needs-node-signature/~json@1.0/serialize"
 ```
 
 Expected: the request hook sees the `authorization` key, derives a secret through `~http-auth@1.0`, creates or finds a node-hosted wallet through `~secret@1.0`, signs the request, then lets normal resolution continue.
@@ -44,7 +44,7 @@ Expected: the request hook sees the `authorization` key, derives a secret throug
 ### Prove the hook challenges missing credentials
 
 ```bash
-curl -sS -i "http://localhost:8734/~message@1.0&body=needs-node-signature" | head -60
+curl -sS -i "http://localhost:8734/~message@1.0&body=needs-node-signature"
 ```
 
 Expected: with the hook config above, an unsigned request that needs auth returns a Basic challenge or hook error instead of silently signing.

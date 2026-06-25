@@ -27,7 +27,7 @@ A Memory-64 WASM execution device backed by WAMR through the BEAMR wrapper.
 curl -sS -X POST "http://localhost:8734/~wasm-64@1.0/compute" \
   -H 'wasm-function: fac' \
   -H 'wasm-params: [10]' \
-  --data-binary @/path/to/test-64.wasm | head -c 1200
+  --data-binary @/path/to/test-64.wasm
 ```
 
 Expected: the module is loaded, function `fac` is invoked with parameter `10`, and the result is returned or cached as WASM state.
@@ -36,7 +36,7 @@ Expected: the module is loaded, function `fac` is invoked with parameter `10`, a
 
 ```bash
 HASHPATH="<hashpath-from-first-compute>"
-curl -sS "http://localhost:8734/$HASHPATH/compute?wasm-function=fac&wasm-params=[11]" | head -c 1200
+curl -sS "http://localhost:8734/$HASHPATH/compute?wasm-function=fac&wasm-params=[11]"
 ```
 
 Expected: `wasm-64@1.0` resumes from cached instance/snapshot state instead of initializing from scratch.

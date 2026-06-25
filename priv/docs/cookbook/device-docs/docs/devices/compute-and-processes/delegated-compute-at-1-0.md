@@ -29,7 +29,7 @@ cat > /tmp/delegated-request.json <<JSON
 }
 JSON
 curl -sS -X POST --data-binary @/tmp/delegated-request.json \
-  "$HB/~delegated-compute@1.0/compute/~json@1.0/serialize" | head -c 1200
+  "$HB/~delegated-compute@1.0/compute/~json@1.0/serialize"
 ```
 
 Expected: the device forwards the compute-shaped request to the configured endpoint and returns the worker response. Use a real remote URL when separating schedulers from compute workers.
@@ -38,7 +38,7 @@ Expected: the device forwards the compute-shaped request to the configured endpo
 
 ```bash
 ADDR=$(curl -sS "http://localhost:8734/~meta@1.0/info/address")
-curl -sS "http://localhost:8734/~json-iface@1.0/to&data=ping&action=Eval&target=$ADDR&from-process=$ADDR/~json@1.0/serialize" | head -c 1000
+curl -sS "http://localhost:8734/~json-iface@1.0/to&data=ping&action=Eval&target=$ADDR&from-process=$ADDR/~json@1.0/serialize"
 ```
 
 Expected: `json-iface@1.0` prepares the message shape that delegated WASM/AOS workers commonly expect.

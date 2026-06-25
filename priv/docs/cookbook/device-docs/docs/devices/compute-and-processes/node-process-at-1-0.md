@@ -37,7 +37,7 @@ Expected: on startup, `~node-process@1.0/counter` can look up or spawn the local
 
 ```bash
 OPERATOR_NODE="<node-with-counter-process>"
-curl -sS "$OPERATOR_NODE/~node-process@1.0/counter/~json@1.0/serialize" | head -c 1600
+curl -sS "$OPERATOR_NODE/~node-process@1.0/counter/~json@1.0/serialize"
 ```
 
 Expected: the configured process definition or current local process state. The name is local to this node, not a global ArNS name.

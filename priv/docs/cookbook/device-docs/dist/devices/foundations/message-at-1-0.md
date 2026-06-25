@@ -30,7 +30,7 @@ Expected: `42` and `hello`.
 ### List public keys for a constructed message
 
 ```bash
-curl -sS "http://localhost:8734/~message@1.0&greeting=hello&role=operator/keys/~json@1.0/serialize" | head -c 1200
+curl -sS "http://localhost:8734/~message@1.0&greeting=hello&role=operator/keys/~json@1.0/serialize"
 ```
 
 Expected: a list containing public keys such as `greeting` and `role`. This is useful before committing only a selected subset of keys.

@@ -31,9 +31,9 @@ The Arweave access device. It reads network status, blocks, transaction headers,
 ```bash
 TXID="wKzEejXI5AlypYl82NYzgtBNIAOg10Ui0EWM4bkYRN4"
 curl -sS "http://localhost:8734/~copycat@1.0/arweave?from=1936565&to=1936565&mode=write" >/dev/null
-curl -sS "http://localhost:8734/~arweave@2.9/tx=$TXID?exclude-data=true" | head -c 1200
+curl -sS "http://localhost:8734/~arweave@2.9/tx=$TXID?exclude-data=true"
 curl -sSI "http://localhost:8734/~arweave@2.9/raw=$TXID"
-curl -sS -H "Range: bytes=0-63" "http://localhost:8734/~arweave@2.9/raw=$TXID" | head -c 120
+curl -sS -H "Range: bytes=0-63" "http://localhost:8734/~arweave@2.9/raw=$TXID"
 ```
 
 Expected: copycat first indexes the containing block, the tx call returns transaction metadata without loading the full data body, the `HEAD` call returns raw payload metadata such as content length/range support, and the range call returns the first bytes of the transaction data.

@@ -5,7 +5,7 @@
 ## Check Bundler Settings
 
 ```bash
-curl -sS "http://localhost:8734/~meta@1.0/info/format~hyperbuddy@1.0" | grep -i bundler -C 4 | head -120
+curl -sS "http://localhost:8734/~meta@1.0/info/format~hyperbuddy@1.0" | grep -i bundler -C 4
 curl -sS "http://localhost:8734/~meta@1.0/info/bundler-ans104"
 ```
 
@@ -52,7 +52,7 @@ The item ID can be used in later cache/query reads if the node cached it success
 ## Operator Checks
 
 ```bash
-curl -sS "http://localhost:8734/~meta@1.0/info/format~hyperbuddy@1.0" | grep -i -E 'bundler|max|worker|meter|arweave' | head -120
+curl -sS "http://localhost:8734/~meta@1.0/info/format~hyperbuddy@1.0" | grep -i -E 'bundler|max|worker|meter|arweave'
 curl -sS "http://localhost:8734/~meta@1.0/info/bundler-ans104"
 ```
 

@@ -22,7 +22,7 @@ The Arweave L1 transaction codec. It converts Arweave transaction records to and
 
 ```bash
 TXID="ptBC0UwDmrUTBQX3MqZ1lB57ex20ygwzkjjCrQjIx3o"
-curl -sS "http://localhost:8734/~arweave@2.9/tx=$TXID?exclude-data=true/serialize~json@1.0" | head -c 1600
+curl -sS "http://localhost:8734/~arweave@2.9/tx=$TXID?exclude-data=true/serialize~json@1.0"
 ```
 
 Expected: the transaction body as JSON. HyperBEAM reads the L1 transaction, maps it into message form through `tx@1.0`, and serializes the resulting message body.

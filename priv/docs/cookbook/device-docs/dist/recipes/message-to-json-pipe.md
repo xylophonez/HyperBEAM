@@ -25,7 +25,7 @@ curl -sS "http://localhost:8734/~message@1.0&greeting=hello&count+integer=42/~js
 ## Human View
 
 ```bash
-curl -sS "http://localhost:8734/~message@1.0&greeting=hello&count+integer=42/format~hyperbuddy@1.0" | head -40
+curl -sS "http://localhost:8734/~message@1.0&greeting=hello&count+integer=42/format~hyperbuddy@1.0"
 ```
 
 This pattern appears everywhere: a path first creates or loads a message, then another device transforms or renders it.

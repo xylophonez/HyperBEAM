@@ -26,7 +26,7 @@ The scheduling device for process assignments. It exposes schedule, slot, status
 PROCESS_ID="<process-id>"
 curl -sS -X POST "http://localhost:8734/$PROCESS_ID~scheduler@1.0/schedule" \
   -H 'action: Ping' \
-  --data-binary 'hello scheduler' | head -c 1200
+  --data-binary 'hello scheduler'
 ```
 
 Expected: an assignment or slot result for the process schedule. The request must be signed/admissible on production scheduler nodes.
@@ -35,7 +35,7 @@ Expected: an assignment or slot result for the process schedule. The request mus
 
 ```bash
 PROCESS_ID="<process-id>"
-curl -sS "http://localhost:8734/$PROCESS_ID~scheduler@1.0/slot&slot+integer=1/~json@1.0/serialize" | head -c 1200
+curl -sS "http://localhost:8734/$PROCESS_ID~scheduler@1.0/slot&slot+integer=1/~json@1.0/serialize"
 ```
 
 Expected: the scheduled message at slot 1 if available.
@@ -53,7 +53,7 @@ Expected: the next slot number or scheduler status response.
 
 ```bash
 PROCESS_ID="<process-id>"
-curl -sS "http://localhost:8734/$PROCESS_ID~scheduler@1.0/status/~json@1.0/serialize" | head -c 1600
+curl -sS "http://localhost:8734/$PROCESS_ID~scheduler@1.0/status/~json@1.0/serialize"
 ```
 
 Expected: scheduler state for that process: latest slot, assignment status, or an error describing missing scheduler state.

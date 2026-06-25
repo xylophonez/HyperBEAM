@@ -20,7 +20,7 @@ A profiling device for measuring device execution. It can run profiling tools ar
 ### Profile a cheap local resolution
 
 ```bash
-curl -sS "http://localhost:8734/~profile@1.0/eval?path=/~meta@1.0/info/address" | head -c 1600
+curl -sS "http://localhost:8734/~profile@1.0/eval?path=/~meta@1.0/info/address"
 ```
 
 Expected: profiling output plus the target result, depending on configured profile engine/return mode.
@@ -29,7 +29,7 @@ Expected: profiling output plus the target result, depending on configured profi
 
 ```bash
 PROFILE_NODE="<local-node-with-event-profiling>"
-curl -sS "$PROFILE_NODE/~profile@1.0/eval?engine=event&path=/~message@1.0/body&body=hello" | head -c 1600
+curl -sS "$PROFILE_NODE/~profile@1.0/eval?engine=event&path=/~message@1.0/body&body=hello"
 ```
 
 Expected: event timing/counter information for the resolution.
@@ -37,7 +37,7 @@ Expected: event timing/counter information for the resolution.
 ### Profile a heavier query after copycat
 
 ```bash
-curl -sS "http://localhost:8734/~profile@1.0/eval?path=/~query@1.0/all?return=count" | head -c 1600
+curl -sS "http://localhost:8734/~profile@1.0/eval?path=/~query@1.0/all?return=count"
 ```
 
 Expected: query result plus profiling metadata, useful when tuning cache/index behavior.

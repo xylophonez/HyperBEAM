@@ -50,7 +50,7 @@ Keep the printed spec ID, implementation ID, and signer address.
 ```bash
 curl -sS "http://localhost:8734/~meta@1.0/info/load-remote-devices"
 curl -sS "http://localhost:8734/~meta@1.0/info/trusted-device-signers"
-curl -sS "http://localhost:8734/~meta@1.0/info/format~hyperbuddy@1.0" | grep -i -E 'trusted|remote|preloaded' | head -60
+curl -sS "http://localhost:8734/~meta@1.0/info/format~hyperbuddy@1.0" | grep -i -E 'trusted|remote|preloaded'
 ```
 
 Use a direct pin when the operator wants exactly one implementation. Use a trusted signer when the signer should be allowed to publish upgrades.

@@ -31,7 +31,7 @@ cat > /tmp/lua-process.json <<'JSON'
 }
 JSON
 curl -sS -X POST -H 'content-type: application/json' --data-binary @/tmp/lua-process.json \
-  "http://localhost:8734/handle/serialize~json@1.0?name=alice" | head -c 1600
+  "http://localhost:8734/handle/serialize~json@1.0?name=alice"
 ```
 
 Expected: Lua state is initialized from the body and `handle` receives the path request as its second argument, returning a message with `body=hello alice`.
@@ -48,7 +48,7 @@ cat > /tmp/lua-sandbox.json <<'JSON'
 }
 JSON
 curl -sS -X POST -H 'content-type: application/json' --data-binary @/tmp/lua-sandbox.json \
-  "http://localhost:8734/handle/serialize~json@1.0" | head -c 1600
+  "http://localhost:8734/handle/serialize~json@1.0"
 ```
 
 Expected: sandboxed globals such as `os` are absent or restricted.

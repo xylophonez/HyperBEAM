@@ -21,7 +21,7 @@ An HTTP Basic authentication device with PBKDF2 password handling and HMAC commi
 ### Trigger the Basic-auth challenge
 
 ```bash
-curl -sS -i "http://localhost:8734/~http-auth@1.0/generate" | head -50
+curl -sS -i "http://localhost:8734/~http-auth@1.0/generate"
 ```
 
 Expected: `401 Unauthorized` with `www-authenticate: Basic` and details saying no Authorization header was provided. This is the browser challenge path.
@@ -41,7 +41,7 @@ Expected: `alice:correct-horse`. `raw=true` is for debugging only; normal auth-h
 ```bash
 AUTH=$(printf 'alice:correct-horse' | base64 | tr -d '\n')
 curl -sS -H "Authorization: Basic $AUTH" \
-  "http://localhost:8734/~http-auth@1.0/generate?iterations+integer=1200000&key-length+integer=64" | head -c 160
+  "http://localhost:8734/~http-auth@1.0/generate?iterations+integer=1200000&key-length+integer=64"
 ```
 
 Expected: a deterministic encoded secret derived from the Basic credentials, salt, iteration count, and key length. `~auth-hook@1.0` passes that secret to `~secret@1.0`/`~httpsig@1.0` for request commitments.

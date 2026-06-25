@@ -31,7 +31,7 @@ Open `/tmp/cacheviz.html` or request it from a browser. Expected: an HTML UI tha
 ### Get graph JSON for tooling
 
 ```bash
-curl -sS "http://localhost:8734/~cacheviz@1.0/json" | head -c 4000
+curl -sS "http://localhost:8734/~cacheviz@1.0/json"
 ```
 
 Expected: nodes and edges representing cached messages/links.

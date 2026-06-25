@@ -38,8 +38,8 @@ Expected: the content ID of the build-time preloaded device index.
 
 ```bash
 curl -sS "http://localhost:8734/~meta@1.0/info/load-remote-devices"
-curl -sS "http://localhost:8734/~meta@1.0/info/trusted-device-signers/~json@1.0/serialize" | head -c 1600
-curl -sS "http://localhost:8734/~meta@1.0/info/trusted-devices/~json@1.0/serialize" | head -c 1600
+curl -sS "http://localhost:8734/~meta@1.0/info/trusted-device-signers/~json@1.0/serialize"
+curl -sS "http://localhost:8734/~meta@1.0/info/trusted-devices/~json@1.0/serialize"
 ```
 
 Expected: whether this node may fetch remote devices, which signers it trusts, and which implementation IDs are pinned.

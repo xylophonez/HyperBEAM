@@ -317,8 +317,8 @@ node_info_data(Opts) ->
         <<"kind">> => <<"node-info">>,
         <<"node">> => node_href(Opts),
         <<"summary">> =>
-            <<"HyperBEAM node documentation index generated from the node's "
-                "runtime device inventory prototype.">>,
+            <<"HyperBEAM documentation for the spec-loaded devices this node "
+                "can resolve and run.">>,
         <<"renderer">> => cookbook_renderer(),
         <<"boilerplate-link">> => <<"/info/guides">>,
         <<"devices">> => on_weave_node_devices(Opts),
@@ -1621,7 +1621,6 @@ render_device_html(Data) ->
             esc(maps:get(<<"id">>, Device)),
             <<"</h1><p>">>, esc(maps:get(<<"summary">>, Data)), <<"</p>">>,
             schema_source_note(Data),
-            device_section_index(SchemaOrder, Spec, Recipes),
             <<"<h2 id=\"schema\">Schema</h2><table><thead><tr>"
                 "<th>Key</th><th>Description</th><th>Parameters</th></tr></thead><tbody>">>,
             schema_rows(DeviceID, Schema, SchemaOrder),
@@ -2466,41 +2465,9 @@ body.hb-docs-protocol .sidebar-viewing-back.is-active {
   text-decoration: none !important;
 }
 .hb-docs-guide-group a:hover { text-decoration: underline !important; }
-.hb-docs-section-index {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 10px;
-  margin: 1.5rem 0 2rem;
-}
-.markdown-section .hb-docs-section-index a,
-.markdown-section .hb-docs-section-index a:hover,
-.markdown-section .hb-docs-section-index a strong,
-.markdown-section .hb-docs-section-index a span {
-  text-decoration: none !important;
-}
-.hb-docs-section-index a {
-  display: grid;
-  gap: 4px;
-  min-height: 78px;
-  padding: 12px;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--bg);
-  color: var(--text) !important;
-  text-decoration: none !important;
-}
-.hb-docs-section-index a:hover {
-  background: var(--bg-hover);
-  text-decoration: none !important;
-}
-.hb-docs-section-index span {
-  color: var(--text-secondary);
-  font-size: var(--text-caption);
-  opacity: 0.72;
-}
-	.hb-docs-renderer-note {
-	  color: var(--text-secondary);
-	  font-size: var(--text-small);
+		.hb-docs-renderer-note {
+		  color: var(--text-secondary);
+		  font-size: var(--text-small);
 	}
 	.spec-meta {
   display: flex;
@@ -2593,9 +2560,6 @@ body.hb-docs-protocol .sidebar-viewing-back.is-active {
   }
   body.hb-docs-protocol .sidebar { top: var(--header-height) !important; }
   body.hb-docs-protocol .content { padding-top: var(--header-height) !important; }
-  .hb-docs-section-index {
-    grid-template-columns: 1fr;
-  }
 }
 ">>.
 docs_sidebar(Items) ->
@@ -3268,21 +3232,6 @@ recipe_nav(DeviceID, Recipes) ->
     || {Name, Recipe} <- lists:sort(maps:to_list(Recipes))
     ].
 
-device_section_index(SchemaOrder, Spec, Recipes) ->
-    [
-        <<"<nav class=\"hb-docs-section-index\" aria-label=\"Device sections\">">>,
-        <<"<a href=\"#schema\"><strong>Schema</strong><span>">>,
-        esc(hb_util:bin(length(SchemaOrder))),
-        <<" documented keys</span></a>">>,
-        <<"<a href=\"#spec\"><strong>Spec</strong><span>">>,
-        spec_index_label(Spec),
-        <<"</span></a>">>,
-        <<"<a href=\"#recipes\"><strong>Recipes</strong><span>">>,
-        esc(hb_util:bin(map_size(Recipes))),
-        <<" on-weave recipes</span></a>">>,
-        <<"</nav>">>
-    ].
-
 schema_source_note(Data) ->
     case maps:get(<<"schema-source">>, Data, undefined) of
         Source when is_map(Source) ->
@@ -3319,12 +3268,6 @@ schema_source_status_suffix(Source) ->
     case maps:get(<<"status">>, Source, <<>>) of
         <<>> -> <<>>;
         Status -> iolist_to_binary([<<" (">>, Status, <<")">>])
-    end.
-
-spec_index_label(Spec) ->
-    case maps:get(<<"spec-status">>, Spec, <<"missing">>) of
-        <<"present">> -> <<"Open the normative contract">>;
-        _ -> <<"Spec coverage not published yet">>
     end.
 
 render_spec_section(_DeviceID, Spec) ->
@@ -4394,17 +4337,19 @@ render_markdown_lines([Line | Rest], Para, Acc, AddHeadingIds, UsedIds, Opts) ->
                 {ok, Table, AfterTable} ->
                     render_markdown_lines(AfterTable, [], [Table, flush_paragraph(Para, Opts) | Acc], AddHeadingIds, UsedIds, Opts);
                 false ->
-                    case {Trim, heading(Trim), bullet_text(Trim), numbered_text(Trim)} of
-                        {<<>>, _, _, _} ->
+                    case {Trim, raw_html_line(Trim), heading(Trim), bullet_text(Trim), numbered_text(Trim)} of
+                        {<<>>, _, _, _, _} ->
                             render_markdown_lines(Rest, [], [flush_paragraph(Para, Opts) | Acc], AddHeadingIds, UsedIds, Opts);
-                        {_, {Level, Text}, _, _} ->
+                        {_, {ok, Html}, _, _, _} ->
+                            render_markdown_lines(Rest, [], [Html, flush_paragraph(Para, Opts) | Acc], AddHeadingIds, UsedIds, Opts);
+                        {_, _, {Level, Text}, _, _} ->
                             {H, NewUsedIds} = render_heading(Level, Text, AddHeadingIds, UsedIds, Opts),
                             render_markdown_lines(Rest, [], [H, flush_paragraph(Para, Opts) | Acc], AddHeadingIds, NewUsedIds, Opts);
-                        {_, _, {ok, Text}, _} ->
+                        {_, _, _, {ok, Text}, _} ->
                             {Items, AfterList} = take_list_block(Rest, unordered, [Text], []),
                             List = render_list(<<"ul">>, Items, Opts),
                             render_markdown_lines(AfterList, [], [List, flush_paragraph(Para, Opts) | Acc], AddHeadingIds, UsedIds, Opts);
-                        {_, _, _, {ok, Text}} ->
+                        {_, _, _, _, {ok, Text}} ->
                             {Items, AfterList} = take_list_block(Rest, ordered, [Text], []),
                             List = render_list(<<"ol">>, Items, Opts),
                             render_markdown_lines(AfterList, [], [List, flush_paragraph(Para, Opts) | Acc], AddHeadingIds, UsedIds, Opts);
@@ -4991,13 +4936,30 @@ command_count(Text) ->
     length([Line || Line <- Lines, is_command_line(trim(Line))]).
 
 is_runnable_block(<<"http">>, Text) ->
-    command_count(Text) > 0;
+    not inspect_only_block(Text) andalso command_count(Text) > 0;
 is_runnable_block(<<"bash">>, Text) ->
-    binary:match(Text, <<"curl">>) =/= nomatch;
+    not inspect_only_block(Text) andalso binary:match(Text, <<"curl">>) =/= nomatch;
 is_runnable_block(<<"sh">>, Text) ->
-    binary:match(Text, <<"curl">>) =/= nomatch;
+    not inspect_only_block(Text) andalso binary:match(Text, <<"curl">>) =/= nomatch;
 is_runnable_block(_Lang, _Text) ->
     false.
+
+inspect_only_block(Text) ->
+    has_angle_placeholder(Text) orelse
+        lists:any(
+            fun(Pattern) -> binary:match(Text, Pattern) =/= nomatch end,
+            [
+                <<"PROCESS_ID">>,
+                <<"/path/to/">>,
+                <<"BAD_MESSAGE_ID">>,
+                <<"$(">>,
+                <<"`">>
+            ]
+        ).
+
+has_angle_placeholder(Text) ->
+    binary:match(Text, <<"<">>) =/= nomatch andalso
+        binary:match(Text, <<">">>) =/= nomatch.
 
 is_command_line(<<"curl">>) -> true;
 is_command_line(<<"curl ", _/binary>>) -> true;
@@ -5016,7 +4978,15 @@ heading(<<"#### ", Text/binary>>) -> {4, Text};
 heading(<<"##### ", Text/binary>>) -> {5, Text};
 heading(_Line) -> false.
 
-bullet_text(<<"- ", Text/binary>>) -> {ok, Text};
+raw_html_line(<<"<video class=\"hb-page-figure\" src=\"../assets/images/what-is-hyperbeam-fig.mp4\" autoplay loop muted playsinline aria-label=\"HyperBEAM modular compute blocks\"></video>">> = Line) ->
+    {ok, Line};
+raw_html_line(_Line) ->
+    false.
+
+bullet_text(<<"- ", Text/binary>>) -> {ok, trim(Text)};
+bullet_text(<<"-   ", Text/binary>>) -> {ok, trim(Text)};
+bullet_text(<<"* ", Text/binary>>) -> {ok, trim(Text)};
+bullet_text(<<"*   ", Text/binary>>) -> {ok, trim(Text)};
 bullet_text(_Line) -> false.
 
 numbered_text(Line) ->
@@ -5214,6 +5184,50 @@ node_sidebar_hierarchy_test() ->
     ?assert(binary:match(Body, <<"hb-docs-guide-index">>) =/= nomatch),
     ?assert(binary:match(Body, <<"<section class=\"hb-docs-guide-group\"><h3>Introduction</h3><ul>">>) =/= nomatch),
     ?assertEqual(nomatch, binary:match(Body, <<"<h2>Guides</h2><div class=\"hb-docs-card-grid\">">>)).
+
+markdown_star_bullet_rendering_test() ->
+    HTML = render_markdown(
+        <<"*   **Initialization Flow:** starts\n"
+            "* **Compute Model:** uses `Message1(Message2) => Message3`">>
+    ),
+    ?assert(binary:match(HTML, <<"<ul>">>) =/= nomatch),
+    ?assert(binary:match(HTML, <<"<li><strong>Initialization Flow:</strong> starts</li>">>) =/= nomatch),
+    ?assert(binary:match(HTML, <<"<code>Message1(Message2) =&gt; Message3</code>">>) =/= nomatch),
+    ?assertEqual(nomatch, binary:match(HTML, <<"*   **Initialization Flow:**">>)).
+
+markdown_video_figure_rendering_test() ->
+    Video =
+        <<"<video class=\"hb-page-figure\" src=\"../assets/images/what-is-hyperbeam-fig.mp4\" "
+            "autoplay loop muted playsinline aria-label=\"HyperBEAM modular compute blocks\"></video>">>,
+    HTML = render_markdown(Video),
+    ?assertEqual(Video, HTML),
+    ?assertEqual(nomatch, binary:match(HTML, <<"&lt;video">>)).
+
+device_page_omits_section_index_test() ->
+    Data = #{
+        <<"device">> => #{ <<"id">> => <<"example@1.0">> },
+        <<"summary">> => <<"Example device.">>,
+        <<"schema">> => #{},
+        <<"schema-order">> => [],
+        <<"recipes">> => #{},
+        <<"spec">> => #{
+            <<"spec-status">> => <<"missing">>,
+            <<"summary">> => <<"No published spec for this test.">>
+        }
+    },
+    HTML = render_device_html(Data),
+    ?assertEqual(nomatch, binary:match(HTML, <<"hb-docs-section-index">>)),
+    ?assert(binary:match(HTML, <<"<h2 id=\"schema\">Schema</h2>">>) =/= nomatch),
+    ?assert(binary:match(HTML, <<"<h2 id=\"spec\">Spec</h2>">>) =/= nomatch),
+    ?assert(binary:match(HTML, <<"<h2 id=\"recipes\">Recipes</h2>">>) =/= nomatch).
+
+placeholder_command_blocks_are_inspect_only_test() ->
+    [Block] = code_blocks(
+        <<"```sh\n"
+            "curl http://localhost:8734/<process-id>~process@1.0/compute/counter\n"
+            "```">>
+    ),
+    ?assertEqual(false, maps:get(<<"runnable">>, Block)).
 
 arweave_without_spec_is_unsupported_test() ->
     ?assertNot(supported_device(?ARWEAVE_DEVICE)),
