@@ -20,4 +20,4 @@ curl -fsS "$HB/~message@1.0&source=hello&body=old&from=source&to=body/~patch@1.0
 
 Expected: JSON where `body` is `hello`, `from` is `source`, and `to` is `body`.
 
-For process examples, the same idea is useful before Lua/WASM compute and after compute before push. The public recipe stops at the deterministic key move; process state mutation needs a separate fixture.
+For process examples, the same idea is useful before Lua/WASM compute and after compute before push. The public recipe stops at the deterministic key move; read-only process state examples use the seeded process fixture recipe.

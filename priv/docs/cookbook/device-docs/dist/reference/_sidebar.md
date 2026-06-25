@@ -2,5 +2,6 @@
   - [Device Inventory](/reference/device-inventory.md)
   - [Example Validation](/reference/example-validation.md)
   - [Glossary](/reference/glossary.md)
+  - [Process Fixture](/reference/process-fixture.md)
   - [Recipe Audit 2026-06-25](/reference/recipe-audit-2026-06-25.md)
   - [Recipe Standards](/reference/recipe-standards.md)

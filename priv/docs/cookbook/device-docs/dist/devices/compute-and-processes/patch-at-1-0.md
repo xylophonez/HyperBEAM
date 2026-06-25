@@ -36,12 +36,12 @@ end)
 Then read the patched state through process paths:
 
 ```bash
-PROCESS_ID="<process-id>"
-ACCOUNT="<address>"
-curl -sS "http://localhost:8734/$PROCESS_ID~process@1.0/now/cache/balances/$ACCOUNT"
+HB="${HB:-http://localhost:8734}"
+PROCESS_ID="co-MIhejkMR8v3-oIvW8m_u3YfV7zXoII0ja1wk-IOo"
+curl -fsS "$HB/$PROCESS_ID~process@1.0/compute/counter"
 ```
 
-Expected: the latest exported balance without performing a fresh dry run.
+Expected: the latest exported counter without performing a fresh dry run.
 
 ### Apply a patch message directly
 

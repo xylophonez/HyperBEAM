@@ -20,43 +20,36 @@ The scheduling device for process assignments. It exposes schedule, slot, status
 
 ## Local Examples
 
-### Schedule a message on a process
+### Read a process slot
 
 ```bash
-PROCESS_ID="<process-id>"
-curl -sS -X POST "http://localhost:8734/$PROCESS_ID~scheduler@1.0/schedule" \
-  -H 'action: Ping' \
-  --data-binary 'hello scheduler'
+HB="${HB:-http://localhost:8734}"
+PROCESS_ID="co-MIhejkMR8v3-oIvW8m_u3YfV7zXoII0ja1wk-IOo"
+curl -fsS "$HB/$PROCESS_ID~process@1.0/slot/current"
 ```
 
-Expected: an assignment or slot result for the process schedule. The request must be signed/admissible on production scheduler nodes.
+Expected output: `2`.
 
-### Read a slot
+### Read schedule assignments
 
 ```bash
-PROCESS_ID="<process-id>"
-curl -sS "http://localhost:8734/$PROCESS_ID~scheduler@1.0/slot&slot+integer=1/~json@1.0/serialize"
+HB="${HB:-http://localhost:8734}"
+PROCESS_ID="co-MIhejkMR8v3-oIvW8m_u3YfV7zXoII0ja1wk-IOo"
+curl -fsS "$HB/$PROCESS_ID~process@1.0/schedule/assignments/0/body/type"
+curl -fsS "$HB/$PROCESS_ID~process@1.0/schedule/assignments/1/body/action"
+curl -fsS "$HB/$PROCESS_ID~process@1.0/schedule/assignments/2/body/action"
 ```
 
-Expected: the scheduled message at slot 1 if available.
+Expected: `Process`, `Eval`, and `Increment`.
 
-### Ask for the next assignable slot
+### Inspect scheduler status
 
 ```bash
-PROCESS_ID="<process-id>"
-curl -sS "http://localhost:8734/$PROCESS_ID~scheduler@1.0/next"
+HB="${HB:-http://localhost:8734}"
+curl -fsS -H 'accept: application/json' "$HB/~scheduler@1.0/status"
 ```
 
-Expected: the next slot number or scheduler status response.
-
-### Check scheduler status for a process
-
-```bash
-PROCESS_ID="<process-id>"
-curl -sS "http://localhost:8734/$PROCESS_ID~scheduler@1.0/status/~json@1.0/serialize"
-```
-
-Expected: scheduler state for that process: latest slot, assignment status, or an error describing missing scheduler state.
+Expected: node-wide scheduler status.
 
 ## Composition
 

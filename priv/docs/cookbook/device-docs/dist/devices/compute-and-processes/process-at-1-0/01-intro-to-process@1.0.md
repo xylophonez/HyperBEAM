@@ -63,7 +63,7 @@ aos process_name --url http://localhost:8734
 ```
 
 
-Replace `process_name` with a friendly local name for the process, such as `counter`. Reuse the same `aos process_name --url https://node.url` command to re-enter the process console after exiting. If you omit `--url https://node.url`, the current AOS mainnet release defaults to a HyperBEAM node like `push.forward.computer`. Passing `--url https://node.url` keeps the selected node explicit as the executor of the process.
+Replace `process_name` with a friendly local name for the process, such as `counter`. Reuse the same `aos process_name --url https://node.url` command to re-enter the process console after exiting. Pass `--url https://node.url` so the selected node is explicit as the executor of the process.
 
 To use a specific wallet:
 
@@ -130,7 +130,9 @@ Send({ Target = ao.id, Tags = { Action = "Increment" } })
 Use your selected node and process ID:
 
 ```sh
-curl http://localhost:8734/<process-id>~process@1.0/compute/counter
+HB="${HB:-http://localhost:8734}"
+PROCESS_ID="co-MIhejkMR8v3-oIvW8m_u3YfV7zXoII0ja1wk-IOo"
+curl -fsS "$HB/$PROCESS_ID~process@1.0/compute/counter"
 ```
 
 

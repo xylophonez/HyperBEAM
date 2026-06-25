@@ -29,4 +29,4 @@ curl -fsS "$HB/~push@1.0/info/schema"
 
 Expected: a JSON schema object for push actions.
 
-Scheduling, slot reads, and process compute examples must include a deterministic process fixture. A placeholder `PROCESS_ID` is not acceptable for inherited public recipes.
+Scheduling and mutation examples require signing and operator policy. For a runnable public process read, use the seeded fixture recipe instead of a placeholder process ID.

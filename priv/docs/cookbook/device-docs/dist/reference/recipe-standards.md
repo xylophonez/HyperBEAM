@@ -9,6 +9,7 @@ Recipes are inherited examples. Treat every runnable block as production-facing 
 - Keep each block self-contained. If a later step needs data, the earlier step must create it in the same recipe.
 - Use only shell builtins and `curl` in runnable blocks.
 - Use deterministic public fixtures or read-only introspection routes.
+- Use the seeded process fixture for process read examples that do not create their own process.
 - State the expected result in prose immediately after the command.
 - Include every required setup step before the command that depends on it.
 - Validate against docs-test before publishing or re-enabling an on-weave recipe.
@@ -27,6 +28,12 @@ Recipes are inherited examples. Treat every runnable block as production-facing 
 A recipe may be a workflow when setup is necessary. In that case, step one must create or import the fixture and the final step must prove the fixture is the one being read. For example, a match/query recipe must seed an index with known data before asking whether entries exist. A bundler recipe must create signed item bytes before submitting them.
 
 If the setup requires operator authority, wallets, signing keys, node config, or mutable production state, keep the recipe out of the public runnable corpus and move it to operator documentation or CI fixtures.
+
+## Seeded Process Fixture
+
+Use `co-MIhejkMR8v3-oIvW8m_u3YfV7zXoII0ja1wk-IOo` for public process read examples that need an existing process. The process exposes `counter`, `status`, `name`, `version`, and `lastupdate` through `process@1.0/compute`.
+
+Do not publish the node used to seed the fixture. docs-test resolves the fixture through operator routing.
 
 ## Blacklist Policy
 

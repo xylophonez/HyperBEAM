@@ -18,18 +18,19 @@ A process-output propagation device. It evaluates messages or slots and recursiv
 
 ## Local Examples
 
-### Push process outbox messages to recipients
+### Inspect a seeded process result before pushing
 
 ```bash
-PROCESS_ID="<process-id>"
-curl -sS "http://localhost:8734/$PROCESS_ID~process@1.0/compute&slot+integer=1/outbox/~push@1.0/all/~json@1.0/serialize"
+HB="${HB:-http://localhost:8734}"
+PROCESS_ID="co-MIhejkMR8v3-oIvW8m_u3YfV7zXoII0ja1wk-IOo"
+curl -fsS "$HB/$PROCESS_ID~process@1.0/compute/counter"
 ```
 
-Expected: after compute produces an outbox, `push@1.0` assigns or forwards those messages according to the process push configuration.
+Expected: a real process state value. Actual push calls are side-effecting and must be signed/admissible on production scheduler nodes.
 
 ### Push one explicit message
 
-```bash
+```text
 curl -sS -X POST -H 'content-type: application/json' \
   --data-binary '{"target":"<recipient-process>","data":"hello"}' \
   "http://localhost:8734/~push@1.0/one/~json@1.0/serialize"
@@ -39,8 +40,8 @@ Expected: the device wraps the target message into an assignment/push result whe
 
 ### Pair with scheduler for delivery
 
-```bash
-RECIPIENT="<recipient-process>"
+```text
+RECIPIENT="recipient process id"
 curl -sS -X POST "http://localhost:8734/$RECIPIENT~scheduler@1.0/schedule" \
   -H 'action: Receive' \
   --data-binary 'hello from push workflow'

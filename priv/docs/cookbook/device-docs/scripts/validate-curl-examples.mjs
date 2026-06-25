@@ -13,10 +13,16 @@ const docsDir = process.env.CURL_EXAMPLE_DOCS_DIR
 const timeoutMs = Number(process.env.CURL_EXAMPLE_TIMEOUT_MS || 120000);
 const exampleBaseUrl = process.env.HB || 'http://localhost:8734';
 const failOnSkip = process.env.CURL_EXAMPLE_FAIL_ON_SKIP === '1';
+const processFixtureId = 'co-MIhejkMR8v3-oIvW8m_u3YfV7zXoII0ja1wk-IOo';
 
 const skipPattern = new RegExp([
   'USER_ADDRESS',
-  'PROCESS_ID',
+  'PROCESS_ID=["\\\']?<',
+  '<process-id>',
+  '<procId>',
+  '<recipient-process>',
+  '<wasi-process-id>',
+  '<process-definition-id>',
   'RECIPIENT',
   'SCHEDULER',
   'MODULE_ID',
@@ -43,6 +49,10 @@ const skipPattern = new RegExp([
   '~copycat@1\\.0/arweave\\?from=.*mode=write',
   'from=\\$TIP&mode=write'
 ].join('|'));
+
+function isFixtureProcessBlock(block) {
+  return block.includes(processFixtureId);
+}
 
 async function walk(dir) {
   const entries = await readdir(dir, { withFileTypes: true });
@@ -141,7 +151,7 @@ for (const file of files) {
       results.push({ rel, index, status: 'skipped', reason: 'not a local HyperBEAM curl example' });
       continue;
     }
-    if (skipPattern.test(block)) {
+    if (!isFixtureProcessBlock(block) && skipPattern.test(block)) {
       results.push({ rel, index, status: 'skipped', reason: 'template/operator/wallet-gated' });
       continue;
     }

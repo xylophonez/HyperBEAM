@@ -173,6 +173,38 @@ TrustedSigners =
         Signer
     || Signer <- hb_opts:get(<<"trusted-device-signers">>, [], Base)
     ],
+DocsFixtureProcessID = <<"co-MIhejkMR8v3-oIvW8m_u3YfV7zXoII0ja1wk-IOo">>,
+DocsFixtureNode =
+    unicode:characters_to_binary(
+        os:getenv("HB_DOCS_PROCESS_FIXTURE_NODE", "")
+    ),
+DocsFixtureScheduler =
+    unicode:characters_to_binary(
+        os:getenv(
+            "HB_DOCS_PROCESS_FIXTURE_SCHEDULER",
+            "YUsEnCSlxvOMxRd1qG6rkaPwMgi3xOorfDfYJoMDndA"
+        )
+    ),
+DocsFixtureRoutes =
+    case DocsFixtureNode of
+        <<>> ->
+            [];
+        _ ->
+            [
+                #{
+                    <<"template">> =>
+                        <<"^/", DocsFixtureProcessID/binary,
+                            "~(process|scheduler)@1\\.0(/.*|$)">>,
+                    <<"strategy">> => <<"Nearest">>,
+                    <<"nodes">> => [
+                        #{
+                            <<"wallet">> => DocsFixtureScheduler,
+                            <<"prefix">> => DocsFixtureNode
+                        }
+                    ]
+                }
+            ]
+    end,
 Opts =
     Base#{
         <<"port">> => 28737,
@@ -184,6 +216,14 @@ Opts =
         <<"name-resolvers">> => NameResolvers,
         <<"trusted-devices">> => TrustedDevices,
         <<"trusted-device-signers">> => TrustedSigners,
+        <<"routes">> => DocsFixtureRoutes ++ hb_opts:get(<<"routes">>, [], Base),
+        <<"on">> => maps:merge(hb_opts:get(<<"on">>, #{}, Base), #{
+            <<"request">> => #{
+                <<"device">> => <<"router@1.0">>,
+                <<"path">> => <<"preprocess">>,
+                <<"commit-request">> => true
+            }
+        }),
         <<"docs-recipe-blacklist-file">> => <<"config/docs-test-recipe-blacklist.json">>
     },
 Url = hb_http_server:start_node(Opts),

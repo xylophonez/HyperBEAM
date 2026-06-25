@@ -102,6 +102,7 @@ const navItemDescriptions = {
   'recipes/paid-device-access.md': 'Inspect pricing and metering contracts',
   'recipes/patch-process-state.md': 'Move values between paths before compute runs',
   'recipes/query-local-cache.md': 'Inspect match/query readiness without hidden state',
+  'recipes/read-seeded-process-state.md': 'Read a real public counter process fixture',
   'recipes/recorder-debug-flight.md': 'Operator fixture requirements for recorder',
   'recipes/relay-fetch-transform.md': 'Inspect relay contract and route policy',
   'recipes/scheduled-lua-process.md': 'Pattern for a scheduled Lua backed process',
@@ -110,6 +111,7 @@ const navItemDescriptions = {
   'reference/device-inventory.md': 'Canonical list of documented edge root devices',
   'reference/example-validation.md': 'Quick smoke tests for docs example commands',
   'reference/glossary.md': 'Terms used across devices, paths, and Forge',
+  'reference/process-fixture.md': 'Public process ID used by runnable examples',
   'reference/recipe-audit-2026-06-25.md': 'Current recipe quarantine and validation audit',
   'reference/recipe-standards.md': 'Rules for public runnable recipes'
 };

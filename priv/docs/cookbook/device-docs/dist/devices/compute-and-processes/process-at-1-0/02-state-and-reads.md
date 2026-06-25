@@ -19,14 +19,16 @@ Send({
 Read selected state:
 
 ```text
-GET /<process-id>~process@1.0/compute/counter
-GET /<process-id>~process@1.0/compute/status
+GET /co-MIhejkMR8v3-oIvW8m_u3YfV7zXoII0ja1wk-IOo~process@1.0/compute/counter
+GET /co-MIhejkMR8v3-oIvW8m_u3YfV7zXoII0ja1wk-IOo~process@1.0/compute/status
 ```
 
 With a node:
 
 ```sh
-curl http://localhost:8734/<process-id>~process@1.0/compute/counter
+HB="${HB:-http://localhost:8734}"
+PROCESS_ID="co-MIhejkMR8v3-oIvW8m_u3YfV7zXoII0ja1wk-IOo"
+curl -fsS "$HB/$PROCESS_ID~process@1.0/compute/counter"
 ```
 
 ## Initial Sync

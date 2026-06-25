@@ -70,8 +70,9 @@ The following examples illustrate HyperPATHs for both processes and direct devic
 To get the complete, real-time state of a process identified by `<procId>`, use the `/now` path component with the [`~process@1.0`](/devices/compute-and-processes/process-at-1-0.md) device:
 
 ```bash
-PROC_ID="<process-id>"
-curl -sS "http://localhost:8734/$PROC_ID~process@1.0/now"
+HB="${HB:-http://localhost:8734}"
+PROCESS_ID="co-MIhejkMR8v3-oIvW8m_u3YfV7zXoII0ja1wk-IOo"
+curl -fsS "$HB/$PROCESS_ID~process@1.0/now/counter"
 ```
 
 This instructs the AO-Core node to load the process and execute the `now` function on the [`~process@1.0`](/devices/compute-and-processes/process-at-1-0.md) device.
@@ -81,11 +82,12 @@ This instructs the AO-Core node to load the process and execute the `now` functi
 If a process maintains its state in a map and you want to access a specific field, like `at-slot`, using the faster `/compute` endpoint:
 
 ```bash
-PROC_ID="<process-id>"
-curl -sS "http://localhost:8734/$PROC_ID~process@1.0/compute/cache"
+HB="${HB:-http://localhost:8734}"
+PROCESS_ID="co-MIhejkMR8v3-oIvW8m_u3YfV7zXoII0ja1wk-IOo"
+curl -fsS "$HB/$PROCESS_ID~process@1.0/compute/status"
 ```
 
-This accesses the `compute` key on the [`~process@1.0`](/devices/compute-and-processes/process-at-1-0.md) device and then navigates to the `cache` key within the resulting state map. Using this path, you will see the latest 'cache' of your process (the number of interactions it has received). Every piece of relevant information about your process can be accessed similarly, effectively providing a native API.
+This accesses the `compute` key on the [`~process@1.0`](/devices/compute-and-processes/process-at-1-0.md) device and then navigates to a patched state key. Every piece of relevant information your process exposes can be accessed similarly, effectively providing a native API.
 
 (Note: This represents direct navigation within the process state structure. For accessing data specifically published via the `~patch@1.0` device, see [`~patch@1.0`](/devices/compute-and-processes/patch-at-1-0.md) and the [Patch process state](/recipes/patch-process-state.md) recipe, which typically use the `/cache/` path.)
 

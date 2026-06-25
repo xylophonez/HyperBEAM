@@ -22,9 +22,7 @@ Common operations:
 
 ## Node Selection
 
-Examples in this section may use `https://push.forward.computer`. Treat it only as an example node.
-
-For real use, select a current HyperBEAM node from `https://lunar.arweave.net` or another marketplace/listing source. Use the selected node's URL for `--url`, and read endpoints. Use that node's advertised address for `HYPERBEAM_NODE_ADDRESS`, then list trusted node addresses in `HYPERBEAM_AUTHORITIES`.
+For real use, select a current HyperBEAM node from `https://lunar.arweave.net` or another marketplace/listing source. Use the selected node's URL for `--url` and read endpoints. Use that node's advertised address for `HYPERBEAM_NODE_ADDRESS`, then list trusted node addresses in `HYPERBEAM_AUTHORITIES`.
 
 ## Section Order
 

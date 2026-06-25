@@ -9,6 +9,7 @@
   - [Inspect Paid Access Primitives](/recipes/paid-device-access.md)
   - [Patch A Message Key](/recipes/patch-process-state.md)
   - [Inspect Query And Match Readiness](/recipes/query-local-cache.md)
+  - [Read Seeded Process State](/recipes/read-seeded-process-state.md)
   - [Recorder Debug Flights](/recipes/recorder-debug-flight.md)
   - [Inspect Relay Contract And Route Policy](/recipes/relay-fetch-transform.md)
   - [Inspect A Scheduled Lua Process Shape](/recipes/scheduled-lua-process.md)

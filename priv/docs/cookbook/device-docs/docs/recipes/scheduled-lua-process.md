@@ -23,4 +23,4 @@ curl -fsS "$HB/~message@1.0&device=process%401.0&execution-device=lua%405.3a&Act
 
 Expected: JSON with `device`, `execution-device`, `Action`, and `Data`.
 
-Cron, process scheduling, and slot reads require a seeded process fixture and operator-safe scheduling policy. Keep those as workflow tests until the fixture exists.
+Cron and process scheduling require signing and operator-safe scheduling policy. Read-only process examples should use the seeded process fixture recipe.

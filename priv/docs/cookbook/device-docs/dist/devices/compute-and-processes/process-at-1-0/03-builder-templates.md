@@ -110,8 +110,8 @@ Handlers.add(
 
 Read latest patched messages:
 
-```sh
-curl http://localhost:8734/<process-id>~process@1.0/compute/messages
+```text
+http://localhost:8734/YOUR_PROCESS_ID~process@1.0/compute/messages
 ```
 
 ## Frontend Client
@@ -198,7 +198,7 @@ Send({
 Read path:
 
 ```text
-http://localhost:8734/<process-id>~process@1.0/compute/web
+http://localhost:8734/YOUR_PROCESS_ID~process@1.0/compute/web
 ```
 
 For multi-file experiences, patch separate keys such as `html`, `css`, and `js`, or store larger assets on Arweave and patch an index of asset IDs.

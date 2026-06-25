@@ -1612,6 +1612,7 @@ boilerplate_pages() ->
         {<<"Device Forge">>, <<"docs/forge/trusted-signers-and-pins.md">>, <<"Trusted Signers And Pins">>}
     ] ++ [
         {<<"Reference">>, <<"docs/reference/example-validation.md">>, <<"Example Validation">>},
+        {<<"Reference">>, <<"docs/reference/process-fixture.md">>, <<"Process Fixture">>},
         {<<"Reference">>, <<"docs/reference/recipe-standards.md">>, <<"Recipe Standards">>},
         {<<"Reference">>, <<"docs/reference/recipe-audit-2026-06-25.md">>, <<"Recipe Audit 2026-06-25">>}
     ].
@@ -5482,7 +5483,7 @@ node_info_contract_test() ->
     ?assertNot(maps:is_key(<<"arweave-info">>, Data)),
     ?assertNot(maps:is_key(<<"message-info">>, Data)),
     ?assertEqual(<<"/info/guides">>, maps:get(<<"boilerplate-link">>, Data)),
-    ?assertEqual(23, length(maps:get(<<"pages">>, maps:get(<<"boilerplate">>, Data)))),
+    ?assertEqual(24, length(maps:get(<<"pages">>, maps:get(<<"boilerplate">>, Data)))),
     ?assertEqual(<<"cookbook@1.0">>, maps:get(<<"device">>, maps:get(<<"renderer">>, Data))),
     ?assertEqual([], maps:get(<<"devices">>, Data)).
 
@@ -5983,7 +5984,7 @@ boilerplate_routes_test() ->
     ?assertEqual(<<"node-boilerplate-index">>, maps:get(<<"kind">>, Index)),
     ?assertEqual(<<"/info/guides">>, maps:get(<<"href">>, Index)),
     Pages = maps:get(<<"pages">>, Index),
-    ?assertEqual(23, length(Pages)),
+    ?assertEqual(24, length(Pages)),
     RelPaths = [maps:get(<<"source-relative">>, Page) || Page <- Pages],
     ProcessPages = boilerplate_pages_for_section(<<"Processes">>, Pages),
     ?assertEqual(7, length(ProcessPages)),
@@ -6018,6 +6019,7 @@ boilerplate_routes_test() ->
     ?assertNot(lists:member(<<"docs/device-recipes/index.md">>, RelPaths)),
     ?assertNot(lists:member(<<"docs/reference/device-inventory.md">>, RelPaths)),
     ?assert(lists:member(<<"docs/reference/example-validation.md">>, RelPaths)),
+    ?assert(lists:member(<<"docs/reference/process-fixture.md">>, RelPaths)),
     ?assert(lists:member(<<"docs/reference/recipe-standards.md">>, RelPaths)),
     ?assert(lists:member(<<"docs/reference/recipe-audit-2026-06-25.md">>, RelPaths)),
     ?assertNot(lists:member(
@@ -6146,6 +6148,7 @@ boilerplate_routes_test() ->
     ?assert(binary:match(GuidesBody, <<"href=\"/info/processes/state-and-reads\"">>) =/= nomatch),
     ?assert(binary:match(GuidesBody, <<"href=\"/info/forge/create-a-device\"">>) =/= nomatch),
     ?assert(binary:match(GuidesBody, <<"href=\"/info/reference/recipe-standards\"">>) =/= nomatch),
+    ?assert(binary:match(GuidesBody, <<"href=\"/info/reference/process-fixture\"">>) =/= nomatch),
     ?assert(binary:match(GuidesBody, <<"Recipe Standards">>) =/= nomatch),
     ?assertEqual(nomatch, binary:match(GuidesBody, <<"Merged from the HyperBEAM">>)),
     ?assertEqual(nomatch, binary:match(GuidesBody, <<"/info/boilerplate">>)),
@@ -6176,6 +6179,9 @@ boilerplate_routes_test() ->
     {ok, AuditJSONResponse} = node_info_route([<<"reference">>, <<"recipe-audit-2026-06-25">>], #{ <<"accept">> => <<"application/json">> }, #{}),
     AuditJSON = decoded_json_response(AuditJSONResponse),
     ?assertEqual(<<"docs/reference/recipe-audit-2026-06-25.md">>, maps:get(<<"source-relative">>, AuditJSON)),
+    {ok, FixtureJSONResponse} = node_info_route([<<"reference">>, <<"process-fixture">>], #{ <<"accept">> => <<"application/json">> }, #{}),
+    FixtureJSON = decoded_json_response(FixtureJSONResponse),
+    ?assertEqual(<<"docs/reference/process-fixture.md">>, maps:get(<<"source-relative">>, FixtureJSON)),
     {ok, DeviceInventory} = node_info_route([<<"reference">>, <<"device-inventory">>], #{ <<"accept">> => <<"application/json">> }, #{}),
     ?assertEqual(404, maps:get(<<"status">>, DeviceInventory)),
     {ok, ProcessIndex} = node_info_route([<<"processes">>, <<"index">>], #{ <<"accept">> => <<"application/json">> }, #{}),

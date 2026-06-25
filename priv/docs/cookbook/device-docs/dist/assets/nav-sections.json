@@ -441,6 +441,11 @@
           "description": "Inspect match/query readiness without hidden state"
         },
         {
+          "title": "Read Seeded Process State",
+          "href": "/recipes/read-seeded-process-state.md",
+          "description": "Read a real public counter process fixture"
+        },
+        {
           "title": "Recorder Debug Flights",
           "href": "/recipes/recorder-debug-flight.md",
           "description": "Operator fixture requirements for recorder"
@@ -481,6 +486,11 @@
           "title": "Glossary",
           "href": "/reference/glossary.md",
           "description": "Terms used across devices, paths, and Forge"
+        },
+        {
+          "title": "Process Fixture",
+          "href": "/reference/process-fixture.md",
+          "description": "Public process ID used by runnable examples"
         },
         {
           "title": "Recipe Audit 2026-06-25",
