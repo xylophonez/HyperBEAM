@@ -1778,9 +1778,7 @@ render_recipe_html(Payload) ->
         [
             <<"<p class=\"eyebrow\">Recipe</p><h1>">>, esc(DeviceID),
             <<" / ">>, esc(maps:get(<<"title">>, Recipe, Slug)), <<"</h1>">>,
-            <<"<p class=\"eyebrow\">">>,
-            esc(maps:get(<<"source-relative">>, Recipe, <<>>)),
-            <<"</p>">>,
+            on_chain_link_paragraph(Recipe, <<"View recipe transaction">>),
             render_markdown(
                 drop_first_h1(recipe_markdown(Recipe)),
                 #{ <<"source-relative">> => maps:get(<<"source-relative">>, Recipe, undefined) }
@@ -1801,8 +1799,8 @@ render_implementations_html(Data) ->
                 [
                     <<"<tr><td>">>, esc(maps:get(<<"name">>, Impl, <<>>)),
                     <<"</td><td><code>">>, esc(maps:get(<<"module">>, Impl, <<>>)),
-                    <<"</code></td><td><code>">>, esc(maps:get(<<"source">>, Impl, <<>>)),
-                    <<"</code></td><td>">>, esc(maps:get(<<"status">>, Impl, <<>>)),
+                    <<"</code></td><td>">>, implementation_source_cell(Impl),
+                    <<"</td><td>">>, esc(maps:get(<<"status">>, Impl, <<>>)),
                     <<"</td></tr>">>
                 ]
             || Impl <- Implementations
@@ -2433,6 +2431,43 @@ body.hb-docs-protocol .sidebar-viewing-back.is-active {
   color: var(--text-tertiary);
   text-align: right;
   white-space: nowrap;
+}
+.hb-docs-chain-link-row {
+  margin: 0.5rem 0 1rem;
+}
+.markdown-section a.hb-docs-chain-link,
+.markdown-section a.hb-docs-chain-link:hover,
+.markdown-section a.hb-docs-chain-link span {
+  text-decoration: none !important;
+}
+.hb-docs-chain-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 24px;
+  padding: 3px 9px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg-muted);
+  color: var(--text-secondary) !important;
+  font-size: var(--text-caption);
+  font-weight: 600;
+  line-height: 1.2;
+}
+.hb-docs-chain-link:hover {
+  background: var(--bg-hover);
+  color: var(--text) !important;
+}
+.hb-docs-chain-link-icon {
+  flex: 0 0 14px;
+  width: 14px;
+  height: 14px;
+  line-height: 0;
+}
+.hb-docs-chain-link-icon svg {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 .hb-docs-guide-index {
   display: grid;
@@ -3176,6 +3211,8 @@ recipe_icon_paths() ->
             <<"M128,24C74.17,24,32,48.6,32,80v96c0,31.4,42.17,56,96,56s96-24.6,96-56V80C224,48.6,181.83,24,128,24Zm80,104c0,9.62-7.88,19.43-21.61,26.92C170.93,163.35,150.19,168,128,168s-42.93-4.65-58.39-13.08C55.88,147.43,48,137.62,48,128V111.36c17.06,15,46.23,24.64,80,24.64s62.94-9.68,80-24.64ZM69.61,53.08C85.07,44.65,105.81,40,128,40s42.93,4.65,58.39,13.08C200.12,60.57,208,70.38,208,80s-7.88,19.43-21.61,26.92C170.93,115.35,150.19,120,128,120s-42.93-4.65-58.39-13.08C55.88,99.43,48,89.62,48,80S55.88,60.57,69.61,53.08ZM186.39,202.92C170.93,211.35,150.19,216,128,216s-42.93-4.65-58.39-13.08C55.88,195.43,48,185.62,48,176V159.36c17.06,15,46.23,24.64,80,24.64s62.94-9.68,80-24.64V176C208,185.62,200.12,195.43,186.39,202.92Z">>,
         <<"chat-dots">> =>
             <<"M116,128a12,12,0,1,1,12,12A12,12,0,0,1,116,128ZM84,140a12,12,0,1,0-12-12A12,12,0,0,0,84,140Zm88,0a12,12,0,1,0-12-12A12,12,0,0,0,172,140Zm60-76V192a16,16,0,0,1-16,16H83l-32.6,28.16-.09.07A15.89,15.89,0,0,1,40,240a16.13,16.13,0,0,1-6.8-1.52A15.85,15.85,0,0,1,24,224V64A16,16,0,0,1,40,48H216A16,16,0,0,1,232,64ZM40,224h0ZM216,64H40V224l34.77-30A8,8,0,0,1,80,192H216Z">>,
+        <<"link">> =>
+            <<"M165.66,90.34a8,8,0,0,1,0,11.32l-64,64a8,8,0,0,1-11.32-11.32l64-64A8,8,0,0,1,165.66,90.34ZM215.6,40.4a56.08,56.08,0,0,0-79.2,0L112,64.8a8,8,0,0,0,11.31,11.31l24.4-24.4a40,40,0,1,1,56.57,56.57l-24.4,24.4A8,8,0,0,0,191.2,144l24.4-24.4A56.08,56.08,0,0,0,215.6,40.4ZM132.69,179.89l-24.4,24.4a40,40,0,1,1-56.57-56.57l24.4-24.4A8,8,0,0,0,64.8,112l-24.4,24.4a56,56,0,0,0,79.2,79.2L144,191.2a8,8,0,0,0-11.31-11.31Z">>,
         <<"puzzle-piece">> =>
             <<"M220.27,158.54a8,8,0,0,0-7.7-.46,20,20,0,1,1,0-36.16A8,8,0,0,0,224,114.69V72a16,16,0,0,0-16-16H171.78a35.36,35.36,0,0,0,.22-4,36.11,36.11,0,0,0-11.36-26.24,36,36,0,0,0-60.55,23.62,36.56,36.56,0,0,0,.14,6.62H64A16,16,0,0,0,48,72v32.22a35.36,35.36,0,0,0-4-.22,36.12,36.12,0,0,0-26.24,11.36,35.7,35.7,0,0,0-9.69,27,36.08,36.08,0,0,0,33.31,33.6,35.68,35.68,0,0,0,6.62-.14V208a16,16,0,0,0,16,16H208a16,16,0,0,0,16-16V165.31A8,8,0,0,0,220.27,158.54ZM208,208H64V165.31a8,8,0,0,0-11.43-7.23,20,20,0,1,1,0-36.16A8,8,0,0,0,64,114.69V72h46.69a8,8,0,0,0,7.23-11.43,20,20,0,1,1,36.16,0A8,8,0,0,0,161.31,72H208v32.23a35.68,35.68,0,0,0-6.62-.14A36,36,0,0,0,204,176a35.36,35.36,0,0,0,4-.22Z">>,
         <<"cooking-pot">> =>
@@ -3355,20 +3392,78 @@ spec_section_markdown(Spec, SectionSlug) ->
     end.
 
 spec_tx_link_paragraph(Spec) ->
-    case spec_tx_link(Spec, <<>>) of
-        [] -> [];
-        Link -> [<<"<p>">>, Link, <<"</p>">>]
-    end.
+    on_chain_link_paragraph(Spec, <<"View spec transaction">>).
 
 spec_tx_link(Spec, Prefix) ->
-    case maps:get(<<"txid">>, Spec, <<>>) of
+    case on_chain_txid(Spec) of
         <<>> -> [];
         TXID ->
             [
                 Prefix,
-                <<"<a href=\"https://viewblock.io/arweave/tx/">>, esc(TXID),
-                <<"\" target=\"_blank\" rel=\"noopener\">View spec transaction</a>">>
+                arweave_tx_link(TXID, <<"View spec transaction">>)
             ]
+    end.
+
+on_chain_link_paragraph(Item, Label) ->
+    case on_chain_txid(Item) of
+        <<>> -> [];
+        TXID ->
+            [
+                <<"<p class=\"hb-docs-chain-link-row\">">>,
+                arweave_tx_link(TXID, Label),
+                <<"</p>">>
+            ]
+    end.
+
+arweave_tx_link(TXID, Label) ->
+    [
+        <<"<a class=\"hb-docs-chain-link\" href=\"">>,
+        esc(arweave_tx_href(TXID)),
+        <<"\" target=\"_blank\" rel=\"noopener\" title=\"">>,
+        esc(TXID),
+        <<"\">">>,
+        <<"<span class=\"hb-docs-chain-link-icon\" aria-hidden=\"true\">">>,
+        phosphor_icon_path_svg(<<"link">>),
+        <<"</span><span>">>,
+        esc(Label),
+        <<"</span></a>">>
+    ].
+
+arweave_tx_href(TXID) ->
+    <<"https://viewblock.io/arweave/tx/", TXID/binary>>.
+
+on_chain_txid(Item) when is_map(Item) ->
+    case on_chain_txid_value(maps:get(<<"txid">>, Item, <<>>)) of
+        <<>> ->
+            case on_chain_txid_value(maps:get(<<"source">>, Item, <<>>)) of
+                <<>> -> on_chain_txid_value(maps:get(<<"source-relative">>, Item, <<>>));
+                TXID -> TXID
+            end;
+        TXID ->
+            TXID
+    end;
+on_chain_txid(Item) ->
+    on_chain_txid_value(Item).
+
+on_chain_txid_value(Value) ->
+    Bin = trim(hb_util:bin(Value)),
+    TXID =
+        case Bin of
+            <<"weave:", Rest/binary>> -> Rest;
+            _ -> Bin
+        end,
+    case is_arweave_txid(TXID) of
+        true -> TXID;
+        false -> <<>>
+    end.
+
+implementation_source_cell(Impl) ->
+    Source = maps:get(<<"source">>, Impl, <<>>),
+    case on_chain_txid(Source) of
+        <<>> ->
+            [<<"<code>">>, esc(Source), <<"</code>">>];
+        TXID ->
+            arweave_tx_link(TXID, <<"View implementation transaction">>)
     end.
 
 spec_markdown(Spec) ->
@@ -5787,6 +5882,25 @@ recipe_card_icons_test() ->
     ?assert(binary:match(Body, <<"hb-docs-recipe-card-title">>) =/= nomatch),
     PackagePath = maps:get(<<"package">>, recipe_icon_paths()),
     ?assert(binary:match(Body, PackagePath) =/= nomatch).
+
+on_chain_link_rendering_test() ->
+    TXID = <<"dsVrhmExq_Bz8PXs7CYnaqXRG5pHLjJhRTT69wFsrvY">>,
+    Recipe = #{
+        <<"txid">> => TXID,
+        <<"source-relative">> => <<"weave:", TXID/binary>>
+    },
+    RecipeLink = iolist_to_binary(on_chain_link_paragraph(Recipe, <<"View recipe transaction">>)),
+    ?assert(binary:match(RecipeLink, <<"hb-docs-chain-link">>) =/= nomatch),
+    ?assert(binary:match(RecipeLink, <<"hb-docs-chain-link-icon">>) =/= nomatch),
+    ?assert(binary:match(RecipeLink, <<"View recipe transaction">>) =/= nomatch),
+    ?assert(binary:match(RecipeLink, <<"https://viewblock.io/arweave/tx/", TXID/binary>>) =/= nomatch),
+    ?assertEqual(nomatch, binary:match(RecipeLink, <<"weave:", TXID/binary>>)),
+    ?assertEqual(TXID, on_chain_txid(<<"weave:", TXID/binary>>)),
+    ImplCell = iolist_to_binary(implementation_source_cell(#{ <<"source">> => TXID })),
+    ?assert(binary:match(ImplCell, <<"View implementation transaction">>) =/= nomatch),
+    ?assert(binary:match(ImplCell, <<"https://viewblock.io/arweave/tx/", TXID/binary>>) =/= nomatch),
+    SpecLink = iolist_to_binary(spec_tx_link(#{ <<"txid">> => TXID }, <<>>)),
+    ?assert(binary:match(SpecLink, <<"View spec transaction">>) =/= nomatch).
 
 device_card_label_test() ->
     ?assertEqual(<<"~arweave@2.9">>, device_marked_id(<<"arweave@2.9">>)),
