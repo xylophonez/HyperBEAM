@@ -20,6 +20,8 @@ A dynamic pricing device for P4. It opens metering sessions, records consumption
 
 ## Local Examples
 
+Inspect workflow examples show request, configuration, or operator command shapes. Run them only after providing the stated local prerequisites; the browser runner does not execute these blocks.
+
 ### Configure metering as P4 pricing
 
 ```text

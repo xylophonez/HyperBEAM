@@ -18,6 +18,8 @@ A friends-and-family allowlist pricing device. It allows configured addresses to
 
 ## Local Examples
 
+Inspect workflow examples show request, configuration, or operator command shapes. Run them only after providing the stated local prerequisites; the browser runner does not execute these blocks.
+
 ### Configure friends-and-family payment policy
 
 ```text

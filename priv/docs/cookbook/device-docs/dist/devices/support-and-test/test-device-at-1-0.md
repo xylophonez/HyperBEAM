@@ -17,6 +17,8 @@ A built-in test helper device used by HyperBEAM tests and examples. It is useful
 
 ## Local Examples
 
+Inspect workflow examples show request, configuration, or operator command shapes. Run them only after providing the stated local prerequisites; the browser runner does not execute these blocks.
+
 ### Use the deterministic index target
 
 ```bash

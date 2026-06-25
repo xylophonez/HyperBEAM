@@ -18,6 +18,8 @@ An Arweave path-manifest resolver for v1 manifests. It maps request paths to dat
 
 ## Local Examples
 
+Inspect workflow examples show request, configuration, or operator command shapes. Run them only after providing the stated local prerequisites; the browser runner does not execute these blocks.
+
 ### Resolve an index path from a manifest message
 
 ```text

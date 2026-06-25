@@ -18,6 +18,8 @@ A reverse index for finding message IDs that contain a specific key/value pair.
 
 ## Local Examples
 
+Inspect workflow examples show request, configuration, or operator command shapes. Run them only after providing the stated local prerequisites; the browser runner does not execute these blocks.
+
 ### Confirm the match device is loaded
 
 ```text

@@ -20,6 +20,8 @@ A legacy AO process environment implemented on HyperBEAM infrastructure.
 
 ## Local Examples
 
+Inspect workflow examples show request, configuration, or operator command shapes. Run them only after providing the stated local prerequisites; the browser runner does not execute these blocks.
+
 ### Define a Genesis-WASM process shell
 
 ```text

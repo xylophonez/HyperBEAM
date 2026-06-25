@@ -2,6 +2,8 @@
 
 Use AO Connect to spawn, message, and read results from `process@1.0` processes on HyperBEAM mainnet.
 
+Inspect workflow examples show request, configuration, or operator command shapes. Run them only after providing the stated local prerequisites; the browser runner does not execute these blocks.
+
 Install:
 
 ```text

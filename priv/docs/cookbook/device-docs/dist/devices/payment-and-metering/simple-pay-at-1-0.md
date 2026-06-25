@@ -21,6 +21,8 @@ A simple flat-pricing ledger device. Operators can configure per-route or per-me
 
 ## Local Examples
 
+Inspect workflow examples show request, configuration, or operator command shapes. Run them only after providing the stated local prerequisites; the browser runner does not execute these blocks.
+
 ### Estimate a normal request
 
 ```bash

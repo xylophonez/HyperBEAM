@@ -19,6 +19,8 @@ A scheduled self-call device. It inserts recurring or one-shot messages into an 
 
 ## Local Examples
 
+Inspect workflow examples show request, configuration, or operator command shapes. Run them only after providing the stated local prerequisites; the browser runner does not execute these blocks.
+
 ### Schedule a recurring request with `every`
 
 ```bash

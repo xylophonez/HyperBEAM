@@ -21,6 +21,8 @@ A Memory-64 WASM execution device backed by WAMR through the BEAMR wrapper.
 
 ## Local Examples
 
+Inspect workflow examples show request, configuration, or operator command shapes. Run them only after providing the stated local prerequisites; the browser runner does not execute these blocks.
+
 ### Execute a WASM function directly
 
 ```text

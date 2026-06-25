@@ -16,6 +16,14 @@ HB=https://docs-test.mystical.computer node scripts/validate-curl-examples.mjs
 
 The broad pass must also end with `0 failed` and `0 skipped`. If an example depends on operator configuration, local files, wallets, mutable cache state, signed fixtures, private routes, or an expected error response, keep it in a `text` fence rather than `bash`.
 
+Run the static example lint before building:
+
+```text
+npm run docs:lint:examples
+```
+
+The lint checks that runnable shell examples do not carry local files, placeholder values, extra shell tools, signing flows, or operator-only state. Command-shaped `text` blocks must be documented as inspect workflows.
+
 ## Quick Curl Smoke Test
 
 ```bash

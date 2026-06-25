@@ -19,6 +19,8 @@ A composition device that runs a declared stack of devices in fold or map mode.
 
 ## Local Examples
 
+Inspect workflow examples show request, configuration, or operator command shapes. Run them only after providing the stated local prerequisites; the browser runner does not execute these blocks.
+
 ### Build a two-device transform pipeline
 
 ```text

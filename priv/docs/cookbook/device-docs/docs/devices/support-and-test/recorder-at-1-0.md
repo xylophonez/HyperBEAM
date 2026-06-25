@@ -30,6 +30,8 @@ If `~recorder@1.0` returns `device_not_loadable` or `device-name-not-resolvable`
 
 ## Local Examples
 
+Inspect workflow examples show request, configuration, or operator command shapes. Run them only after providing the stated local prerequisites; the browser runner does not execute these blocks.
+
 ### Record one target request
 
 ```text

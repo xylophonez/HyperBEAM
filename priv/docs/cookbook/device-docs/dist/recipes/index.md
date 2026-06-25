@@ -18,9 +18,9 @@ Bad-pattern recipes from the earlier on-weave corpus are quarantined at the docs
 - [Inspect paid access primitives](paid-device-access.md)
 - [Inspect relay contract and route policy](relay-fetch-transform.md)
 
-## Operator-Only Guidance
+## Inspect Workflows
 
 - [Recorder debug flights](recorder-debug-flight.md)
 - [Trusted custom devices](trusted-custom-device.md)
 
-Operator-only pages describe the workflow and acceptance criteria but do not publish runnable commands when the action requires wallets, local files, privileged configuration, or seeded node state.
+Inspect workflow pages describe the operation and acceptance criteria but do not publish runnable commands when the action requires wallets, local files, privileged configuration, or seeded node state.

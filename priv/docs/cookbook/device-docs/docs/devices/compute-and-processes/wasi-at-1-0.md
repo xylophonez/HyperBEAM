@@ -18,6 +18,8 @@ A virtual filesystem device plus WASI preview1-compatible imports for WASM modul
 
 ## Local Examples
 
+Inspect workflow examples show request, configuration, or operator command shapes. Run them only after providing the stated local prerequisites; the browser runner does not execute these blocks.
+
 ### Pass WASI args/env to a WASM process
 
 ```text

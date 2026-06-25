@@ -20,6 +20,12 @@ Use `bash` or `sh` fences only for examples that are intended to be executed by 
 
 The broad docs validator treats every `bash` or `sh` curl block as a public example. A page can still document setup-dependent behavior, but that setup belongs in prose or `text` fences until a deterministic fixture exists.
 
+## Inspect Workflows
+
+Inspect workflows show the request shape, configuration shape, or operator command sequence for flows that require local prerequisites. Use them for signing, wallet-backed requests, ANS-104 and bundler operations, binary artifacts, local build commands, private node policy, payment ledgers, recorder flights, and other stateful workflows.
+
+An inspect workflow should state the prerequisite and the expected success shape. It should not be marked as shell-runnable unless the page also provides every required artifact and the validator can execute the block on a fresh node.
+
 ## Not Acceptable In Public Recipes
 
 - Placeholders such as `PROCESS_ID`, `USER_ADDRESS`, `RECIPIENT`, `WALLET`, or `NAME_FROM_YOUR_RESOLVER`.

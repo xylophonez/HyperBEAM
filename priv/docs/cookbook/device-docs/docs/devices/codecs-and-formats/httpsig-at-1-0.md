@@ -19,6 +19,8 @@ An HTTP Message Signatures commitment device based on RFC 9421-style signatures.
 
 ## Local Examples
 
+Inspect workflow examples show request, configuration, or operator command shapes. Run them only after providing the stated local prerequisites; the browser runner does not execute these blocks.
+
 ### Return a HyperBEAM response as HTTP Message Signatures
 
 ```text

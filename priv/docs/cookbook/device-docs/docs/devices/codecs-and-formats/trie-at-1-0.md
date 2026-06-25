@@ -18,6 +18,8 @@ A radix trie device with implicit leaves. It is useful for path-indexed data and
 
 ## Local Examples
 
+Inspect workflow examples show request, configuration, or operator command shapes. Run them only after providing the stated local prerequisites; the browser runner does not execute these blocks.
+
 ### Set values in a committed trie
 
 ```text

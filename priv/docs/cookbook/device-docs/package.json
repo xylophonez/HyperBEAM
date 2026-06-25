@@ -10,7 +10,8 @@
     "docs:deploy:arweave": "node scripts/deploy-bundler.mjs",
     "docs:deploy:bundler": "node scripts/deploy-bundler.mjs",
     "docs:deploy:turbo": "node scripts/deploy-arweave.mjs",
-    "docs:validate:curl": "node scripts/validate-curl-examples.mjs"
+    "docs:validate:curl": "node scripts/validate-curl-examples.mjs",
+    "docs:lint:examples": "node scripts/lint-runnable-examples.mjs"
   },
   "dependencies": {
     "@ardrive/turbo-sdk": "^1.41.3",

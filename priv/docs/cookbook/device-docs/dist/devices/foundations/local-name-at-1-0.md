@@ -18,6 +18,8 @@ A node-local name registry. It stores names in node state and nonvolatile storag
 
 ## Local Examples
 
+Inspect workflow examples show request, configuration, or operator command shapes. Run them only after providing the stated local prerequisites; the browser runner does not execute these blocks.
+
 ### Confirm the local-name device is loaded
 
 ```text

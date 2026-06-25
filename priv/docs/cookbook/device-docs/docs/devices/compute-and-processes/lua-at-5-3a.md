@@ -20,6 +20,8 @@ The Lua execution device. It calls Lua modules on HyperBEAM messages and support
 
 ## Local Examples
 
+Inspect workflow examples show request, configuration, or operator command shapes. Run them only after providing the stated local prerequisites; the browser runner does not execute these blocks.
+
 ### Run an inline Lua handler
 
 ```text

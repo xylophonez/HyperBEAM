@@ -18,6 +18,8 @@ A wrapper for compute on remote machines that implement the JSON-Iface.
 
 ## Local Examples
 
+Inspect workflow examples show request, configuration, or operator command shapes. Run them only after providing the stated local prerequisites; the browser runner does not execute these blocks.
+
 ### Delegate compute to a local worker endpoint
 
 ```text

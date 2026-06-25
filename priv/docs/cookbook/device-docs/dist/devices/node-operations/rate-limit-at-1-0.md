@@ -19,6 +19,8 @@ A request-hook rate limiter keyed by client IP. It can reject excessive requests
 
 ## Local Examples
 
+Inspect workflow examples show request, configuration, or operator command shapes. Run them only after providing the stated local prerequisites; the browser runner does not execute these blocks.
+
 ### Configure a request-rate hook
 
 ```text

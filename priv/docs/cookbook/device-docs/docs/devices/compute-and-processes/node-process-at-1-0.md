@@ -18,6 +18,8 @@ A singleton node-local process device that uses local names and node configurati
 
 ## Local Examples
 
+Inspect workflow examples show request, configuration, or operator command shapes. Run them only after providing the stated local prerequisites; the browser runner does not execute these blocks.
+
 ### Configure a node-local singleton process
 
 ```text

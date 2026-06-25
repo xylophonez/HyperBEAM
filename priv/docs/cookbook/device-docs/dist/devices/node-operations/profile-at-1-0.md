@@ -17,6 +17,8 @@ A profiling device for measuring device execution. It can run profiling tools ar
 
 ## Local Examples
 
+Inspect workflow examples show request, configuration, or operator command shapes. Run them only after providing the stated local prerequisites; the browser runner does not execute these blocks.
+
 ### Profile a cheap local resolution
 
 ```text

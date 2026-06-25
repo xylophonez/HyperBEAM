@@ -2,6 +2,8 @@
 
 Use this page to move old AO or Legacynet processes and clients into the HyperBEAM-first `@PROCESS1.0` model.
 
+Inspect workflow examples show request, configuration, or operator command shapes. Run them only after providing the stated local prerequisites; the browser runner does not execute these blocks.
+
 ## Main Change
 
 Primary HyperBEAM read pattern:

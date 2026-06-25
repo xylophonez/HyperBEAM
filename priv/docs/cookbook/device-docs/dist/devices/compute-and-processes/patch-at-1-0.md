@@ -18,6 +18,8 @@ A data-shaping device that moves values between message paths. It can operate as
 
 ## Local Examples
 
+Inspect workflow examples show request, configuration, or operator command shapes. Run them only after providing the stated local prerequisites; the browser runner does not execute these blocks.
+
 ### Export a process table as direct HTTP state
 
 Inside a Lua process, send patch messages whenever state changes:

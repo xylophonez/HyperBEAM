@@ -18,6 +18,8 @@ The Arweave L1 transaction codec. It converts Arweave transaction records to and
 
 ## Local Examples
 
+Inspect workflow examples show request, configuration, or operator command shapes. Run them only after providing the stated local prerequisites; the browser runner does not execute these blocks.
+
 ### Read an Arweave transaction as JSON
 
 ```bash

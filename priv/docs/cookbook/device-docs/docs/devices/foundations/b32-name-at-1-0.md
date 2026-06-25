@@ -17,6 +17,8 @@ A name resolver for base32 subdomains that point at Arweave message IDs.
 
 ## Local Examples
 
+Inspect workflow examples show request, configuration, or operator command shapes. Run them only after providing the stated local prerequisites; the browser runner does not execute these blocks.
+
 ### Resolve a base32 subdomain back to an Arweave ID
 
 ```text

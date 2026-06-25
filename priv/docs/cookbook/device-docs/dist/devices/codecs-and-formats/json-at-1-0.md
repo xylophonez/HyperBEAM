@@ -17,6 +17,8 @@ A JSON codec for serializing and deserializing HyperBEAM messages.
 
 ## Local Examples
 
+Inspect workflow examples show request, configuration, or operator command shapes. Run them only after providing the stated local prerequisites; the browser runner does not execute these blocks.
+
 ### Serialize a constructed message
 
 ```bash

@@ -18,6 +18,8 @@ A codec that flattens nested TABM messages into path-keyed maps and can expand t
 
 ## Local Examples
 
+Inspect workflow examples show request, configuration, or operator command shapes. Run them only after providing the stated local prerequisites; the browser runner does not execute these blocks.
+
 ### Flatten a nested message into slash-key form
 
 ```text

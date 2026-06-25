@@ -2,6 +2,8 @@
 
 HyperBEAM changes the default AO read pattern. Instead of sending dry-run messages just to inspect state, expose read keys through the `patch@1.0` device and fetch them over HTTP.
 
+Inspect workflow examples show request, configuration, or operator command shapes. Run them only after providing the stated local prerequisites; the browser runner does not execute these blocks.
+
 ## Patch Device
 
 The [`patch@1.0` device]() pushes selected process data to HyperBEAM endpoints so it can be discovered and fetched by clients. Each key sent to the patch device becomes readable through the process endpoint.

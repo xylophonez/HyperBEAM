@@ -26,6 +26,8 @@ The Arweave access device. It reads network status, blocks, transaction headers,
 
 ## Local Examples
 
+Inspect workflow examples show request, configuration, or operator command shapes. Run them only after providing the stated local prerequisites; the browser runner does not execute these blocks.
+
 ### Fetch raw Arweave data by transaction ID
 
 ```text

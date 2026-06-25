@@ -19,6 +19,8 @@ A local bundling service. It accepts signed committed items, writes them to the 
 
 ## Local Examples
 
+Inspect workflow examples show request, configuration, or operator command shapes. Run them only after providing the stated local prerequisites; the browser runner does not execute these blocks.
+
 ### Create a signed ANS-104 item and upload it
 
 The bundler rejects unsigned bytes. This example asks HyperBEAM to sign and serialize a message with `~ans104@1.0`, then posts those bytes to the local bundler item endpoint.

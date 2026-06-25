@@ -20,6 +20,8 @@ A cookie commitment and authentication device. It can generate, finalize, commit
 
 ## Local Examples
 
+Inspect workflow examples show request, configuration, or operator command shapes. Run them only after providing the stated local prerequisites; the browser runner does not execute these blocks.
+
 ### Parse an incoming Cookie header
 
 ```bash

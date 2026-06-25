@@ -18,6 +18,8 @@ The node entrypoint and configuration surface. It returns the public node messag
 
 ## Local Examples
 
+Inspect workflow examples show request, configuration, or operator command shapes. Run them only after providing the stated local prerequisites; the browser runner does not execute these blocks.
+
 ### Read the node address for signatures and operator checks
 
 ```text

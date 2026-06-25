@@ -2,6 +2,8 @@
 
 The Device Forge is how a `dev_*` Erlang module becomes a loadable HyperBEAM device. The runtime loads generated `_hb_device_*` modules from signed implementation messages; it does not load raw source modules.
 
+Inspect workflow examples show request, configuration, or operator command shapes. Run them only after providing the stated local prerequisites; the browser runner does not execute these blocks.
+
 ## What The Forge Produces
 
 For each root such as `dev_echo_lens`, the Forge packages the root and helper modules into:

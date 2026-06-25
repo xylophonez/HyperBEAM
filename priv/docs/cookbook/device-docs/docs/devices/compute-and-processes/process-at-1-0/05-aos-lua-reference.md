@@ -2,6 +2,8 @@
 
 This page covers the AOS essentials used throughout the `process@1.0` examples.
 
+Inspect workflow examples show request, configuration, or operator command shapes. Run them only after providing the stated local prerequisites; the browser runner does not execute these blocks.
+
 ## Install And Start
 
 ```text

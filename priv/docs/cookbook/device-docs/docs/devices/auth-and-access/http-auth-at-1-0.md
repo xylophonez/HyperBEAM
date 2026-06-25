@@ -18,6 +18,8 @@ An HTTP Basic authentication device with PBKDF2 password handling and HMAC commi
 
 ## Local Examples
 
+Inspect workflow examples show request, configuration, or operator command shapes. Run them only after providing the stated local prerequisites; the browser runner does not execute these blocks.
+
 ### Trigger the Basic-auth challenge
 
 ```text

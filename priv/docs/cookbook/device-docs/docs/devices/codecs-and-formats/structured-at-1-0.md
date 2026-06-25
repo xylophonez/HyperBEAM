@@ -19,6 +19,8 @@ A rich structured codec for typed HyperBEAM messages, including integers, floats
 
 ## Local Examples
 
+Inspect workflow examples show request, configuration, or operator command shapes. Run them only after providing the stated local prerequisites; the browser runner does not execute these blocks.
+
 ### Encode rich types into `ao-types`
 
 ```bash

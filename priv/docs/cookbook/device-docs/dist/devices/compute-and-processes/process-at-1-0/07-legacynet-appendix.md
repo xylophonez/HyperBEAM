@@ -2,6 +2,8 @@
 
 This appendix is for Legacynet AO patterns that only matter when supporting existing Legacynet processes.
 
+Inspect workflow examples show request, configuration, or operator command shapes. Run them only after providing the stated local prerequisites; the browser runner does not execute these blocks.
+
 Use this only when supporting existing Legacynet processes.
 
 ## When To Use Legacynet Material

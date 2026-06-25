@@ -2,6 +2,8 @@
 
 AO has many devices. Among them, the `process@1.0` device is the one you use to create and interact with "smart contracts" called processes.
 
+Inspect workflow examples show request, configuration, or operator command shapes. Run them only after providing the stated local prerequisites; the browser runner does not execute these blocks.
+
 A process is a deterministic log of state transitions stored on Arweave. Messages add inputs to that log, the process evaluates those messages, and HyperBEAM makes selected process data available through endpoints.
 
 Use this page to create a process, load a small counter, send it a message, and read exposed state through the `process@1.0` device.

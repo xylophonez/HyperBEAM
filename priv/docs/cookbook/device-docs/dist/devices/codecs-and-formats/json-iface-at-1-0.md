@@ -18,6 +18,8 @@ The JSON interface used by WASM and delegated compute engines to exchange proces
 
 ## Local Examples
 
+Inspect workflow examples show request, configuration, or operator command shapes. Run them only after providing the stated local prerequisites; the browser runner does not execute these blocks.
+
 ### Convert a HyperBEAM message to AOS-style JSON
 
 ```text

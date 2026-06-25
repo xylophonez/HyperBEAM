@@ -26,6 +26,8 @@ The local discovery engine. It searches supported stores and cache indexes, and 
 
 ## Local Examples
 
+Inspect workflow examples show request, configuration, or operator command shapes. Run them only after providing the stated local prerequisites; the browser runner does not execute these blocks.
+
 ### Count local index entries
 
 ```bash

@@ -17,6 +17,8 @@ A repass trigger device. It can cause evaluation to pass through a workflow mult
 
 ## Local Examples
 
+Inspect workflow examples show request, configuration, or operator command shapes. Run them only after providing the stated local prerequisites; the browser runner does not execute these blocks.
+
 ### Repeat a stack for multiple passes
 
 ```text

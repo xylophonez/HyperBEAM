@@ -18,6 +18,8 @@ A relay device for making HTTP calls from a HyperBEAM path. It can fetch local n
 
 ## Local Examples
 
+Inspect workflow examples show request, configuration, or operator command shapes. Run them only after providing the stated local prerequisites; the browser runner does not execute these blocks.
+
 ### Relay a local node request
 
 ```bash

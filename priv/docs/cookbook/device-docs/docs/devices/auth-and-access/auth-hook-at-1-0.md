@@ -18,6 +18,8 @@ A request hook that signs incoming messages with node-hosted wallets according t
 
 ## Local Examples
 
+Inspect workflow examples show request, configuration, or operator command shapes. Run them only after providing the stated local prerequisites; the browser runner does not execute these blocks.
+
 ### Install an auth hook that signs Basic-auth requests
 
 ```text

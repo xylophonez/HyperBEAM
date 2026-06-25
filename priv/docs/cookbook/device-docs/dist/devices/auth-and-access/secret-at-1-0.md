@@ -21,6 +21,8 @@ A node-hosted secret and wallet device. It can generate, import, export, list, s
 
 ## Local Examples
 
+Inspect workflow examples show request, configuration, or operator command shapes. Run them only after providing the stated local prerequisites; the browser runner does not execute these blocks.
+
 ### List node-hosted secret references
 
 ```bash

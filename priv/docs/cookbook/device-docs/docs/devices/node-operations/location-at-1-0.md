@@ -18,6 +18,8 @@ A peer-location device. It creates, caches, and reads signed location records th
 
 ## Local Examples
 
+Inspect workflow examples show request, configuration, or operator command shapes. Run them only after providing the stated local prerequisites; the browser runner does not execute these blocks.
+
 ### Publish this node's current location record
 
 ```bash

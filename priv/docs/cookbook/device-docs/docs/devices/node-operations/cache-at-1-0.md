@@ -19,6 +19,8 @@ The local cache read/write device. It reads IDs or store paths, honors requested
 
 ## Local Examples
 
+Inspect workflow examples show request, configuration, or operator command shapes. Run them only after providing the stated local prerequisites; the browser runner does not execute these blocks.
+
 ### Read a known ID from the local cache
 
 ```text
