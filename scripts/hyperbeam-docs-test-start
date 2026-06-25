@@ -220,8 +220,7 @@ Opts =
         <<"on">> => maps:merge(hb_opts:get(<<"on">>, #{}, Base), #{
             <<"request">> => #{
                 <<"device">> => <<"router@1.0">>,
-                <<"path">> => <<"preprocess">>,
-                <<"commit-request">> => true
+                <<"path">> => <<"preprocess">>
             }
         }),
         <<"docs-recipe-blacklist-file">> => <<"config/docs-test-recipe-blacklist.json">>
