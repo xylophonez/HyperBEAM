@@ -16,20 +16,20 @@ For each root such as `dev_echo_lens`, the Forge packages the root and helper mo
 
 From a HyperBEAM checkout:
 
-```bash
+```text
 cd /tmp/hyperbeam-source
 ./install-template --local /tmp/hyperbeam-source
 ```
 
 For a project pinned to upstream edge instead of a local checkout:
 
-```bash
+```text
 ./install-template --branch edge
 ```
 
 Create a new device project:
 
-```bash
+```text
 mkdir -p /tmp/hb-device-docs-forge
 cd /tmp/hb-device-docs-forge
 rebar3 new device name=echo_lens
@@ -75,7 +75,7 @@ The public device name is derived from the root module name: `dev_echo_lens` imp
 
 ## Package, Verify, And Test
 
-```bash
+```text
 rebar3 device package
 rebar3 device verify
 rebar3 device test
@@ -95,7 +95,7 @@ A local run of this exact flow passed with two EUnit tests.
 
 Use a different port if your normal HyperBEAM node already uses `8734`:
 
-```bash
+```text
 cat > device-test-8799.json <<'JSON'
 {
   "port": 8799
@@ -107,7 +107,7 @@ HB_CONFIG=device-test-8799.json rebar3 device local
 
 In another shell:
 
-```bash
+```text
 curl -sS "http://localhost:8799/~echo-lens@1.0/echo?input=hello"
 curl -sS "http://localhost:8799/~echo-lens@1.0/upper?input=hello"
 ```
@@ -123,7 +123,7 @@ HELLO
 
 Publishing signs and uploads the spec and implementation messages using your wallet keyfile:
 
-```bash
+```text
 rebar3 device publish --key wallet.json
 ```
 

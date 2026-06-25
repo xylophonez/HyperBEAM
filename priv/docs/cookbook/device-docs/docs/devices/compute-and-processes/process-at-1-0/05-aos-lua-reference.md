@@ -4,20 +4,20 @@ This page covers the AOS essentials used throughout the `process@1.0` examples.
 
 ## Install And Start
 
-```sh
+```text
 npm i -g https://get_ao.arweave.net
 aos --url http://localhost:8734
 ```
 
 Use a wallet:
 
-```sh
+```text
 aos --wallet ./wallet.json --url http://localhost:8734
 ```
 
 Run a command non-interactively when supported by your AOS version:
 
-```sh
+```text
 aos <process-id> --run "return 1 + 1"
 ```
 

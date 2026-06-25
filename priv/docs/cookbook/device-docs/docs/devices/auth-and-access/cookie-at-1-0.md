@@ -40,7 +40,7 @@ Expected: a response message containing `set-cookie` lines. Use `format=cookie` 
 
 ### Generate then verify cookie-backed auth state
 
-```bash
+```text
 curl -sS -i "http://localhost:8734/~cookie@1.0/generate" | tee /tmp/hb-cookie-generate.txt
 COOKIE=$(grep -i '^set-cookie:' /tmp/hb-cookie-generate.txt | sed 's/^[Ss]et-[Cc]ookie: //' | cut -d';' -f1 | paste -sd '; ' -)
 curl -sS -i -H "Cookie: $COOKIE" "http://localhost:8734/~cookie@1.0/verify"

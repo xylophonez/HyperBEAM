@@ -28,7 +28,7 @@ The Arweave access device. It reads network status, blocks, transaction headers,
 
 ### Fetch raw Arweave data by transaction ID
 
-```bash
+```text
 TXID="wKzEejXI5AlypYl82NYzgtBNIAOg10Ui0EWM4bkYRN4"
 curl -sS "http://localhost:8734/~copycat@1.0/arweave?from=1936565&to=1936565&mode=write" >/dev/null
 curl -sS "http://localhost:8734/~arweave@2.9/tx=$TXID?exclude-data=true"
@@ -40,7 +40,7 @@ Expected: copycat first indexes the containing block, the tx call returns transa
 
 ### Bring the containing block into the node, then read bytes
 
-```bash
+```text
 curl -sS "http://localhost:8734/~copycat@1.0/arweave?from=1936565&to=1936565&mode=write"
 curl -sS "http://localhost:8734/~copycat@1.0/arweave?from=1936565&to=1936565&mode=list" | grep "wKzEejXI5AlypYl82NYzgtBNIAOg10Ui0EWM4bkYRN4"
 curl -sS -H "Range: bytes=0-31" "http://localhost:8734/~arweave@2.9/raw=wKzEejXI5AlypYl82NYzgtBNIAOg10Ui0EWM4bkYRN4"
@@ -50,7 +50,7 @@ Expected: `mode=write` copies block/TX offset facts into the local Arweave index
 
 ### Use the raw-data headers as an offset source
 
-```bash
+```text
 curl -sS "http://localhost:8734/~copycat@1.0/arweave?from=1936565&to=1936565&mode=write" >/dev/null
 curl -sSI "http://localhost:8734/~arweave@2.9/raw=wKzEejXI5AlypYl82NYzgtBNIAOg10Ui0EWM4bkYRN4" \
   | grep -i -E 'offset|content-length|raw-id'

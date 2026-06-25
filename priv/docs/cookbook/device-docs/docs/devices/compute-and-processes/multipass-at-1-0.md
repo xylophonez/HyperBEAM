@@ -19,7 +19,7 @@ A repass trigger device. It can cause evaluation to pass through a workflow mult
 
 ### Repeat a stack for multiple passes
 
-```bash
+```text
 HB="<local-node-with-multipass-stack>"
 cat > /tmp/multipass-stack.json <<'JSON'
 {
@@ -37,7 +37,7 @@ Expected: `multipass@1.0` asks the resolver to run another pass until the pass c
 
 ### Combine with dedup safely
 
-```bash
+```text
 cat > /tmp/dedup-multipass-stack.json <<'JSON'
 {
   "device": "stack@1.0",

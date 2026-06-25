@@ -2,20 +2,20 @@
 
 Install from a HyperBEAM checkout:
 
-```bash
+```text
 cd /tmp/hyperbeam-source
 ./install-template --local /tmp/hyperbeam-source
 ```
 
 Install from upstream edge:
 
-```bash
+```text
 ./install-template --branch edge
 ```
 
 Pin to a commit for repeatable scaffolding:
 
-```bash
+```text
 ./install-template --commit <commit-or-tag>
 ```
 
@@ -23,7 +23,7 @@ The installer writes a `rebar3 new device` template into your user template dire
 
 Create a project:
 
-```bash
+```text
 mkdir -p /tmp/hb-device-docs-forge
 cd /tmp/hb-device-docs-forge
 rebar3 new device name=echo_lens

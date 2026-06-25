@@ -19,7 +19,7 @@ A name resolver for base32 subdomains that point at Arweave message IDs.
 
 ### Resolve a base32 subdomain back to an Arweave ID
 
-```bash
+```text
 B32_HOST="<52-character-base32-id>.localhost"
 curl -sS -H "Host: $B32_HOST" "http://localhost:8734/index.html"
 ```
@@ -28,7 +28,7 @@ Expected: `b32-name@1.0` decodes the subdomain into the original 43-character Ar
 
 ### Compare with a normal ID path
 
-```bash
+```text
 HB="<node-with-b32-name-resolver>"
 ID="<decoded-43-character-id>"
 curl -sS "$HB/$ID/index.html"
@@ -38,7 +38,7 @@ Expected: the subdomain and explicit-ID forms resolve to the same content when r
 
 ### Use b32-name in the resolver chain
 
-```bash
+```text
 cat > /tmp/hb-b32-name.flat <<'EOF'
 name-resolvers/1/device: b32-name@1.0
 name-resolvers/2/device: local-name@1.0

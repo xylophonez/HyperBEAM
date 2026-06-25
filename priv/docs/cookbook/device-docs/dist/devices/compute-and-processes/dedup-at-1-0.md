@@ -20,7 +20,7 @@ A stream helper that skips duplicate messages during evaluation.
 
 ### Deduplicate repeated requests in a stack
 
-```bash
+```text
 HB="<local-node-with-dedup-stack>"
 cat > /tmp/dedup-stack.json <<'JSON'
 {
@@ -41,7 +41,7 @@ Expected: the first request is allowed through and records the request subject i
 
 ### Deduplicate by body instead of entire request
 
-```bash
+```text
 HB="<local-node-with-dedup-stack>"
 curl -sS -X POST -H 'content-type: application/json' \
   --data-binary '{"device":"dedup@1.0","dedup-subject":"body","body":{"id":"same-work"}}' \
@@ -52,7 +52,7 @@ Expected: messages with the same `body` hash are treated as the same work item e
 
 ### Use with multipass without blocking later passes
 
-```bash
+```text
 cat > /tmp/dedup-multipass.json <<'JSON'
 {
   "device": "stack@1.0",

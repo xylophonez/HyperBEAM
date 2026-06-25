@@ -20,7 +20,7 @@ An HTTP Basic authentication device with PBKDF2 password handling and HMAC commi
 
 ### Trigger the Basic-auth challenge
 
-```bash
+```text
 curl -sS -i "http://localhost:8734/~http-auth@1.0/generate"
 ```
 
@@ -28,7 +28,7 @@ Expected: `401 Unauthorized` with `www-authenticate: Basic` and details saying n
 
 ### Derive raw auth material from a Basic header
 
-```bash
+```text
 AUTH=$(printf 'alice:correct-horse' | base64 | tr -d '\n')
 curl -sS -H "Authorization: Basic $AUTH" \
   "http://localhost:8734/~http-auth@1.0/generate?raw+atom=true"
@@ -38,7 +38,7 @@ Expected: `alice:correct-horse`. `raw=true` is for debugging only; normal auth-h
 
 ### Derive a reproducible secret for signing
 
-```bash
+```text
 AUTH=$(printf 'alice:correct-horse' | base64 | tr -d '\n')
 curl -sS -H "Authorization: Basic $AUTH" \
   "http://localhost:8734/~http-auth@1.0/generate?iterations+integer=1200000&key-length+integer=64"
@@ -48,7 +48,7 @@ Expected: a deterministic encoded secret derived from the Basic credentials, sal
 
 ### Commit and verify with the same Basic credential
 
-```bash
+```text
 AUTH=$(printf 'alice:correct-horse' | base64 | tr -d '\n')
 curl -sS -H "Authorization: Basic $AUTH" \
   "http://localhost:8734/~message@1.0&body=paywalled/commit~http-auth@1.0/~json@1.0/serialize" > /tmp/http-auth-committed.json

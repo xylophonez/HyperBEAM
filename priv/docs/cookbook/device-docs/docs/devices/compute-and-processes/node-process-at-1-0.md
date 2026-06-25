@@ -20,7 +20,7 @@ A singleton node-local process device that uses local names and node configurati
 
 ### Configure a node-local singleton process
 
-```bash
+```text
 cat > /tmp/hb-node-process.flat <<'EOF'
 port: 8734
 node-processes/counter/device: process@1.0
@@ -35,7 +35,7 @@ Expected: on startup, `~node-process@1.0/counter` can look up or spawn the local
 
 ### Look up the singleton process
 
-```bash
+```text
 OPERATOR_NODE="<node-with-counter-process>"
 curl -sS "$OPERATOR_NODE/~node-process@1.0/counter/~json@1.0/serialize"
 ```
@@ -44,7 +44,7 @@ Expected: the configured process definition or current local process state. The 
 
 ### Register a supporting local name
 
-```bash
+```text
 curl -sS -X POST -H 'content-type: application/json' \
   --data-binary '{"key":"counter","value":{"device":"process@1.0"}}' \
   "<operator-local-node>/~local-name@1.0/register"

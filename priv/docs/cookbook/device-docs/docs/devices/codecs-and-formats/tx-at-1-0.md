@@ -29,7 +29,7 @@ Expected: the transaction body as JSON. HyperBEAM reads the L1 transaction, maps
 
 ### Inspect the transaction commitment headers
 
-```bash
+```text
 TXID="ptBC0UwDmrUTBQX3MqZ1lB57ex20ygwzkjjCrQjIx3o"
 curl -sS "http://localhost:8734/~arweave@2.9/tx=$TXID?exclude-data=true" -D - -o /dev/null \
   | grep -i -E '^(status|content-type|data_size|reward|anchor|ao-types|signature-input):'
@@ -39,7 +39,7 @@ Expected: headers including `signature-input` with `alg="tx@1.0/rsa-pss-sha256"`
 
 ### Fetch the raw data behind the same transaction
 
-```bash
+```text
 TXID="ptBC0UwDmrUTBQX3MqZ1lB57ex20ygwzkjjCrQjIx3o"
 curl -sSI "http://localhost:8734/~arweave@2.9/raw=$TXID" \
   | grep -i -E '^(status|content-type|content-length|accept-ranges|raw-id|ao-types):'

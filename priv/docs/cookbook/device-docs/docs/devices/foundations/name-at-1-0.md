@@ -20,7 +20,7 @@ A resolver device for turning names into values through configured resolver mess
 
 ### Inspect configured name resolvers
 
-```bash
+```text
 curl -sS "http://localhost:8734/~meta@1.0/info/name-resolvers/~json@1.0/serialize"
 ```
 
@@ -28,7 +28,7 @@ Expected: the resolver configuration for this node when present, or a clear miss
 
 ### Use local-name as one resolver
 
-```bash
+```text
 cat > /tmp/hb-name-resolvers.flat <<'EOF'
 name-resolvers/1/device: local-name@1.0
 name-resolvers/2/device: b32-name@1.0

@@ -20,7 +20,7 @@ A node-local name registry. It stores names in node state and nonvolatile storag
 
 ### Confirm the local-name device is loaded
 
-```bash
+```text
 curl -sSI "http://localhost:8734/~local-name@1.0/info" | grep -i -E 'status|default|excludes|content-type'
 ```
 
@@ -28,7 +28,7 @@ Expected: headers showing `status: 200` plus the local-name default function and
 
 ### Check whether a local name exists
 
-```bash
+```text
 curl -sSI "http://localhost:8734/~local-name@1.0/lookup?key=demo-service" | grep -i -E 'HTTP/|status|content-type'
 ```
 
@@ -36,7 +36,7 @@ Expected before registration: an HTTP `404` status. That is not a device failure
 
 ### Register a local name with an operator signature
 
-```bash
+```text
 OPERATOR_NODE="<operator-node-you-control>"
 curl -sS -i -X POST -H 'content-type: application/json' \
   --data-binary '{"key":"demo-service","value":{"device":"message@1.0","body":"hello local name"}}' \
@@ -62,7 +62,7 @@ Use this from a node/operator context where `Opts` carries the operator wallet. 
 
 ### Look up an operator-registered name
 
-```bash
+```text
 OPERATOR_NODE="<operator-node-you-control>"
 curl -sS "$OPERATOR_NODE/~local-name@1.0/lookup?key=demo-service"
 ```
@@ -71,7 +71,7 @@ Expected after a successful operator registration: the message registered under 
 
 ### Use default lookup syntax after registration
 
-```bash
+```text
 OPERATOR_NODE="<operator-node-you-control>"
 curl -sS "$OPERATOR_NODE/~local-name@1.0/demo-service/body"
 ```

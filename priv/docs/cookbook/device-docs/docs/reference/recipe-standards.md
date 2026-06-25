@@ -14,6 +14,12 @@ Recipes are inherited examples. Treat every runnable block as production-facing 
 - Include every required setup step before the command that depends on it.
 - Validate against docs-test before publishing or re-enabling an on-weave recipe.
 
+## Runnable Blocks In Device Docs
+
+Use `bash` or `sh` fences only for examples that are intended to be executed by the validator. Use `text` for operator walkthroughs, configuration snippets, expected failure examples, local-file workflows, wallet/signing flows, and examples that require seeded state outside the block.
+
+The broad docs validator treats every `bash` or `sh` curl block as a public example. A page can still document setup-dependent behavior, but that setup belongs in prose or `text` fences until a deterministic fixture exists.
+
 ## Not Acceptable In Public Recipes
 
 - Placeholders such as `PROCESS_ID`, `USER_ADDRESS`, `RECIPIENT`, `WALLET`, or `NAME_FROM_YOUR_RESOLVER`.

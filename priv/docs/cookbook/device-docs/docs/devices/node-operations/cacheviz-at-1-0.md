@@ -22,7 +22,7 @@ A visualization device for the local cache. It can render cache relationships as
 
 ### Render the cache graph UI
 
-```bash
+```text
 curl -sS "http://localhost:8734/~cacheviz@1.0/index" > /tmp/cacheviz.html
 ```
 
@@ -38,7 +38,7 @@ Expected: nodes and edges representing cached messages/links.
 
 ### Generate Graphviz DOT or SVG
 
-```bash
+```text
 curl -sS "http://localhost:8734/~cacheviz@1.0/dot" > /tmp/cache.dot
 curl -sS "http://localhost:8734/~cacheviz@1.0/svg" > /tmp/cache.svg
 ```

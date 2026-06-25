@@ -19,7 +19,7 @@ A compression device that zips and unzips message bodies.
 
 ### Compress a message body
 
-```bash
+```text
 curl -sS -D /tmp/hb-gzip-headers.txt \
   "http://localhost:8734/~message@1.0&body=hello-from-hyperbeam/~gzip@1.0/zip/body" \
   -o /tmp/hb-gzip-body.bin
@@ -39,7 +39,7 @@ Expected: `hello-from-hyperbeam`.
 
 ### Decompress a gzip payload from the shell
 
-```bash
+```text
 printf 'payload from stdin' | gzip -c >/tmp/payload.gz
 curl -sS -X POST -H 'content-encoding: gzip' --data-binary @/tmp/payload.gz \
   "http://localhost:8734/~gzip@1.0/unzip/body"

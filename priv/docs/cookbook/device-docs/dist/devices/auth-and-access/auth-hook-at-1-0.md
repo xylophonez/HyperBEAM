@@ -20,7 +20,7 @@ A request hook that signs incoming messages with node-hosted wallets according t
 
 ### Install an auth hook that signs Basic-auth requests
 
-```bash
+```text
 cat > /tmp/hb-auth-hook.flat <<'EOF'
 port: 8734
 on/request/device: auth-hook@1.0
@@ -33,7 +33,7 @@ EOF
 
 Start a disposable node with that config, then send a request with Basic auth:
 
-```bash
+```text
 AUTH=$(printf 'alice:correct-horse' | base64 | tr -d '\n')
 curl -sS -i -H "Authorization: Basic $AUTH" \
   "http://localhost:8734/~message@1.0&body=needs-node-signature/~json@1.0/serialize"
@@ -43,7 +43,7 @@ Expected: the request hook sees the `authorization` key, derives a secret throug
 
 ### Prove the hook challenges missing credentials
 
-```bash
+```text
 curl -sS -i "http://localhost:8734/~message@1.0&body=needs-node-signature"
 ```
 
@@ -51,7 +51,7 @@ Expected: with the hook config above, an unsigned request that needs auth return
 
 ### Use cookie-backed auth instead of Basic auth
 
-```bash
+```text
 cat > /tmp/hb-cookie-hook.flat <<'EOF'
 port: 8734
 on/request/device: auth-hook@1.0

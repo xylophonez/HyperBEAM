@@ -8,6 +8,14 @@ HB=https://docs-test.mystical.computer CURL_EXAMPLE_DOCS_DIR=docs/recipes CURL_E
 
 The strict pass must end with `0 failed` and `0 skipped`.
 
+Run the broad docs validator before deploying generated device docs:
+
+```text
+HB=https://docs-test.mystical.computer node scripts/validate-curl-examples.mjs
+```
+
+The broad pass must also end with `0 failed` and `0 skipped`. If an example depends on operator configuration, local files, wallets, mutable cache state, signed fixtures, private routes, or an expected error response, keep it in a `text` fence rather than `bash`.
+
 ## Quick Curl Smoke Test
 
 ```bash

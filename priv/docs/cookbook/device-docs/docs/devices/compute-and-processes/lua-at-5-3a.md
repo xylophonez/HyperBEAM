@@ -22,7 +22,7 @@ The Lua execution device. It calls Lua modules on HyperBEAM messages and support
 
 ### Run an inline Lua handler
 
-```bash
+```text
 cat > /tmp/lua-process.json <<'JSON'
 {
   "device": "lua@5.3a",
@@ -38,7 +38,7 @@ Expected: Lua state is initialized from the body and `handle` receives the path 
 
 ### Sandbox dangerous Lua functions
 
-```bash
+```text
 cat > /tmp/lua-sandbox.json <<'JSON'
 {
   "device": "lua@5.3a",
@@ -55,7 +55,7 @@ Expected: sandboxed globals such as `os` are absent or restricted.
 
 ### Use Lua inside a process definition
 
-```bash
+```text
 cat > /tmp/lua-process-definition.json <<'JSON'
 {
   "device": "process@1.0",

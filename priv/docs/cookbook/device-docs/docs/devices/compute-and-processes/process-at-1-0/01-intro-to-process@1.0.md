@@ -52,13 +52,13 @@ For process-to-process messages to be accepted, the recipient process must trust
 
 ## Install AOS
 
-```sh
+```text
 npm i -g https://get_ao.arweave.net
 ```
 
 ## Create a Process
 
-```sh
+```text
 aos process_name --url http://localhost:8734
 ```
 
@@ -67,7 +67,7 @@ Replace `process_name` with a friendly local name for the process, such as `coun
 
 To use a specific wallet:
 
-```sh
+```text
 aos process_name --wallet ./wallet.json --url http://localhost:8734
 ```
 
@@ -167,7 +167,7 @@ end
 
 For local development, start HyperBEAM with the profile your environment requires, then point AOS at it:
 
-```sh
+```text
 aos myLocalProcess --url http://localhost:8734
 ```
 

@@ -17,7 +17,7 @@ For new work, use HyperBEAM mainnet.
 
 Mainnet AOS defaults to HyperBEAM. To create or connect through the Legacynet path, use `--legacy`:
 
-```sh
+```text
 aos <Legacynet-process-id> --wallet ./wallet.json --legacy
 ```
 
@@ -77,7 +77,7 @@ The cookbook WeaveDrive snack was written for AO Legacynet. Use it only for exis
 
 Setup:
 
-```sh
+```text
 aos test-weavedrive \
   --tag-name Extension --tag-value WeaveDrive \
   --tag-name Attestor --tag-value <attestor-address> \

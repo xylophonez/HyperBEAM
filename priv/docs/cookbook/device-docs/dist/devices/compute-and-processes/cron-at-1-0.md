@@ -29,7 +29,7 @@ Expected: a task ID. The cron worker resolves `/~meta@1.0/info/address` every fi
 
 ### Stop the recurring task
 
-```bash
+```text
 TASK_ID="<task-id-from-every>"
 curl -sS "http://localhost:8734/~cron@1.0/stop?task=$TASK_ID"
 ```

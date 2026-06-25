@@ -23,7 +23,7 @@ A Memory-64 WASM execution device backed by WAMR through the BEAMR wrapper.
 
 ### Execute a WASM function directly
 
-```bash
+```text
 curl -sS -X POST "http://localhost:8734/~wasm-64@1.0/compute" \
   -H 'wasm-function: fac' \
   -H 'wasm-params: [10]' \
@@ -34,7 +34,7 @@ Expected: the module is loaded, function `fac` is invoked with parameter `10`, a
 
 ### Continue from a prior hashpath/state
 
-```bash
+```text
 HASHPATH="<hashpath-from-first-compute>"
 curl -sS "http://localhost:8734/$HASHPATH/compute?wasm-function=fac&wasm-params=[11]"
 ```
@@ -43,7 +43,7 @@ Expected: `wasm-64@1.0` resumes from cached instance/snapshot state instead of i
 
 ### Use WASM as a process execution device
 
-```bash
+```text
 cat > /tmp/wasm-process.json <<'JSON'
 {
   "device": "process@1.0",

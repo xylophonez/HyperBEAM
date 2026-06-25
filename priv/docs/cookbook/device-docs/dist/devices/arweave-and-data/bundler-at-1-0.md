@@ -23,7 +23,7 @@ A local bundling service. It accepts signed committed items, writes them to the 
 
 The bundler rejects unsigned bytes. This example asks HyperBEAM to sign and serialize a message with `~ans104@1.0`, then posts those bytes to the local bundler item endpoint.
 
-```bash
+```text
 cat > /tmp/hb-bundler-item.json <<'JSON'
 {
   "data": "hello from a signed HyperBEAM bundler item",
@@ -46,7 +46,7 @@ Expected: a successful item submission response with the data-item ID or a confi
 
 ### Confirm unsigned bytes are rejected
 
-```bash
+```text
 printf 'not a signed data item' >/tmp/not-an-item.bin
 curl -sS -i -X POST \
   -H 'content-type: application/octet-stream' \
@@ -58,7 +58,7 @@ Expected: a `400`-style invalid or unsigned item response. That failure is usefu
 
 ### Force a small bundle batch for local testing
 
-```bash
+```text
 cat > /tmp/hb-bundler.flat <<'EOF'
 port: 8734
 bundler-max-items: 2
@@ -72,7 +72,7 @@ Start a disposable node with that config, run the signed-item upload twice, then
 
 ### Submit an already structured item message
 
-```bash
+```text
 curl -sS -X POST \
   -H 'content-type: application/json' \
   --data-binary '{"data":"structured item body","content-type":"text/plain","commitments":{}}' \

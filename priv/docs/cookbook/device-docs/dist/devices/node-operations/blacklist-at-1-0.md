@@ -20,7 +20,7 @@ A request-hook device for content moderation. It refreshes provider data and blo
 
 ### Configure a newline blacklist provider
 
-```bash
+```text
 cat >/tmp/blacklist.txt <<'EOF'
 BAD_MESSAGE_ID_1
 BAD_MESSAGE_ID_2
@@ -36,7 +36,7 @@ Expected: the hook refreshes the provider, parses newline-delimited IDs, and sto
 
 ### Run a request through blacklist policy
 
-```bash
+```text
 BLACKLIST_NODE="<node-with-blacklist-hook>"
 curl -sS "$BLACKLIST_NODE/BAD_MESSAGE_ID_1/~message@1.0/id"
 ```
@@ -45,7 +45,7 @@ Expected: once initialized, a matching request is rejected before normal resolut
 
 ### Use multiple providers
 
-```bash
+```text
 cat >> /tmp/hb-blacklist.flat <<'EOF'
 blacklist-providers/2/body: OTHER_BAD_ID
 EOF

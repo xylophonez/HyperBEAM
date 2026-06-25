@@ -20,7 +20,7 @@ A codec that flattens nested TABM messages into path-keyed maps and can expand t
 
 ### Flatten a nested message into slash-key form
 
-```bash
+```text
 HB="<local-node-with-flat-codec>"
 curl -sS -X POST -H 'content-type: application/json' \
   --data-binary '{"user":{"name":"alice","role":"operator"},"count":3}' \
@@ -31,7 +31,7 @@ Expected: keys such as `user/name` and `user/role` appear in the result. This is
 
 ### Parse a flat config into a nested message
 
-```bash
+```text
 HB="<local-node-with-flat-codec>"
 printf 'user/name: alice\nuser/role: operator\ncount: 3\n' >/tmp/demo.flat
 curl -sS -X POST --data-binary @/tmp/demo.flat \
@@ -42,7 +42,7 @@ Expected: a nested message equivalent to `{"user":{"name":"alice","role":"operat
 
 ### Use flat config to start a node
 
-```bash
+```text
 cat > /tmp/hb-minimal.flat <<'EOF'
 port: 8734
 store: rocksdb@1.0

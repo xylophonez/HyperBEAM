@@ -2,7 +2,7 @@
 
 Publishing signs and uploads the spec and implementation messages:
 
-```bash
+```text
 rebar3 device publish --key wallet.json
 ```
 

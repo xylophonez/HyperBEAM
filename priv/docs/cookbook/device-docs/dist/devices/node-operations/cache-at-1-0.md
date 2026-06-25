@@ -21,7 +21,7 @@ The local cache read/write device. It reads IDs or store paths, honors requested
 
 ### Read a known ID from the local cache
 
-```bash
+```text
 ID=$(curl -sS "http://localhost:8734/~meta@1.0/info/preloaded-devices-index")
 curl -sS "http://localhost:8734/~cache@1.0/read&path=$ID/~json@1.0/serialize"
 ```

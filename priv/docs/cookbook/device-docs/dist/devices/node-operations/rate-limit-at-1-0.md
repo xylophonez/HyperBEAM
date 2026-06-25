@@ -21,7 +21,7 @@ A request-hook rate limiter keyed by client IP. It can reject excessive requests
 
 ### Configure a request-rate hook
 
-```bash
+```text
 cat > /tmp/hb-rate-limit.flat <<'EOF'
 on/request/device: rate-limit@1.0
 rate-limit/window: 60-second
@@ -34,7 +34,7 @@ Expected: the hook counts requests per committer for a 60-second window and reje
 
 ### Exercise the limit with repeated cheap requests
 
-```bash
+```text
 for i in $(seq 1 35); do
   curl -sS -o /tmp/rate-$i.txt -w "%{http_code}\n" \
     "http://localhost:8734/~meta@1.0/info/address"
@@ -45,7 +45,7 @@ Expected: normal responses until the configured threshold is exceeded, then a ra
 
 ### Change the keying strategy for shared clients
 
-```bash
+```text
 cat >> /tmp/hb-rate-limit.flat <<'EOF'
 rate-limit/key: ip
 EOF

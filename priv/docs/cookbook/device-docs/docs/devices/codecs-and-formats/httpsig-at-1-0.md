@@ -21,7 +21,7 @@ An HTTP Message Signatures commitment device based on RFC 9421-style signatures.
 
 ### Return a HyperBEAM response as HTTP Message Signatures
 
-```bash
+```text
 curl -sS -D /tmp/headers.txt "http://localhost:8734/~message@1.0&body=signed-response" -o /tmp/body.txt
 sed -n '/^signature:/Ip;/^signature-input:/Ip;/^content-digest:/Ip' /tmp/headers.txt
 cat /tmp/body.txt

@@ -20,7 +20,7 @@ A reverse index for finding message IDs that contain a specific key/value pair.
 
 ### Confirm the match device is loaded
 
-```bash
+```text
 curl -sSI "http://localhost:8734/~match@1.0/info" | grep -i -E 'status|default|excludes|content-type'
 ```
 

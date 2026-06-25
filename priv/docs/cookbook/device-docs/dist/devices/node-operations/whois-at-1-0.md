@@ -35,7 +35,7 @@ Expected: the URL this node reports for itself, such as `http://localhost:8734` 
 
 ### Compare network identity with signing identity
 
-```bash
+```text
 curl -sS "http://localhost:8734/~meta@1.0/info/address"
 curl -sS "http://localhost:8734/~whois@1.0/node"
 ```

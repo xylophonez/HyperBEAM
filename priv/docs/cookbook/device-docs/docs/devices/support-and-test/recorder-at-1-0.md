@@ -21,7 +21,7 @@ A debugging recorder that captures request/response flights for replay and diagn
 
 Recorder is a support/debug device. Some operator builds do not preload it. Check your node before using the examples:
 
-```bash
+```text
 curl -sS "http://localhost:8734/~meta@1.0/info/format~hyperbuddy@1.0" \
   | grep -i 'recorder' || true
 ```
@@ -32,7 +32,7 @@ If `~recorder@1.0` returns `device_not_loadable` or `device-name-not-resolvable`
 
 ### Record one target request
 
-```bash
+```text
 curl -sS "http://localhost:8734/~recorder@1.0/record?request=/~meta@1.0/info/address&format=text"
 ```
 
@@ -40,7 +40,7 @@ Expected: a text flight log showing the request, device calls, and response path
 
 ### Take off, run a path, then land
 
-```bash
+```text
 RECORDER_NODE="<local-node-with-recorder>"
 curl -sS "$RECORDER_NODE/~recorder@1.0/take-off/~message@1.0&body=hello/body/land~recorder@1.0?format=text"
 ```
@@ -49,7 +49,7 @@ Expected: recorder captures the intermediate flight while the path runs, then `l
 
 ### Return JSON for tooling
 
-```bash
+```text
 curl -sS "http://localhost:8734/~recorder@1.0/record?request=/~query@1.0/all%3Freturn%3Dcount&format=json"
 ```
 

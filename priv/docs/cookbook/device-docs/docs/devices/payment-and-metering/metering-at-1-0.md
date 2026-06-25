@@ -22,7 +22,7 @@ A dynamic pricing device for P4. It opens metering sessions, records consumption
 
 ### Configure metering as P4 pricing
 
-```bash
+```text
 cat > /tmp/hb-p4-metering.flat <<'EOF'
 on/request/device: p4@1.0
 on/request/pricing-device: metering@1.0
@@ -48,7 +48,7 @@ Expected: `estimate` returns `0` and starts process-local accounting; `price` re
 
 ### Meter Arweave bytes from a bundler flow
 
-```bash
+```text
 curl -sS -X POST -H 'content-type: application/octet-stream' \
   --data-binary @signed-item.bin \
   "http://localhost:8734/~bundler@1.0/item?codec-device=ans104@1.0"

@@ -20,7 +20,7 @@ The node entrypoint and configuration surface. It returns the public node messag
 
 ### Read the node address for signatures and operator checks
 
-```bash
+```text
 curl -sS "http://localhost:8734/~meta@1.0/info/address"
 ```
 
@@ -28,7 +28,7 @@ Expected: the node's public address. Use this to know which key signs local resp
 
 ### Read the preloaded device index
 
-```bash
+```text
 curl -sS "http://localhost:8734/~meta@1.0/info/preloaded-devices-index"
 ```
 
@@ -36,7 +36,7 @@ Expected: the content ID of the build-time preloaded device index.
 
 ### Check remote-device loading policy
 
-```bash
+```text
 curl -sS "http://localhost:8734/~meta@1.0/info/load-remote-devices"
 curl -sS "http://localhost:8734/~meta@1.0/info/trusted-device-signers/~json@1.0/serialize"
 curl -sS "http://localhost:8734/~meta@1.0/info/trusted-devices/~json@1.0/serialize"
@@ -46,7 +46,7 @@ Expected: whether this node may fetch remote devices, which signers it trusts, a
 
 ### Use meta as the default request pipeline
 
-```bash
+```text
 curl -sS -D - "http://localhost:8734/~message@1.0&body=through-meta/body" -o /dev/null \
   | grep -i -E 'HTTP/|ao-result:|status:|content-type'
 curl -sS "http://localhost:8734/~message@1.0&body=through-meta/body"

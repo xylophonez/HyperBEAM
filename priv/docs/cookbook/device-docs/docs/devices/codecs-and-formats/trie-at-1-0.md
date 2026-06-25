@@ -20,7 +20,7 @@ A radix trie device with implicit leaves. It is useful for path-indexed data and
 
 ### Set values in a committed trie
 
-```bash
+```text
 curl -sS "http://localhost:8734/~trie@1.0/set&car+integer=31337&card+integer=90210/~json@1.0/serialize" | tee /tmp/trie.json
 ```
 
@@ -28,7 +28,7 @@ Expected: a trie message containing both keys. The radix trie shares prefixes, s
 
 ### Read a key from that trie
 
-```bash
+```text
 TRIE_ID=$(curl -sS -X POST -H 'content-type: application/json' --data-binary @/tmp/trie.json \
   "http://localhost:8734/~message@1.0/id")
 curl -sS "http://localhost:8734/$TRIE_ID/get?key=car"
@@ -39,7 +39,7 @@ Expected: `get?key=car` and default lookup `/card` return the stored values once
 
 ### List committed trie keys
 
-```bash
+```text
 curl -sS -X POST -H 'content-type: application/json' --data-binary @/tmp/trie.json \
   "http://localhost:8734/~trie@1.0/keys/~json@1.0/serialize"
 ```

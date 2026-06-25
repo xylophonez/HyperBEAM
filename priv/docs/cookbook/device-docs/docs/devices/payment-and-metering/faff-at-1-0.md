@@ -20,7 +20,7 @@ A friends-and-family allowlist pricing device. It allows configured addresses to
 
 ### Configure friends-and-family payment policy
 
-```bash
+```text
 cat > /tmp/hb-faff.flat <<'EOF'
 on/request/device: p4@1.0
 on/request/pricing-device: faff@1.0
@@ -33,7 +33,7 @@ Expected: P4 asks `faff@1.0` whether all request signers are in `faff-allow-list
 
 ### Estimate for an allowed signed request
 
-```bash
+```text
 curl -sS -X POST -H 'content-type: application/json' \
   --data-binary '{"request":{"path":"/~meta@1.0/info/address"}}' \
   "http://localhost:8734/~faff@1.0/estimate"
@@ -43,7 +43,7 @@ Expected: `0` when every signer is allowlisted; `infinity` when any signer is mi
 
 ### Use FAFF as a no-charge ledger
 
-```bash
+```text
 curl -sS "http://localhost:8734/~faff@1.0/charge?quantity+integer=100&request+map=path=/~meta@1.0/info/address"
 ```
 

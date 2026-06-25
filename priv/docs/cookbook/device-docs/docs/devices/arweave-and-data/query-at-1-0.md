@@ -44,7 +44,7 @@ Expected: `true` or `false`. This mode is useful for hooks and route policies th
 
 ### Query data imported by copycat
 
-```bash
+```text
 curl -sS "http://localhost:8734/~copycat@1.0/arweave?from=1936565&to=1936565&mode=write"
 curl -sS "http://localhost:8734/~copycat@1.0/arweave?from=1936565&to=1936565&mode=list"
 ```

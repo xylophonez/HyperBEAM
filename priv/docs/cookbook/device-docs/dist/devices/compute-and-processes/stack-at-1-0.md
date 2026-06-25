@@ -21,7 +21,7 @@ A composition device that runs a declared stack of devices in fold or map mode.
 
 ### Build a two-device transform pipeline
 
-```bash
+```text
 HB="<local-node-with-stack-device>"
 cat > /tmp/stack.json <<'JSON'
 {
@@ -41,7 +41,7 @@ Expected: the request first executes gzip behavior, then JSON serialization over
 
 ### Use stack for request preprocessing
 
-```bash
+```text
 cat > /tmp/hb-stack-hook.flat <<'EOF'
 on/request/device: stack@1.0
 on/request/device-stack/1: rate-limit@1.0
@@ -53,7 +53,7 @@ Expected: incoming requests pass through rate limiting before auth signing. Stac
 
 ### Run map mode over several devices
 
-```bash
+```text
 HB="<local-node-with-stack-device>"
 curl -sS -X POST -H 'content-type: application/json' \
   --data-binary '{"device":"stack@1.0","mode":"map","device-stack":{"1":"message@1.0","2":"json@1.0"},"body":"hello"}' \

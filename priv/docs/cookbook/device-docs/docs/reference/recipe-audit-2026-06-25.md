@@ -16,6 +16,7 @@ This audit covers the docs-test on-weave `Device-Recipe` corpus and the static r
 | Runtime docs | Added file-backed recipe blacklist support in `hb_docs`. | Operators need to hide known bad on-weave recipes without deleting or republishing transactions. |
 | docs-test config | Added `config/docs-test-recipe-blacklist.json` and wired it from `scripts/hyperbeam-docs-test-start`. | The current public on-weave recipe corpus should not be inherited while it contains broken patterns. |
 | Static recipes | Replaced local-file, placeholder, and operator-mutation examples with deterministic curl-only recipes. | Public recipes must be runnable from a fresh shell and pass on docs-test. |
+| Device/reference examples | Marked setup-dependent device, operator, payment, cache, WASM, bundler, recorder, and forge examples as `text` instead of runnable shell. | The broad validator must not advertise operator-only or fixture-missing walkthroughs as copy/paste runnable examples. |
 | Process fixture | Added a seeded public counter process and `recipes/read-seeded-process-state.md`. | Process examples need a real process ID rather than inherited `PROCESS_ID` placeholders. |
 | Validator | Added `HB` override, strict recipe-directory mode, skipped-example failure mode, and bad semantic output detection. | A 200 response is not enough when the body is an error page, Hyperbuddy shell, or failed recorder report. |
 | Standards | Added `reference/recipe-standards.md`. | Future recipes need a stable acceptance bar before being published on weave. |
@@ -58,14 +59,14 @@ HB=https://docs-test.mystical.computer CURL_EXAMPLE_DOCS_DIR=docs/recipes CURL_E
 Summary: 27 passed, 0 failed, 0 skipped
 ```
 
-The broader docs curl scan is not yet clean:
+Broad docs validation now passes with all remaining runnable shell examples:
 
 ```text
 HB=https://docs-test.mystical.computer node scripts/validate-curl-examples.mjs
-Summary: 102 passed, 30 failed, 53 skipped
+Summary: 84 passed, 0 failed, 0 skipped
 ```
 
-Those failures are outside the approved recipe directory, mostly device/reference examples that still need the recipe-standard treatment or should be marked operator-only.
+The previously failing or skipped broad examples are still documented when useful, but they are no longer marked as executable shell unless docs-test can run them deterministically.
 
 ## Still Missing
 

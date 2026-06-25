@@ -20,7 +20,7 @@ A virtual filesystem device plus WASI preview1-compatible imports for WASM modul
 
 ### Pass WASI args/env to a WASM process
 
-```bash
+```text
 cat > /tmp/wasi-process.json <<'JSON'
 {
   "device": "process@1.0",
@@ -37,7 +37,7 @@ Expected: when `wasm-64@1.0` runs the module, `wasi@1.0` supplies args/env and c
 
 ### Read stdout after compute
 
-```bash
+```text
 PROCESS_ID="<wasi-process-id>"
 curl -sS "http://localhost:8734/$PROCESS_ID~process@1.0/compute/results/stdout"
 ```
@@ -46,7 +46,7 @@ Expected: bytes written by the WASM module to stdout, if the module and process 
 
 ### Use a local file-less WASI module first
 
-```bash
+```text
 curl -sS "http://localhost:8734/~meta@1.0/info/format~hyperbuddy@1.0" \
   | grep -i -E 'wasm|wasi'
 ```

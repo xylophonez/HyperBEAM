@@ -20,7 +20,7 @@ A wrapper for compute on remote machines that implement the JSON-Iface.
 
 ### Delegate compute to a local worker endpoint
 
-```bash
+```text
 HB="<local-node-with-json-iface-worker>"
 cat > /tmp/delegated-request.json <<JSON
 {
@@ -36,7 +36,7 @@ Expected: the device forwards the compute-shaped request to the configured endpo
 
 ### Pair with JSON-Iface for process compute
 
-```bash
+```text
 ADDR=$(curl -sS "http://localhost:8734/~meta@1.0/info/address")
 curl -sS "http://localhost:8734/~json-iface@1.0/to&data=ping&action=Eval&target=$ADDR&from-process=$ADDR/~json@1.0/serialize"
 ```
@@ -45,7 +45,7 @@ Expected: `json-iface@1.0` prepares the message shape that delegated WASM/AOS wo
 
 ### Require separate verification for delegated results
 
-```bash
+```text
 curl -sS -D /tmp/delegated.headers "http://localhost:8734/~meta@1.0/info/address" -o /tmp/delegated.body
 sed -n '/^signature:/Ip;/^signature-input:/Ip' /tmp/delegated.headers
 ```

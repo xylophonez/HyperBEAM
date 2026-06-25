@@ -20,7 +20,7 @@ An Arweave path-manifest resolver for v1 manifests. It maps request paths to dat
 
 ### Resolve an index path from a manifest message
 
-```bash
+```text
 HB="<local-node-with-manifest-cache>"
 cat > /tmp/manifest.json <<'JSON'
 {
@@ -37,7 +37,7 @@ Expected: `index` follows the manifest's `index.path` to `paths/index.html` and 
 
 ### Resolve a specific asset path
 
-```bash
+```text
 HB="<local-node-with-manifest-cache>"
 curl -sS -X POST --data-binary @/tmp/manifest.json \
   "$HB/~manifest@1.0/index.html/~json@1.0/serialize"
@@ -47,7 +47,7 @@ Expected: the manifest device maps `index.html` to its configured ID. If the ID 
 
 ### Serve a legacy manifest by ID
 
-```bash
+```text
 HB="<local-node-with-manifest-cache>"
 MANIFEST_ID="<manifest_tx_id>"
 curl -sS "$HB/$MANIFEST_ID/index"

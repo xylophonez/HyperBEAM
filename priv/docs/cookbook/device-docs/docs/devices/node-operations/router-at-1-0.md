@@ -22,7 +22,7 @@ The outbound routing device. It selects routes from node configuration and suppo
 
 ### Register a route as the operator
 
-```bash
+```text
 curl -sS -X POST -H 'content-type: application/json' \
   --data-binary '{"template":"/~meta@1.0/*","node":"http://localhost:8734","priority":10,"strategy":"Random"}' \
   "http://localhost:8734/~router@1.0/routes"
@@ -40,7 +40,7 @@ Expected: the route that would handle the local meta path, including node/strate
 
 ### Route by base for deterministic workers
 
-```bash
+```text
 curl -sS -G "http://localhost:8734/~router@1.0/route" \
   --data-urlencode 'route-path=/PROCESS_ID~process@1.0/compute' \
   --data-urlencode 'route-by=PROCESS_ID'
@@ -50,7 +50,7 @@ Expected: the same process/hashpath consistently maps to the same worker when a 
 
 ### Offer this node to a remote router
 
-```bash
+```text
 cat > /tmp/hb-router-offer.flat <<'EOF'
 router-opts/offered/1/registration-peer: http://router.example:8734
 router-opts/offered/1/prefix: /~meta@1.0

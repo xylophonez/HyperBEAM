@@ -20,7 +20,7 @@ The JSON interface used by WASM and delegated compute engines to exchange proces
 
 ### Convert a HyperBEAM message to AOS-style JSON
 
-```bash
+```text
 ADDR=$(curl -sS "http://localhost:8734/~meta@1.0/info/address")
 curl -sS -X POST -H 'content-type: application/json' \
   --data-binary "{\"data\":\"return 1 + 1\",\"action\":\"Eval\",\"target\":\"$ADDR\",\"from-process\":\"$ADDR\"}" \
@@ -41,7 +41,7 @@ Expected: a HyperBEAM message carrying normalized result fields. In a full WASM 
 
 ### Use it inside a process definition
 
-```bash
+```text
 cat > /tmp/json-iface-process.json <<'JSON'
 {
   "device": "process@1.0",

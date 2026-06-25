@@ -31,7 +31,7 @@ Expected: a JSON message containing secret references, not private key material.
 
 ### Generate a node-hosted in-memory secret
 
-```bash
+```text
 KEYID="$NEW_SECRET_KEYID"
 curl -sS "http://localhost:8734/~secret@1.0/generate?persist=in-memory&keyid=$KEYID"
 ```
@@ -40,7 +40,7 @@ Expected on a node with a configured access-control provider: a key reference, n
 
 ### Commit a message through a hosted secret
 
-```bash
+```text
 KEYID="$AUTHORIZED_SECRET_KEYID"
 curl -sS "http://localhost:8734/~message@1.0&body=operator-owned/commit~secret@1.0&keyid=$KEYID/~json@1.0/serialize"
 ```
@@ -49,7 +49,7 @@ Expected: a message with commitments created by the node-hosted secret if the ca
 
 ### Export only after access control passes
 
-```bash
+```text
 KEYID="$AUTHORIZED_SECRET_KEYID"
 curl -sS "http://localhost:8734/~secret@1.0/export?keyids=$KEYID"
 ```

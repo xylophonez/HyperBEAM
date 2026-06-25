@@ -16,7 +16,7 @@ The process still mutates state through messages. The difference is that read-fa
 
 ## Step 1: Connect To HyperBEAM
 
-```sh
+```text
 aos --url http://localhost:8734
 ```
 

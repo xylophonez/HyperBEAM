@@ -37,7 +37,7 @@ Expected: `deserialize` turns JSON body bytes into message keys, and the trailin
 
 ### Use JSON as an API format for another device
 
-```bash
+```text
 curl -sS "http://localhost:8734/~meta@1.0/info/~json@1.0/serialize"
 ```
 

@@ -34,7 +34,7 @@ Expected: `0` for operator requests, a route-specific price if the request match
 
 ### Top up a user balance as the operator
 
-```bash
+```text
 curl -sS -X POST -H 'content-type: application/json' \
   --data-binary '{"target":"USER_ADDRESS","quantity":1000}' \
   "http://localhost:8734/~simple-pay@1.0/topup"
@@ -44,7 +44,7 @@ Expected: success only for operator/external payment devices allowed to adjust t
 
 ### Check balance and charge
 
-```bash
+```text
 TARGET="AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
 curl -sS "http://localhost:8734/~simple-pay@1.0/balance?target=$TARGET"
 curl -sS \

@@ -21,7 +21,7 @@ An indexing orchestrator. It copies messages from foreign sources into the local
 
 ### Copy one Arweave block into local indexes
 
-```bash
+```text
 curl -sS "http://localhost:8734/~copycat@1.0/arweave?from=1749502&to=1749502&mode=write"
 curl -sS "http://localhost:8734/~copycat@1.0/arweave?from=1749502&to=1749502&mode=list"
 ```
@@ -30,7 +30,7 @@ Expected: `mode=write` fetches the block header and writes transaction/data-item
 
 ### Copy recent blocks backwards until existing coverage
 
-```bash
+```text
 TIP=$(curl -sS "http://localhost:8734/~arweave@2.9/current/height")
 curl -sS "http://localhost:8734/~copycat@1.0/arweave?from=$TIP&mode=write"
 ```
@@ -39,7 +39,7 @@ Expected: copycat walks backwards from the current block and stops when it reach
 
 ### Query copied data locally
 
-```bash
+```text
 curl -sS "http://localhost:8734/~copycat@1.0/arweave?from=1936565&to=1936565&mode=write"
 curl -sS "http://localhost:8734/~copycat@1.0/arweave?from=1936565&to=1936565&mode=list"
 ```
@@ -48,7 +48,7 @@ Expected: the first command imports one real Arweave block into local indexes; t
 
 ### Prove copied offsets unlock raw reads
 
-```bash
+```text
 TXID="ptBC0UwDmrUTBQX3MqZ1lB57ex20ygwzkjjCrQjIx3o"
 curl -sS "http://localhost:8734/~copycat@1.0/arweave?from=1749502&to=1749502&mode=write"
 curl -sSI "http://localhost:8734/~arweave@2.9/raw=$TXID" | grep -i -E 'content-length|accept-ranges|status|ao-types'

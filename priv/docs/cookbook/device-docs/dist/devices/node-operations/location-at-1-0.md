@@ -28,7 +28,7 @@ Expected: a signed location message for this node address and URL/nonce. Nodes u
 
 ### Read a known node location
 
-```bash
+```text
 ADDR=$(curl -sS "http://localhost:8734/~meta@1.0/info/address")
 curl -sS "http://localhost:8734/~location@1.0/$ADDR/~json@1.0/serialize"
 ```

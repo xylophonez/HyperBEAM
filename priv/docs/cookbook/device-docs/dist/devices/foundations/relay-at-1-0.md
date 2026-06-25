@@ -28,7 +28,7 @@ Expected: the same address returned by a direct `~meta@1.0/info/address` call.
 
 ### Inspect route policy before relaying external URLs
 
-```bash
+```text
 curl -sS "http://localhost:8734/~meta@1.0/info/routes/format~hyperbuddy@1.0"
 ```
 

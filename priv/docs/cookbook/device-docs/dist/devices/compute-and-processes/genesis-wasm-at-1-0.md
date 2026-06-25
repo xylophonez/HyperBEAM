@@ -22,7 +22,7 @@ A legacy AO process environment implemented on HyperBEAM infrastructure.
 
 ### Define a Genesis-WASM process shell
 
-```bash
+```text
 cat > /tmp/genesis-process.json <<'JSON'
 {
   "device": "process@1.0",
@@ -40,7 +40,7 @@ Expected: on a node with the referenced WASM module available, process evaluatio
 
 ### Send a compute message to that process
 
-```bash
+```text
 PROCESS_ID="<process-definition-id>"
 curl -sS -X POST "http://localhost:8734/$PROCESS_ID~process@1.0/compute" \
   -H 'action: Eval' \
@@ -51,7 +51,7 @@ Expected: the process stack invokes the Genesis WASM execution device with the p
 
 ### Migrate new work toward wasm-64
 
-```bash
+```text
 curl -sS "http://localhost:8734/~wasm-64@1.0/content-type"
 ```
 

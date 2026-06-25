@@ -2,7 +2,7 @@
 
 From the device project root:
 
-```bash
+```text
 rebar3 device package
 rebar3 device verify
 rebar3 device test
@@ -16,12 +16,12 @@ rebar3 device test
 
 Use recorder output for failures:
 
-```bash
+```text
 rebar3 device test --record=errors
 ```
 
 Use a full local check when core tests matter too:
 
-```bash
+```text
 rebar3 device test --with-core
 ```

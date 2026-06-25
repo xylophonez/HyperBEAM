@@ -27,7 +27,7 @@ Expected: `i like HyperBEAM!`. This is a simple deterministic target for resolve
 
 ### Inspect the helper paths
 
-```bash
+```text
 curl -sS "http://localhost:8734/~test-device@1.0/info/~json@1.0/serialize"
 ```
 
@@ -35,7 +35,7 @@ Expected: a JSON message whose `body` links to a helper-path description includi
 
 ### Use it in a cron stop test
 
-```bash
+```text
 TASK=$(curl -sS "http://localhost:8734/~cron@1.0/once?cron-path=/~test-device@1.0/delay")
 curl -sS "http://localhost:8734/~cron@1.0/stop?task=$TASK"
 ```

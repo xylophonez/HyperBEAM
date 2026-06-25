@@ -4,7 +4,7 @@ Use AO Connect to spawn, message, and read results from `process@1.0` processes 
 
 Install:
 
-```sh
+```text
 npm install @permaweb/aoconnect
 ```
 
@@ -46,7 +46,7 @@ const ao = connect({
 
 You can retrieve a node's authority address from its metadata endpoint:
 
-```sh
+```text
 curl "http://localhost:8734/~meta@1.0/info/address"
 ```
 
@@ -116,13 +116,13 @@ Use `ao.message` for normal app messages and reach for `request` when you need t
 
 Install:
 
-```sh
+```text
 npm install -g https://get_ao.arweave.net
 ```
 
 Connect to a selected node:
 
-```sh
+```text
 aos <process-id> --url http://localhost:8734
 ```
 
