@@ -263,11 +263,11 @@ supported_device_info_route(Device, [<<"spec">>, SectionSlug], Req, Opts) ->
             respond_html_or_json(spec_section, Payload, Payload, Req)
     end;
 supported_device_info_route(Device, [<<"recipes">>], Req, Opts) ->
-    Data = device_info_data(Device, Opts),
+    Data = device_recipes_data(Device, Opts),
     Recipes = maps:get(<<"recipes">>, Data, #{}),
     respond_html_or_json(recipes, Data, Recipes, Req);
 supported_device_info_route(Device, [<<"recipes">>, Slug], Req, Opts) ->
-    Data = device_info_data(Device, Opts),
+    Data = device_recipes_data(Device, Opts),
     Recipes = maps:get(<<"recipes">>, Data, #{}),
     case maps:get(Slug, Recipes, undefined) of
         undefined -> {ok, not_found_response()};
@@ -351,6 +351,36 @@ device_info_data(Device, Opts) ->
         _ ->
             unsupported_device_info_data(Device)
     end.
+
+device_recipes_data(Device, Opts) ->
+    {Name, Version} = split_device_id(Device),
+    SpecID =
+        case docs_resolve_spec(Device, Opts) of
+            {ok, ResolvedSpecID} -> ResolvedSpecID;
+            _ -> <<>>
+        end,
+    Recipes = maps:merge(
+        static_device_recipes(Device),
+        on_weave_recipe_docs_if_enabled(Device, SpecID, <<>>, Opts)
+    ),
+    maps:merge(device_doc_link_fields(Device), #{
+        <<"kind">> => <<"device-info">>,
+        <<"device">> => #{
+            <<"name">> => Name,
+            <<"version">> => Version,
+            <<"id">> => Device,
+            <<"spec-id">> => SpecID
+        },
+        <<"device-id">> => Device,
+        <<"device-name">> => Name,
+        <<"device-version">> => Version,
+        <<"renderer">> => cookbook_renderer(),
+        <<"schema">> => #{},
+        <<"schema-order">> => [],
+        <<"spec">> => #{},
+        <<"recipes">> => Recipes,
+        <<"recipe-count">> => map_size(Recipes)
+    }).
 
 unsupported_device_info_data(Device) ->
     #{
@@ -857,6 +887,8 @@ on_weave_recipe_docs(Device, SpecID, SpecSigner, Opts) ->
             #{}
     end.
 
+on_weave_recipe_docs_if_enabled(_Device, <<>>, _SpecSigner, _Opts) ->
+    #{};
 on_weave_recipe_docs_if_enabled(Device, SpecID, SpecSigner, Opts) ->
     case docs_recipe_source_mode(Opts) of
         <<"static-curated">> ->
