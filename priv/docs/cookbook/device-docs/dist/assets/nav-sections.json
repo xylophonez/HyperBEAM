@@ -421,6 +421,11 @@
           "description": "Compress and decompress a message body locally"
         },
         {
+          "title": "Inspect The Transaction Codec",
+          "href": "/recipes/inspect-transaction-codec.md",
+          "description": "Inspect Arweave transaction codec commitments"
+        },
+        {
           "title": "Build A Message And Serialize It",
           "href": "/recipes/message-to-json-pipe.md",
           "description": "Construct a message and serialize it to JSON"

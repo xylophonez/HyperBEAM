@@ -16,6 +16,7 @@ This audit covers the docs-test on-weave `Device-Recipe` corpus and the static r
 | Runtime docs | Added file-backed recipe blacklist support in `hb_docs`. | Operators need to hide known bad on-weave recipes without deleting or republishing transactions. |
 | docs-test config | Added `config/docs-test-recipe-blacklist.json` and wired it from `scripts/hyperbeam-docs-test-start`. | The current public on-weave recipe corpus should not be inherited while it contains broken patterns. |
 | Static recipes | Replaced local-file, placeholder, and operator-mutation examples with deterministic curl-only recipes. | Public recipes must be runnable from a fresh shell and pass on docs-test. |
+| Device recipe UI | Attached curated static recipes to device recipe lists and configured docs-test to skip quarantined on-weave recipe lookup. | Device pages should show tested replacement recipes quickly while bad on-weave transactions remain quarantined. |
 | Device/reference examples | Marked setup-dependent device, operator, payment, cache, WASM, bundler, recorder, and forge examples as `text` instead of runnable shell. | The broad validator must not advertise prerequisite-bound workflows as directly runnable examples. |
 | Process fixture | Added a seeded public counter process and `recipes/read-seeded-process-state.md`. | Process examples need a real process ID rather than inherited `PROCESS_ID` placeholders. |
 | Validator | Added `HB` override, strict recipe-directory mode, skipped-example failure mode, bad semantic output detection, and static runnable-example lint. | A 200 response is not enough when the body is an error page, Hyperbuddy shell, or failed recorder report; shell fences should stay runnable by construction. |
@@ -42,6 +43,7 @@ Approved public replacement pages now cover:
 - inline Lua transforms
 - patch key movement
 - ANS-104 bundling prerequisites without submitting bytes
+- transaction codec commitment inspection
 - match/query contract inspection without claiming existing matches
 - process, scheduler, and push shape inspection without scheduling
 - real process reads against the seeded counter fixture
@@ -56,14 +58,14 @@ Strict recipe validation passed:
 
 ```text
 HB=https://docs-test.mystical.computer CURL_EXAMPLE_DOCS_DIR=docs/recipes CURL_EXAMPLE_FAIL_ON_SKIP=1 node scripts/validate-curl-examples.mjs
-Summary: 27 passed, 0 failed, 0 skipped
+Summary: 29 passed, 0 failed, 0 skipped
 ```
 
 Broad docs validation now passes with all remaining runnable shell examples:
 
 ```text
 HB=https://docs-test.mystical.computer node scripts/validate-curl-examples.mjs
-Summary: 84 passed, 0 failed, 0 skipped
+Summary: 86 passed, 0 failed, 0 skipped
 ```
 
 The previously failing or skipped broad examples are still documented when useful, but they are no longer marked as executable shell unless docs-test can run them deterministically.

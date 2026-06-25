@@ -430,7 +430,10 @@ on_weave_info_data(Device, SpecID, Opts) ->
     SpecSigner = maps:get(<<"signer">>, Spec, <<>>),
     {Schema, SchemaOrder, SchemaSource} =
         docs_schema_for_device(Device, SpecID, Opts),
-    Recipes = on_weave_recipe_docs(Device, SpecID, SpecSigner, Opts),
+    Recipes = maps:merge(
+        static_device_recipes(Device),
+        on_weave_recipe_docs_if_enabled(Device, SpecID, SpecSigner, Opts)
+    ),
     {Name, Version} = split_device_id(Device),
     maps:merge(device_doc_link_fields(Device), #{
         <<"kind">> => <<"device-info">>,
@@ -853,6 +856,108 @@ on_weave_recipe_docs(Device, SpecID, SpecSigner, Opts) ->
         {error, _Reason} ->
             #{}
     end.
+
+on_weave_recipe_docs_if_enabled(Device, SpecID, SpecSigner, Opts) ->
+    case docs_recipe_source_mode(Opts) of
+        <<"static-curated">> ->
+            #{};
+        <<"static-only">> ->
+            #{};
+        <<"off">> ->
+            #{};
+        _ ->
+            on_weave_recipe_docs(Device, SpecID, SpecSigner, Opts)
+    end.
+
+docs_recipe_source_mode(Opts) ->
+    hb_opts:get(
+        <<"docs-recipe-source-mode">>,
+        hb_opts:get(docs_recipe_source_mode, <<"on-weave-and-static">>, Opts),
+        Opts
+    ).
+
+static_device_recipes(Device) ->
+    lists:foldl(
+        fun({Slug, RelPath, Devices}, Acc) ->
+            case lists:member(Device, Devices) of
+                true ->
+                    Acc#{Slug => static_recipe_doc(Slug, RelPath, Devices)};
+                false ->
+                    Acc
+            end
+        end,
+        #{},
+        static_recipe_pages()
+    ).
+
+static_recipe_doc(Slug, RelPath, Devices) ->
+    Source = device_docs_path(RelPath),
+    case file:read_file(binary_to_list(Source)) of
+        {ok, RawMarkdown} ->
+            Markdown = sanitize_boilerplate_markdown(RawMarkdown),
+            Blocks = code_blocks(Markdown),
+            Runnable = [Block || Block <- Blocks, maps:get(<<"runnable">>, Block, false) =:= true],
+            #{
+                <<"name">> => Slug,
+                <<"title">> => markdown_title(Markdown, Slug),
+                <<"summary">> => markdown_summary(Markdown),
+                <<"source">> => <<"static-cookbook">>,
+                <<"source-relative">> => RelPath,
+                <<"recipe-status">> => <<"curated">>,
+                <<"block-count">> => length(Blocks),
+                <<"runnable-block-count">> => length(Runnable),
+                <<"blocks">> => Blocks,
+                <<"markdown">> => Markdown,
+                <<"devices">> => Devices
+            };
+        {error, Reason} ->
+            #{
+                <<"name">> => Slug,
+                <<"title">> => Slug,
+                <<"summary">> => <<"Curated recipe source could not be loaded.">>,
+                <<"source">> => <<"static-cookbook">>,
+                <<"source-relative">> => RelPath,
+                <<"recipe-status">> => <<"missing">>,
+                <<"error">> => format_reason(Reason),
+                <<"block-count">> => 0,
+                <<"runnable-block-count">> => 0,
+                <<"devices">> => Devices
+            }
+    end.
+
+static_recipe_pages() ->
+    [
+        {<<"arweave-json-to-lua">>, <<"docs/recipes/arweave-json-to-lua.md">>,
+            [<<"lua@5.3a">>, <<"json@1.0">>, <<"message@1.0">>]},
+        {<<"bundle-data-locally">>, <<"docs/recipes/bundle-data-locally.md">>,
+            [<<"ans104@1.0">>, <<"message@1.0">>]},
+        {<<"check-node-readiness">>, <<"docs/recipes/check-node-readiness.md">>,
+            [<<"meta@1.0">>, <<"message@1.0">>, <<"gzip@1.0">>]},
+        {<<"create-a-process">>, <<"docs/recipes/create-a-process.md">>,
+            [<<"message@1.0">>, <<"scheduler@1.0">>, <<"push@1.0">>, <<"lua@5.3a">>, <<"node-process@1.0">>]},
+        {<<"gzip-round-trip">>, <<"docs/recipes/gzip-round-trip.md">>,
+            [<<"gzip@1.0">>, <<"message@1.0">>]},
+        {<<"inspect-transaction-codec">>, <<"docs/recipes/inspect-transaction-codec.md">>,
+            [<<"tx@1.0">>, <<"ans104@1.0">>]},
+        {<<"message-to-json-pipe">>, <<"docs/recipes/message-to-json-pipe.md">>,
+            [<<"message@1.0">>, <<"json@1.0">>]},
+        {<<"paid-device-access">>, <<"docs/recipes/paid-device-access.md">>,
+            [<<"metering@1.0">>, <<"p4@1.0">>]},
+        {<<"patch-process-state">>, <<"docs/recipes/patch-process-state.md">>,
+            [<<"patch@1.0">>, <<"message@1.0">>, <<"node-process@1.0">>]},
+        {<<"query-local-cache">>, <<"docs/recipes/query-local-cache.md">>,
+            [<<"match@1.0">>]},
+        {<<"read-seeded-process-state">>, <<"docs/recipes/read-seeded-process-state.md">>,
+            [<<"node-process@1.0">>, <<"scheduler@1.0">>, <<"push@1.0">>]},
+        {<<"recorder-debug-flight">>, <<"docs/recipes/recorder-debug-flight.md">>,
+            [<<"recorder@1.0">>]},
+        {<<"relay-fetch-transform">>, <<"docs/recipes/relay-fetch-transform.md">>,
+            [<<"relay@1.0">>, <<"router@1.0">>]},
+        {<<"scheduled-lua-process">>, <<"docs/recipes/scheduled-lua-process.md">>,
+            [<<"lua@5.3a">>, <<"scheduler@1.0">>, <<"message@1.0">>, <<"node-process@1.0">>]},
+        {<<"trusted-custom-device">>, <<"docs/recipes/trusted-custom-device.md">>,
+            [<<"meta@1.0">>]}
+    ].
 
 apply_recipe_blacklist(Device, SpecID, Recipes, Opts) ->
     [
@@ -5859,6 +5964,36 @@ recipe_blacklist_loads_operator_file_test() ->
     ?assertEqual(
         [],
         docs_recipe_blacklist(#{ <<"docs-recipe-blacklist-file">> => hb_util:bin(BadPath) })
+    ).
+
+static_recipes_attach_to_device_pages_test() ->
+    MessageRecipes = static_device_recipes(<<"message@1.0">>),
+    RouterRecipes = static_device_recipes(<<"router@1.0">>),
+    TXRecipes = static_device_recipes(<<"tx@1.0">>),
+    ?assert(maps:is_key(<<"message-to-json-pipe">>, MessageRecipes)),
+    ?assert(maps:is_key(<<"relay-fetch-transform">>, RouterRecipes)),
+    ?assert(maps:is_key(<<"inspect-transaction-codec">>, TXRecipes)),
+    TXRecipe = maps:get(<<"inspect-transaction-codec">>, TXRecipes),
+    ?assertEqual(<<"static-cookbook">>, maps:get(<<"source">>, TXRecipe)),
+    ?assertEqual(
+        <<"docs/recipes/inspect-transaction-codec.md">>,
+        maps:get(<<"source-relative">>, TXRecipe)
+    ),
+    ?assertEqual(2, maps:get(<<"runnable-block-count">>, TXRecipe)),
+    Body = iolist_to_binary(recipe_nav(<<"tx@1.0">>, TXRecipes)),
+    ?assert(binary:match(Body, <<"href=\"/~tx@1.0/info/recipes/inspect-transaction-codec\"">>) =/= nomatch),
+    ?assert(binary:match(Body, <<"Inspect The Transaction Codec">>) =/= nomatch).
+
+static_curated_recipe_mode_skips_on_weave_lookup_test() ->
+    Opts = #{ <<"docs-recipe-source-mode">> => <<"static-curated">> },
+    ?assertEqual(
+        #{},
+        on_weave_recipe_docs_if_enabled(
+            <<"message@1.0">>,
+            <<"spec-id">>,
+            <<"spec-signer">>,
+            Opts
+        )
     ).
 
 footer_nav_test() ->

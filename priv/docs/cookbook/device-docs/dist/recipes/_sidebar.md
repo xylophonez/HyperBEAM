@@ -5,6 +5,7 @@
   - [Check Docs-Test Readiness](/recipes/check-node-readiness.md)
   - [Build A Process-Shaped Message](/recipes/create-a-process.md)
   - [Gzip Round Trip](/recipes/gzip-round-trip.md)
+  - [Inspect The Transaction Codec](/recipes/inspect-transaction-codec.md)
   - [Build A Message And Serialize It](/recipes/message-to-json-pipe.md)
   - [Inspect Paid Access Primitives](/recipes/paid-device-access.md)
   - [Patch A Message Key](/recipes/patch-process-state.md)

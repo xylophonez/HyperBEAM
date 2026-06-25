@@ -12,6 +12,7 @@ Bad-pattern recipes from the earlier on-weave corpus are quarantined at the docs
 - [Patch a message key](patch-process-state.md)
 - [Run an inline Lua transform](arweave-json-to-lua.md)
 - [Inspect an ANS-104 bundling shape](bundle-data-locally.md)
+- [Inspect the transaction codec](inspect-transaction-codec.md)
 - [Inspect query and match readiness](query-local-cache.md)
 - [Build a process-shaped message](create-a-process.md)
 - [Inspect a scheduled Lua process shape](scheduled-lua-process.md)

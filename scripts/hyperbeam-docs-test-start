@@ -223,7 +223,8 @@ Opts =
                 <<"path">> => <<"preprocess">>
             }
         }),
-        <<"docs-recipe-blacklist-file">> => <<"config/docs-test-recipe-blacklist.json">>
+        <<"docs-recipe-blacklist-file">> => <<"config/docs-test-recipe-blacklist.json">>,
+        <<"docs-recipe-source-mode">> => <<"static-curated">>
     },
 Url = hb_http_server:start_node(Opts),
 io:format("started ~s~n", [Url]),

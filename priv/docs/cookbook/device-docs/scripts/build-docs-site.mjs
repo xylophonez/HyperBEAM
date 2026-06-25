@@ -98,6 +98,7 @@ const navItemDescriptions = {
   'recipes/check-node-readiness.md': 'Smoke test docs-test before harder examples',
   'recipes/create-a-process.md': 'Build a process shaped message from devices',
   'recipes/gzip-round-trip.md': 'Compress and decompress a message body locally',
+  'recipes/inspect-transaction-codec.md': 'Inspect Arweave transaction codec commitments',
   'recipes/message-to-json-pipe.md': 'Construct a message and serialize it to JSON',
   'recipes/paid-device-access.md': 'Inspect pricing and metering contracts',
   'recipes/patch-process-state.md': 'Move values between paths before compute runs',
