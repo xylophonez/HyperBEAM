@@ -1,28 +1,26 @@
 # Recipes
 
-Recipes shift from device reference to use cases. Each one combines devices into a concrete workflow and names the prerequisites that affect the result.
+Recipes are examples that a reader can run directly against a HyperBEAM node. The approved public set is intentionally small: each runnable block is self-contained, curl-only, and validated against docs-test.
 
-## Local Basics
+Bad-pattern recipes from the earlier on-weave corpus are quarantined at the docs-test operator config level. A quarantined recipe should not be re-enabled until it follows the [recipe standards](/reference/recipe-standards.md) and passes the validator.
 
-- [Check node readiness](check-node-readiness.md)
+## Approved Runnable Recipes
+
+- [Check docs-test readiness](check-node-readiness.md)
 - [Build a message and serialize it](message-to-json-pipe.md)
-- [Relay, fetch, and transform](relay-fetch-transform.md)
 - [Gzip round trip](gzip-round-trip.md)
-- [Record a debug flight](recorder-debug-flight.md)
+- [Patch a message key](patch-process-state.md)
+- [Run an inline Lua transform](arweave-json-to-lua.md)
+- [Inspect an ANS-104 bundling shape](bundle-data-locally.md)
+- [Inspect query and match readiness](query-local-cache.md)
+- [Build a process-shaped message](create-a-process.md)
+- [Inspect a scheduled Lua process shape](scheduled-lua-process.md)
+- [Inspect paid access primitives](paid-device-access.md)
+- [Inspect relay contract and route policy](relay-fetch-transform.md)
 
-## Data And Indexing
+## Operator-Only Guidance
 
-- [Bundle data locally](bundle-data-locally.md)
-- [Query local cache](query-local-cache.md)
-- [Compute over Arweave JSON with Lua](arweave-json-to-lua.md)
+- [Recorder debug flights](recorder-debug-flight.md)
+- [Trusted custom devices](trusted-custom-device.md)
 
-## Processes And Composition
-
-- [Create a process-shaped message](create-a-process.md)
-- [Scheduled Lua process pattern](scheduled-lua-process.md)
-- [Patch process state](patch-process-state.md)
-
-## Operator Workflows
-
-- [Paid device access](paid-device-access.md)
-- [Trusted custom device](trusted-custom-device.md)
+Operator-only pages describe the workflow and acceptance criteria but do not publish runnable commands when the action requires wallets, local files, privileged configuration, or seeded node state.

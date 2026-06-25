@@ -396,22 +396,22 @@
           "description": "Use case workflows that combine multiple devices"
         },
         {
-          "title": "Compute Over Arweave JSON With Lua",
+          "title": "Run An Inline Lua Transform",
           "href": "/recipes/arweave-json-to-lua.md",
-          "description": "Copy Arweave JSON into a Lua compute path"
+          "description": "Run an inline Lua transform without local files"
         },
         {
-          "title": "Bundle Data Locally",
+          "title": "Inspect An ANS-104 Bundling Shape",
           "href": "/recipes/bundle-data-locally.md",
-          "description": "Submit signed data items through the bundler"
+          "description": "Inspect ANS-104 bundling prerequisites"
         },
         {
-          "title": "Check Node Readiness",
+          "title": "Check Docs-Test Readiness",
           "href": "/recipes/check-node-readiness.md",
-          "description": "Smoke test node info before harder examples"
+          "description": "Smoke test docs-test before harder examples"
         },
         {
-          "title": "Create A Process-Shaped Message",
+          "title": "Build A Process-Shaped Message",
           "href": "/recipes/create-a-process.md",
           "description": "Build a process shaped message from devices"
         },
@@ -426,39 +426,39 @@
           "description": "Construct a message and serialize it to JSON"
         },
         {
-          "title": "Paid Device Access",
+          "title": "Inspect Paid Access Primitives",
           "href": "/recipes/paid-device-access.md",
-          "description": "Wrap requests with pricing and ledger checks"
+          "description": "Inspect pricing and metering contracts"
         },
         {
-          "title": "Patch Process State",
+          "title": "Patch A Message Key",
           "href": "/recipes/patch-process-state.md",
           "description": "Move values between paths before compute runs"
         },
         {
-          "title": "Query Local Cache",
+          "title": "Inspect Query And Match Readiness",
           "href": "/recipes/query-local-cache.md",
-          "description": "Search local cache indexes the node maintains"
+          "description": "Inspect match/query readiness without hidden state"
         },
         {
-          "title": "Record A Debug Flight",
+          "title": "Recorder Debug Flights",
           "href": "/recipes/recorder-debug-flight.md",
-          "description": "Capture a device request flow for debugging"
+          "description": "Operator fixture requirements for recorder"
         },
         {
-          "title": "Relay, Fetch, And Transform",
+          "title": "Inspect Relay Contract And Route Policy",
           "href": "/recipes/relay-fetch-transform.md",
-          "description": "Relay a URL, fetch data, then transform it"
+          "description": "Inspect relay contract and route policy"
         },
         {
-          "title": "Scheduled Lua Process Pattern",
+          "title": "Inspect A Scheduled Lua Process Shape",
           "href": "/recipes/scheduled-lua-process.md",
           "description": "Pattern for a scheduled Lua backed process"
         },
         {
-          "title": "Trusted Custom Device",
+          "title": "Trusted Custom Devices",
           "href": "/recipes/trusted-custom-device.md",
-          "description": "Load a custom Forge device through node trust"
+          "description": "Operator requirements for custom device trust"
         }
       ]
     },
@@ -473,7 +473,7 @@
           "description": "Canonical list of documented edge root devices"
         },
         {
-          "title": "Local Checks",
+          "title": "Example Validation",
           "href": "/reference/example-validation.md",
           "description": "Quick smoke tests for docs example commands"
         },
@@ -481,6 +481,16 @@
           "title": "Glossary",
           "href": "/reference/glossary.md",
           "description": "Terms used across devices, paths, and Forge"
+        },
+        {
+          "title": "Recipe Audit 2026-06-25",
+          "href": "/reference/recipe-audit-2026-06-25.md",
+          "description": "Current recipe quarantine and validation audit"
+        },
+        {
+          "title": "Recipe Standards",
+          "href": "/reference/recipe-standards.md",
+          "description": "Rules for public runnable recipes"
         }
       ]
     }

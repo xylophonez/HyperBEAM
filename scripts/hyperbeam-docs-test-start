@@ -183,7 +183,8 @@ Opts =
         <<"load-remote-devices">> => true,
         <<"name-resolvers">> => NameResolvers,
         <<"trusted-devices">> => TrustedDevices,
-        <<"trusted-device-signers">> => TrustedSigners
+        <<"trusted-device-signers">> => TrustedSigners,
+        <<"docs-recipe-blacklist-file">> => <<"config/docs-test-recipe-blacklist.json">>
     },
 Url = hb_http_server:start_node(Opts),
 io:format("started ~s~n", [Url]),

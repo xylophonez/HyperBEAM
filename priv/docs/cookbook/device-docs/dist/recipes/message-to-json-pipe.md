@@ -1,31 +1,24 @@
 # Build A Message And Serialize It
 
-This is the smallest useful HyperBEAM pipeline: construct a message, read fields from it, then serialize it for a client.
+This is the smallest useful HyperBEAM pipeline: construct a message, read fields from it, then serialize the same message for a client.
 
 ## Read Fields
 
 ```bash
-curl -sS "http://localhost:8734/~message@1.0&greeting=hello/greeting"
-curl -sS "http://localhost:8734/~message@1.0&count+integer=42/count"
+HB="${HB:-http://localhost:8734}"
+curl -fsS "$HB/~message@1.0&greeting=hello/greeting"
+curl -fsS "$HB/~message@1.0&count+integer=42/count"
 ```
 
-Expected output:
-
-```text
-hello
-42
-```
+Expected output: `hello` and `42`.
 
 ## Serialize The Message
 
 ```bash
-curl -sS "http://localhost:8734/~message@1.0&greeting=hello&count+integer=42/~json@1.0/serialize"
+HB="${HB:-http://localhost:8734}"
+curl -fsS "$HB/~message@1.0&greeting=hello&count+integer=42/~json@1.0/serialize"
 ```
 
-## Human View
+Expected: a JSON object with `greeting` equal to `hello` and `count` equal to `42`.
 
-```bash
-curl -sS "http://localhost:8734/~message@1.0&greeting=hello&count+integer=42/format~hyperbuddy@1.0"
-```
-
-This pattern appears everywhere: a path first creates or loads a message, then another device transforms or renders it.
+This pattern appears everywhere: a path creates or loads a message, then another device transforms or renders it.

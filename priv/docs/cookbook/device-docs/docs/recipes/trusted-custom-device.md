@@ -1,56 +1,13 @@
-# Trusted Custom Device
+# Trusted Custom Devices
 
-This recipe takes a Forge-built device from local development to a node trust policy.
+Trusted custom device loading is an operator workflow. A real recipe requires a packaged device, a signer, an implementation transaction, and an explicit node trust policy. Those are not safe to fake with placeholders.
 
-## Build And Test Locally
+An acceptable public workflow must provide:
 
-```bash
-cd /tmp/hb-device-docs-forge/echo_lens
-rebar3 device package
-rebar3 device verify
-rebar3 device test
-```
+- The exact device source or package commit.
+- A reproducible package and verify command run in CI.
+- The spec transaction ID, implementation transaction ID, and signer address.
+- The node policy that pins the implementation or trusts the signer.
+- A read-only smoke path that proves the loaded device is the intended one.
 
-## Run A Local Node With The Device
-
-```bash
-cat > device-test-8799.json <<'JSON'
-{
-  "port": 8799
-}
-JSON
-
-HB_CONFIG=device-test-8799.json rebar3 device local
-```
-
-In another shell:
-
-```bash
-curl -sS "http://localhost:8799/~echo-lens@1.0/echo?input=hello"
-curl -sS "http://localhost:8799/~echo-lens@1.0/upper?input=hello"
-```
-
-Expected:
-
-```text
-hello
-HELLO
-```
-
-## Publish
-
-```bash
-rebar3 device publish --key wallet.json
-```
-
-Keep the printed spec ID, implementation ID, and signer address.
-
-## Check A Node's Trust Policy
-
-```bash
-curl -sS "http://localhost:8734/~meta@1.0/info/load-remote-devices"
-curl -sS "http://localhost:8734/~meta@1.0/info/trusted-device-signers"
-curl -sS "http://localhost:8734/~meta@1.0/info/format~hyperbuddy@1.0" | grep -i -E 'trusted|remote|preloaded'
-```
-
-Use a direct pin when the operator wants exactly one implementation. Use a trusted signer when the signer should be allowed to publish upgrades.
+Until those artifacts are available, keep custom device trust instructions in Forge/operator documentation and do not publish runnable commands that assume `/tmp` projects, local ports, wallet files, or unpublished transaction IDs.

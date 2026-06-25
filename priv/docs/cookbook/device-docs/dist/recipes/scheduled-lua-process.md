@@ -1,33 +1,26 @@
-# Scheduled Lua Process Pattern
+# Inspect A Scheduled Lua Process Shape
 
-This pattern shows the moving parts for a scheduled Lua-backed process. It is useful before you have a fully signed process fixture because it lets you verify the node has each device and see the shape each stage expects.
+This recipe shows the safe parts of a scheduled Lua workflow: a Lua module can run inline, and a process-shaped message can name Lua as its execution device. It does not register cron tasks or schedule messages.
 
-## Check Lua And Scheduler Devices
-
-```bash
-curl -sS "http://localhost:8734/~lua@5.3a/info/format~hyperbuddy@1.0"
-curl -sS "http://localhost:8734/~scheduler@1.0/info/format~hyperbuddy@1.0"
-curl -sS "http://localhost:8734/~cron@1.0/info/format~hyperbuddy@1.0"
-```
-
-## Build A Lua Assignment Message Shape
+## Run The Lua Handler
 
 ```bash
-curl -sS "http://localhost:8734/~message@1.0&device=process%401.0&execution-device=lua%405.3a&Action=Tick&Data=hello/format~hyperbuddy@1.0"
+HB="${HB:-http://localhost:8734}"
+curl -fsS -X POST \
+  -H 'content-type: application/json' \
+  --data-binary '{"device":"lua@5.3a","content-type":"application/lua","body":"function tick(base, req, opts) return { body = \"tick:\" .. (req.Action or \"none\") } end"}' \
+  "$HB/tick/body?Action=Tick"
 ```
 
-## Schedule A Self-Call Shape
+Expected output: `tick:Tick`.
+
+## Build The Assignment Shape
 
 ```bash
-curl -sS "http://localhost:8734/~cron@1.0/once?cron-path=~process@1.0/compute&Action=Tick"
+HB="${HB:-http://localhost:8734}"
+curl -fsS "$HB/~message@1.0&device=process%401.0&execution-device=lua%405.3a&Action=Tick&Data=hello/~json@1.0/serialize"
 ```
 
-On a configured process node, the cron path becomes a scheduled compute call. On an unconfigured node, use the response to see which process or scheduler input is missing.
+Expected: JSON with `device`, `execution-device`, `Action`, and `Data`.
 
-## Compute And Push Flow
-
-```text
-cron once/every -> process schedule -> scheduler slot -> lua compute -> push outputs
-```
-
-Use `~patch@1.0` when the scheduled message shape does not match the Lua function's expected keys.
+Cron, process scheduling, and slot reads require a seeded process fixture and operator-safe scheduling policy. Keep those as workflow tests until the fixture exists.

@@ -1,35 +1,32 @@
-# Create A Process-Shaped Message
+# Build A Process-Shaped Message
 
-A process is a device composition: scheduler, execution device, push behavior, and state. This recipe builds a process-shaped message and shows which node settings must exist before scheduling or compute can run.
+A process combines scheduler, execution, patching, and push behavior. This public recipe builds the message shape without scheduling or mutating process state.
 
-## Build A Process Definition Shape
-
-```bash
-curl -sS "http://localhost:8734/~message@1.0&device=process%401.0&scheduler=scheduler%401.0&execution-device=lua%405.3a&push-device=push%401.0/format~hyperbuddy@1.0"
-```
-
-## Check Process Infrastructure
+## Serialize A Process Shape
 
 ```bash
-curl -sS "http://localhost:8734/~meta@1.0/info/format~hyperbuddy@1.0" | grep -i -E 'process|scheduler|execution|compute|push|lua|wasm|stack'
-curl -sS "http://localhost:8734/~process@1.0/info/format~hyperbuddy@1.0"
-curl -sS "http://localhost:8734/~scheduler@1.0/info/format~hyperbuddy@1.0"
+HB="${HB:-http://localhost:8734}"
+curl -fsS "$HB/~message@1.0&device=process%401.0&scheduler=scheduler%401.0&execution-device=lua%405.3a&push-device=push%401.0/~json@1.0/serialize"
 ```
 
-## Try A Slot Read
+Expected: JSON with `device`, `scheduler`, `execution-device`, and `push-device` fields.
+
+## Inspect Scheduler Contract
 
 ```bash
-curl -sS "http://localhost:8734/~process@1.0/slot&slot=0/format~hyperbuddy@1.0"
+HB="${HB:-http://localhost:8734}"
+curl -fsS "$HB/~scheduler@1.0/info/schema"
 ```
 
-A real slot result requires a process base message and scheduler state. Without those, the response usefully tells you which input is missing.
+Expected: a JSON schema object for scheduler actions.
 
-## How It Composes
+## Inspect Push Contract
 
-| Device | Role |
-|---|---|
-| `~process@1.0` | Routes process operations. |
-| `~scheduler@1.0` | Stores and returns assignments/slots. |
-| `~lua@5.3a` or `~wasm-64@1.0` | Executes process logic. |
-| `~patch@1.0` | Shapes assignment/input/output paths. |
-| `~push@1.0` | Pushes produced messages onward. |
+```bash
+HB="${HB:-http://localhost:8734}"
+curl -fsS "$HB/~push@1.0/info/schema"
+```
+
+Expected: a JSON schema object for push actions.
+
+Scheduling, slot reads, and process compute examples must include a deterministic process fixture. A placeholder `PROCESS_ID` is not acceptable for inherited public recipes.

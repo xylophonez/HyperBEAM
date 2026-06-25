@@ -93,23 +93,25 @@ const navItemDescriptions = {
   'forge/trusted-signers-and-pins.md': 'Trusted signers, pins, and remote load policy',
 
   'recipes/index.md': 'Use case workflows that combine multiple devices',
-  'recipes/arweave-json-to-lua.md': 'Copy Arweave JSON into a Lua compute path',
-  'recipes/bundle-data-locally.md': 'Submit signed data items through the bundler',
-  'recipes/check-node-readiness.md': 'Smoke test node info before harder examples',
+  'recipes/arweave-json-to-lua.md': 'Run an inline Lua transform without local files',
+  'recipes/bundle-data-locally.md': 'Inspect ANS-104 bundling prerequisites',
+  'recipes/check-node-readiness.md': 'Smoke test docs-test before harder examples',
   'recipes/create-a-process.md': 'Build a process shaped message from devices',
   'recipes/gzip-round-trip.md': 'Compress and decompress a message body locally',
   'recipes/message-to-json-pipe.md': 'Construct a message and serialize it to JSON',
-  'recipes/paid-device-access.md': 'Wrap requests with pricing and ledger checks',
+  'recipes/paid-device-access.md': 'Inspect pricing and metering contracts',
   'recipes/patch-process-state.md': 'Move values between paths before compute runs',
-  'recipes/query-local-cache.md': 'Search local cache indexes the node maintains',
-  'recipes/recorder-debug-flight.md': 'Capture a device request flow for debugging',
-  'recipes/relay-fetch-transform.md': 'Relay a URL, fetch data, then transform it',
+  'recipes/query-local-cache.md': 'Inspect match/query readiness without hidden state',
+  'recipes/recorder-debug-flight.md': 'Operator fixture requirements for recorder',
+  'recipes/relay-fetch-transform.md': 'Inspect relay contract and route policy',
   'recipes/scheduled-lua-process.md': 'Pattern for a scheduled Lua backed process',
-  'recipes/trusted-custom-device.md': 'Load a custom Forge device through node trust',
+  'recipes/trusted-custom-device.md': 'Operator requirements for custom device trust',
 
   'reference/device-inventory.md': 'Canonical list of documented edge root devices',
   'reference/example-validation.md': 'Quick smoke tests for docs example commands',
-  'reference/glossary.md': 'Terms used across devices, paths, and Forge'
+  'reference/glossary.md': 'Terms used across devices, paths, and Forge',
+  'reference/recipe-audit-2026-06-25.md': 'Current recipe quarantine and validation audit',
+  'reference/recipe-standards.md': 'Rules for public runnable recipes'
 };
 
 function titleFromSlug(slug) {

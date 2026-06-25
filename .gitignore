@@ -25,6 +25,7 @@ rebar3.crashdump
 .hyperbeam-dev-server.*
 
 *.json
+!config/docs-test-recipe-blacklist.json
 !.vscode/*
 
 *.bin

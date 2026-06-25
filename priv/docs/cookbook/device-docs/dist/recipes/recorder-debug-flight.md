@@ -1,32 +1,13 @@
-# Record A Debug Flight
+# Recorder Debug Flights
 
-`~recorder@1.0` captures device request flow for debugging. Run it on a disposable or private node because recordings can include request contents.
+Recorder examples are operator-only until the docs-test node has a successful structured recorder fixture. The previous recipe returned HTTP 200 while the recorded target result was `not_found`, which is not acceptable for an inherited example.
 
-Recorder must be present in the node's preloaded store. If the node returns `device_not_loadable` or `device-name-not-resolvable`, use a local HyperBEAM build with `dev_recorder` included, or record through Forge tests instead.
+An acceptable recorder recipe must:
 
-```bash
-curl -sS "http://localhost:8734/~meta@1.0/info/format~hyperbuddy@1.0" \
-  | grep -i 'recorder' || true
-```
+- Install or confirm `~recorder@1.0` on the target node.
+- Use a structured target request, not a string that silently loses query fields.
+- Prove the recorded target result is successful.
+- Redact private headers, wallets, cookies, and authorization material.
+- Run on a private or disposable node when request contents are sensitive.
 
-## Try A Short Flight
-
-```bash
-curl -m 5 -sS "http://localhost:8734/~recorder@1.0/record?request=/~meta@1.0/info/address&format=text"
-```
-
-## Record A Target Request
-
-```bash
-curl -m 5 -sS "http://localhost:8734/~recorder@1.0/record?request=/~meta@1.0/info"
-```
-
-## Use During Forge Tests
-
-From a Forge device project:
-
-```bash
-rebar3 device test --record=errors
-```
-
-Use recorder output to understand which message shape reached a device, which key ran, and where a composed path failed.
+Until that fixture exists, use recorder in Forge/operator test suites rather than as a public runnable recipe.

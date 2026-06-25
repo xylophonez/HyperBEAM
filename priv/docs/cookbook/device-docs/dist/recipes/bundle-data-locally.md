@@ -1,59 +1,23 @@
-# Bundle Data Locally
+# Inspect An ANS-104 Bundling Shape
 
-`~bundler@1.0` is both a user workflow and an operator workflow. Users submit signed data items. The node verifies the item, caches it immediately, queues it, and later dispatches a bundle to Arweave according to operator thresholds.
+Bundling is a write workflow: a real submission requires signed ANS-104 bytes and operator bundler configuration. The public recipe stays read-only and verifies the pieces a bundling example must use before a signed fixture is introduced.
 
-## Check Bundler Settings
-
-```bash
-curl -sS "http://localhost:8734/~meta@1.0/info/format~hyperbuddy@1.0" | grep -i bundler -C 4
-curl -sS "http://localhost:8734/~meta@1.0/info/bundler-ans104"
-```
-
-## Confirm Unsigned Data Is Rejected
+## Inspect The ANS-104 Codec
 
 ```bash
-curl -sS -X POST "http://localhost:8734/~bundler@1.0/tx" \
-  -H "content-type: text/plain" \
-  --data-binary "hello from an unsigned request"
+HB="${HB:-http://localhost:8734}"
+curl -fsS "$HB/~ans104@1.0/info/schema"
 ```
 
-Expected: an `invalid-item` response. The bundler requires a signed committed item.
+Expected: a JSON schema object with codec operations such as `commit`, `serialize`, or `deserialize`.
 
-## Submit A Signed Item
-
-Create real signed ANS-104 bytes with HyperBEAM, then post the signed bytes:
+## Build A Candidate Data Message
 
 ```bash
-cat > /tmp/hb-bundle-recipe-item.json <<'JSON'
-{
-  "data": "hello from the local bundler recipe",
-  "content-type": "text/plain",
-  "app-name": "hb-device-docs"
-}
-JSON
-curl -sS -X POST \
-  -H "content-type: application/json" \
-  --data-binary @/tmp/hb-bundle-recipe-item.json \
-  "http://localhost:8734/~message@1.0/commit&commitment-device=ans104@1.0&type=signed/~ans104@1.0/serialize" \
-  -o /tmp/hb-bundle-recipe-signed-item.bin
-curl -sS -X POST "http://localhost:8734/~bundler@1.0/tx?codec-device=ans104@1.0" \
-  -H "content-type: application/octet-stream" \
-  --data-binary @/tmp/hb-bundle-recipe-signed-item.bin
+HB="${HB:-http://localhost:8734}"
+curl -fsS "$HB/~message@1.0&body=bundle-example&media-type=text-plain/~json@1.0/serialize"
 ```
 
-Expected for a valid signed item:
+Expected: JSON with `body` equal to `bundle-example` and `media-type` equal to `text-plain`.
 
-```json
-{"id":"<item-id>","timestamp":<milliseconds>}
-```
-
-The item ID can be used in later cache/query reads if the node cached it successfully. Arweave permanence starts only after the bundler dispatches and the network confirms the bundle.
-
-## Operator Checks
-
-```bash
-curl -sS "http://localhost:8734/~meta@1.0/info/format~hyperbuddy@1.0" | grep -i -E 'bundler|max|worker|meter|arweave'
-curl -sS "http://localhost:8734/~meta@1.0/info/bundler-ans104"
-```
-
-Metering output depends on whether the node configured metering sessions and rates; the default edge node may expose a bundler route without enabling metering consumption.
+A production bundler recipe must add a tested signing step that creates the item bytes in the same recipe, then post those bytes to a node whose bundler route is enabled. Do not publish examples that assume a pre-existing `/tmp` item file.

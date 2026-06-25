@@ -1,0 +1,823 @@
+{
+  "generated_at": "2026-06-25T12:27:47+00:00",
+  "source": "https://docs-test.mystical.computer/info",
+  "policy": "docs-test quarantines all legacy on-weave recipes until each has a self-contained tested replacement.",
+  "recipes": [
+    {
+      "device": "ans104@1.0",
+      "slug": "commit-a-message-through-the-ans-104-codec",
+      "txid": "ts1IKkOVgjgaDuGvtnOt2pcdcfUXgl37OSQjok46siM",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "ans104@1.0",
+      "slug": "decode-those-ans-104-bytes-through-hyperbeam",
+      "txid": "CIihjrdasFfsIfmfD0MmxzsZLPMBYmGsT3xCjzoykLQ",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "ans104@1.0",
+      "slug": "serialize-a-signed-data-item-with-hyperbeam",
+      "txid": "h2eVHxoqpUUDPHffHMeYA9N4xZTU-kBGvmQBoO-DVeE",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "ans104@1.0",
+      "slug": "submit-the-same-signed-item-to-the-bundler-path",
+      "txid": "9ILYM90O9ZTjmOruSsXgf84yAAxN-AJO5RGvVbFB1To",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "apply@1.0",
+      "slug": "apply-a-request-stored-inside-another-message",
+      "txid": "O8g68wwaumMOZmvXA8k0L1yicE-itPknjYAUePSkM7s",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "apply@1.0",
+      "slug": "price-an-apply-subrequest-with-simple-pay",
+      "txid": "FD3nUitIMIoUMEWXu6lNcL4L1AmhuJB8SjtutJ8Tgcg",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "apply@1.0",
+      "slug": "use-apply-as-a-controlled-api-bridge",
+      "txid": "pLpChcDxVYDTDw7gJH-MD9A8m7deJ4qfRTkDZIniojI",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "b32-name@1.0",
+      "slug": "compare-with-a-normal-id-path",
+      "txid": "xKgvUcGxaW95pMfBM78c-wIuW_fFfspGpFpmt9UjiDM",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "b32-name@1.0",
+      "slug": "resolve-a-base32-subdomain-back-to-an-arweave-id",
+      "txid": "Ei7zgVgmau3V94U81IBP4jUiqW9YClpWBAeEmY5ISdA",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "b32-name@1.0",
+      "slug": "use-b32-name-in-the-resolver-chain",
+      "txid": "lUaWFRoiGmRLCSt8lMvSsYpUX3o0qingjxe6bAlGD80",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "dedup@1.0",
+      "slug": "deduplicate-by-body-instead-of-entire-request",
+      "txid": "TPFoRcLM_wh8rHyzX1nDFO2PoExypakaZu-3uHMulq8",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "dedup@1.0",
+      "slug": "deduplicate-repeated-requests-in-a-stack",
+      "txid": "5RUFfdixcSFSzCzIw93Sj4j3N4bywBFuVewdKiT49yk",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "dedup@1.0",
+      "slug": "use-with-multipass-without-blocking-later-passes",
+      "txid": "MJZIFQAQ5-iySATf2QYSwu79qpMhlNM6ySWZg6NegKw",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "delegated-compute@1.0",
+      "slug": "delegate-compute-to-a-local-worker-endpoint",
+      "txid": "GEdyyVZyfEtyEEcfrxgR68o3jcZrwTSGhgisCt6YVyk",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "delegated-compute@1.0",
+      "slug": "pair-with-json-iface-for-process-compute",
+      "txid": "JuNKh7dwhiBWu0u7C5kPFGdpqtV4BPuiDcjW_vYwfkU",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "delegated-compute@1.0",
+      "slug": "require-separate-verification-for-delegated-results",
+      "txid": "N9jx59TLkjGrSwXfAsNOiOGSUB8BJI7rxL1IBlfYDxI",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "flat@1.0",
+      "slug": "flatten-a-nested-message-into-slash-key-form",
+      "txid": "iga1uadfuoxMUXFYOhhuJwEFnTWqaSZSVoCzyrft76k",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "flat@1.0",
+      "slug": "parse-a-flat-config-into-a-nested-message",
+      "txid": "HQIuetYMMu3UryeCL8S7FYx2h0L30SBUcbE2fR_Ho4Y",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "flat@1.0",
+      "slug": "use-flat-config-to-start-a-node",
+      "txid": "rbLuJa2HXwfDVvnq-yctAR6rq4_6BwyouibwDOmEU5M",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "genesis-wasm@1.0",
+      "slug": "define-a-genesis-wasm-process-shell",
+      "txid": "V8I3F4CO1Ig0veNob574-iqhEyLjYR6UXkF5LcOZzD8",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "genesis-wasm@1.0",
+      "slug": "migrate-new-work-toward-wasm-64",
+      "txid": "UQwGidnvEbILsFbVhiDPYp3C8P3K5BQVbcidksnPICs",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "genesis-wasm@1.0",
+      "slug": "send-a-compute-message-to-that-process",
+      "txid": "oTki6rFqqDBcCez4NREr98xmyqnablUOo4stauFZd5g",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "gzip@1.0",
+      "slug": "compress-a-message-body",
+      "txid": "GnBjw92wvpWKWBFXqReR5Eq8sT4fWr2-J6XKao8zs3Y",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "gzip@1.0",
+      "slug": "decompress-a-gzip-payload-from-the-shell",
+      "txid": "TXj0lORYMYYpWYOCOCPwBDlc4IBZ05RH12NvNlSzUe8",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "gzip@1.0",
+      "slug": "decompress-the-same-body",
+      "txid": "Nr6xsY5x5-sX-TAWCdBDqrPMqOzCK_nYsfVvijizKYo",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "httpsig@1.0",
+      "slug": "commit-a-message-with-an-hmac-secret",
+      "txid": "FRkbzhj9UoY-4l1mGldRwYDeivXO_vilKc63iAaicek",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "httpsig@1.0",
+      "slug": "commit-and-verify-in-one-hyperpath",
+      "txid": "N859cEMQhZuqu7Xh1Gpp1JYucn4beEDpyL26bnJtp9c",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "httpsig@1.0",
+      "slug": "return-a-hyperbeam-response-as-http-message-signatures",
+      "txid": "c3rC58cMAxPTsWar3XXUJdXJ5LF5NBNG9NCpuRTgbv8",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "json-iface@1.0",
+      "slug": "convert-a-hyperbeam-message-to-aos-style-json",
+      "txid": "xHqLuvK7-v8jH39zNRQUiHOmuyTd3Tg3Hv7GVvCR5cw",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "json-iface@1.0",
+      "slug": "convert-aos-style-output-back-into-a-message",
+      "txid": "DmAo7HWLAlRelNDQrHun-eASq-93Os6X9Cm3bmL_0jk",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "json-iface@1.0",
+      "slug": "use-it-inside-a-process-definition",
+      "txid": "6t5-mlFTgQ3kyNS3JmmE41o7OHeik9rET2tVrNKf35Y",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "json@1.0",
+      "slug": "decode-json-request-body-into-a-message",
+      "txid": "WEFtZaPGaE6nrQVIxCmjSSLc1dulU-RHKM-ikfpHtds",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "json@1.0",
+      "slug": "serialize-a-constructed-message",
+      "txid": "Gkzoextygzhdq39LMyYCyxSyvl8YA4RqPfB278FueJ8",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "json@1.0",
+      "slug": "use-json-as-an-api-format-for-another-device",
+      "txid": "YqbyMunQkXyTwTb1_74EyJoL1bCzssZKKCJ3bZc6YXM",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "local-name@1.0",
+      "slug": "check-whether-a-local-name-exists",
+      "txid": "YyIT9W3jjVjHq-YjAkA4HmegQ5w9RfHst71vT-DmUTQ",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "local-name@1.0",
+      "slug": "confirm-the-local-name-device-is-loaded",
+      "txid": "ylHQSt7xDd6VfO1O42TbW5EDCUb6C3E62oWT9NHyuAI",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "local-name@1.0",
+      "slug": "look-up-an-operator-registered-name",
+      "txid": "ckCoG3BH2s-lHL6vO4sUYvUlxAtDI4JponVELEEHGJc",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "local-name@1.0",
+      "slug": "register-a-local-name-with-an-operator-signature",
+      "txid": "Cl08FJL2uJehJzIKIckWa8dlMTt2aoRAY5cQMXVrkd0",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "local-name@1.0",
+      "slug": "use-default-lookup-syntax-after-registration",
+      "txid": "fmsF1pWMgcH32bJb5r7siWJljEjuwLF2Vdi77Gl6dDU",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "lua@5.3a",
+      "slug": "run-an-inline-lua-handler",
+      "txid": "tqanbOk9jevOXueI9dkZ3B6g6WMzSpAY9WlT7lGLRKc",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "lua@5.3a",
+      "slug": "sandbox-dangerous-lua-functions",
+      "txid": "VPX0S_9FLtxIwRo7YXtCmOqt7PvPYloqXnVTHy7a5y0",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "lua@5.3a",
+      "slug": "use-lua-inside-a-process-definition",
+      "txid": "MTA53f8jqsxH5M4wAQ-F3WsTc9R_Ud4t1v4UTsTLOoE",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "match@1.0",
+      "slug": "check-whether-the-local-query-index-has-entries",
+      "txid": "nzAwKBfIU39PyOaQ1cKq_9bnGv4zgfslijsmnn4tCQ8",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "match@1.0",
+      "slug": "confirm-the-match-device-is-loaded",
+      "txid": "LCD7VNwNGtjNjLiky1KWQKyet3oUIvhBcyoJ4t-kKeI",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "match@1.0",
+      "slug": "query-a-single-reverse-index-key-directly-after-indexing-data",
+      "txid": "W5MzvZ7fAzhycXnpA8pqfC2KS5dmec1rmye2_AK0CR4",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "message@1.0",
+      "slug": "build-a-typed-message-and-read-fields",
+      "txid": "sCKMKruI5y69vbJBewrIHjakmGNc4DPaivA4vuQoL1Y",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "message@1.0",
+      "slug": "calculate-and-verify-ids-commitments",
+      "txid": "76NL9IchV4qAM5-iAnKQNIc0fSE3RIqOfR9HJZg0O9g",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "message@1.0",
+      "slug": "list-public-keys-for-a-constructed-message",
+      "txid": "E7mHt3sSxwJZ_ulb2jKWajAM-2OW_I8XBMhXDwUl4-0",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "meta@1.0",
+      "slug": "check-remote-device-loading-policy",
+      "txid": "ktHHK5zy0a0QDrXoiqxhop3h-NFN16-xteY9ymjuwCk",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "meta@1.0",
+      "slug": "read-the-node-address-for-signatures-and-operator-checks",
+      "txid": "dFXe57dixKnKyihMPg5fXNLSlkEK0Fjav2ZqAdN2YxQ",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "meta@1.0",
+      "slug": "read-the-preloaded-device-index",
+      "txid": "59IhkI8mYy2kr4CvqPhAxAU76W_T2nr3NtFJdIP5OMc",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "meta@1.0",
+      "slug": "use-meta-as-the-default-request-pipeline",
+      "txid": "vlDqCTiDogCGWeJMpp9U6GyDozIwPmg3M8G55strDZs",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "metering@1.0",
+      "slug": "configure-metering-as-p4-pricing",
+      "txid": "dsVrhmExq_Bz8PXs7CYnaqXRG5pHLjJhRTT69wFsrvY",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "metering@1.0",
+      "slug": "meter-arweave-bytes-from-a-bundler-flow",
+      "txid": "-C9tcNzA0d7jh_AYfwn7BDmytWhrJiP18gMmLjJgZ3g",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "metering@1.0",
+      "slug": "open-and-close-a-metering-session-directly",
+      "txid": "MvSA_P7M-ZhXOtPOMI0wtZXV-l5HLxrSrQlsOb9M89Q",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "multipass@1.0",
+      "slug": "combine-with-dedup-safely",
+      "txid": "8P8MxT273EIzXQ0PsW-2Z5MmADccOXBC3Q_uA6AjxU0",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "multipass@1.0",
+      "slug": "repeat-a-stack-for-multiple-passes",
+      "txid": "z3JdC-lhfZWOhpmbvMFCcMfh4-ohKmwYcOm4f4wssqc",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "multipass@1.0",
+      "slug": "stop-at-one-pass-when-no-repeat-is-requested",
+      "txid": "D5-Hj2jAmVeNVPfHifzWgy3Vr0p44uYTzrdelR5qtQ4",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "name@1.0",
+      "slug": "inspect-configured-name-resolvers",
+      "txid": "0g3v0UgtbKKBvxHV7bHkVBysXtEpmjgnSA56DLo1utQ",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "name@1.0",
+      "slug": "resolve-a-configured-name-then-continue-the-path",
+      "txid": "5XrIGwk6KJSsYzUpJFCNRc_Y7EKoY8VKg8QoKNAe8xc",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "name@1.0",
+      "slug": "use-local-name-as-one-resolver",
+      "txid": "mBcOx_HXmOppjNK2i_6oTCImyAXBlBWWNnM-H3qE8Zs",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "node-process@1.0",
+      "slug": "configure-a-node-local-singleton-process",
+      "txid": "Jda2bZqiKJbS1wPTut9LbyqspAQZdXLUNykViT_ebDQ",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "node-process@1.0",
+      "slug": "look-up-the-singleton-process",
+      "txid": "Dbd_UvRFl8a_tAoDgcZMS3Xcu04zACPh63w6bIiqbFo",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "node-process@1.0",
+      "slug": "register-a-supporting-local-name",
+      "txid": "cHYJRZnYUcPkEbavXh8B86KxtaMk14U7U4IAhsEsNAU",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "p4@1.0",
+      "slug": "charge-after-response",
+      "txid": "adGmnL2BS_7J2ZmSlqs8PNR5xEFPcFDiOfu9Yltjibs",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "p4@1.0",
+      "slug": "check-balance-through-p4",
+      "txid": "N3doenD0kyIAtbKqiHKtrM8bBK1zkE2zA1E-HVFFBxA",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "p4@1.0",
+      "slug": "configure-p4-with-simple-pay",
+      "txid": "xn3qm0gvz0_56dW0GGXJdsAHQBW_ruolWiYvk_wCAzA",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "p4@1.0",
+      "slug": "gate-a-request-before-execution",
+      "txid": "ihj1t9Rew7tSbneX9GMpbaajtwTD_qjdkNb4RwRZM6o",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "patch@1.0",
+      "slug": "apply-a-patch-message-directly",
+      "txid": "evogZEJugQuQFpPAQPX0rUhff0xoD5zow5bs7FsBLuI",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "patch@1.0",
+      "slug": "export-a-process-table-as-direct-http-state",
+      "txid": "zCFsjUk_nopiDJfqlEe3jXUidqQFpdHbFkNelADnjQA",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "patch@1.0",
+      "slug": "patch-only-the-changed-key",
+      "txid": "NQfmW48HOfN6gCnhe2WDfH5F3-bpxKf1oWNP_6kXQXc",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "push@1.0",
+      "slug": "pair-with-scheduler-for-delivery",
+      "txid": "OxLyQegXw4PU7wULjCdDqQB6JwTNwm3YWWaFPojfCww",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "push@1.0",
+      "slug": "push-one-explicit-message",
+      "txid": "Gc8t9E6FjIUgvZlpsf0zCQVpYYhCA_3ionAmZ-QHIqc",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "push@1.0",
+      "slug": "push-process-outbox-messages-to-recipients",
+      "txid": "jJkhwD6n-FoOf_i2502nkXmV3A5Pxwg-DZqsymWLKS8",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "relay@1.0",
+      "slug": "inspect-route-policy-before-relaying-external-urls",
+      "txid": "rb1orvu29GRREZycdk_-Ps8Xl_tYk_6It6d5dT7sw2Q",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "relay@1.0",
+      "slug": "relay-a-local-node-request",
+      "txid": "2lGIEimXMw-HgA-ZhP4yyBnPDzIUsdGk64QEu3S3h4w",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "router@1.0",
+      "slug": "match-a-request-against-the-route-table",
+      "txid": "YgLLe-O_j0pog43KJRt5UveSQhbxtchT_6YBHqSeyo0",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "router@1.0",
+      "slug": "offer-this-node-to-a-remote-router",
+      "txid": "jbSlnEgKdxi3KQxpPAlfCoRZWwdbMm2_-uylHzNjMaE",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "router@1.0",
+      "slug": "register-a-route-as-the-operator",
+      "txid": "YyfSmPbcM_CoO9YX-phV37z4PVcz4EwpaLpn6iMv2wA",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "router@1.0",
+      "slug": "route-by-base-for-deterministic-workers",
+      "txid": "HO-MpVp6_NFi8Wpd8ReEJdN4jTarG5xI9cQ91D2irfA",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "scheduler@1.0",
+      "slug": "ask-for-the-next-assignable-slot",
+      "txid": "yhYwC9AwFMpc4c6mMbZSKfJusbOusa485xCuD6xC80g",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "scheduler@1.0",
+      "slug": "check-scheduler-status-for-a-process",
+      "txid": "X2uGygQIfg-fbv_lSA60zq8guFBDNLgdweHvUOjAEkg",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "scheduler@1.0",
+      "slug": "read-a-slot",
+      "txid": "JF7PFmJekLYv36dfYXcRtyTvm9c_X273uQMWkEP2gVI",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "scheduler@1.0",
+      "slug": "schedule-a-message-on-a-process",
+      "txid": "AmJaiwh9khzMeMz_kqxzLR41Ykb4IeZQRSEu9bfSV2I",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "stack@1.0",
+      "slug": "build-a-two-device-transform-pipeline",
+      "txid": "u7ZZ1kgULt9ODojAfzOsUMitmjXsoQJnDH-1lZNQVkQ",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "stack@1.0",
+      "slug": "run-map-mode-over-several-devices",
+      "txid": "5ig8A4B9g2FSKdZcbngc2LYXv4XFdGwZkbHl3D3WlWM",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "stack@1.0",
+      "slug": "use-stack-for-request-preprocessing",
+      "txid": "prXXgJTDTL5iCgrxWFVWMkMRLTi96-yFqubAsCDuNkY",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "structured@1.0",
+      "slug": "decode-ao-types-back-to-rich-values",
+      "txid": "Gh78uEs0qQm1mGfZjFUAieFq_kJKdw2BnJSlVU3r8l4",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "structured@1.0",
+      "slug": "encode-rich-types-into-ao-types",
+      "txid": "Fqc5Ay3acPJUdZ2D-8ot90__TYZniRnfFfqbHHkrWQA",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "structured@1.0",
+      "slug": "limit-the-encoded-type-set",
+      "txid": "e9WY6HxMECkltWMFNoDdW0LDUxOR6nktLhCy_qbJ1bM",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "trie@1.0",
+      "slug": "list-committed-trie-keys",
+      "txid": "2eYSZhfvEVQqhgi8iVptZ5DjedxVKeh_EPZ7dQquqcA",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "trie@1.0",
+      "slug": "read-a-key-from-that-trie",
+      "txid": "lRxOwOZZaxHTlJiiLsh8RFCvjWNczGHt6iH7GT_bup0",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "trie@1.0",
+      "slug": "set-values-in-a-committed-trie",
+      "txid": "w5rb3wZCtSDJHp8A9uqX6rW6iuBH2Egt2v6veyx1Tig",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "tx@1.0",
+      "slug": "fetch-the-raw-data-behind-the-same-transaction",
+      "txid": "kCI6oxLKnHqTsrGEPqtQkEcfNB9wdgHii_s3Qz4aCzo",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "tx@1.0",
+      "slug": "inspect-the-transaction-commitment-headers",
+      "txid": "08GkFyJMsFMiA9ZXusVwH8upQPR0xbT7_iiy5ArFUW0",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "tx@1.0",
+      "slug": "read-an-arweave-transaction-as-json",
+      "txid": "3rkMwt4WU03d6AXE1bNbBbviU1bdSM9IvTSZCxCTXOw",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "wasi@1.0",
+      "slug": "pass-wasi-args-env-to-a-wasm-process",
+      "txid": "EYrTW8Y2EWTSAWG2nx2daHgfG4Rx54lPTwa5Iq6fg8E",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "wasi@1.0",
+      "slug": "read-stdout-after-compute",
+      "txid": "2BhJefyWu2WEbAMLYJHb5_kxnxy52JcOgmTiTCNK5mM",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "wasi@1.0",
+      "slug": "use-a-local-file-less-wasi-module-first",
+      "txid": "q4LkWXDUsLnwdMlvk9CE6gncIudZP-K6QAD9Rw7llJM",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "wasm-64@1.0",
+      "slug": "continue-from-a-prior-hashpath-state",
+      "txid": "HWIxkBTLRC-1T1_1-m43BVjJmSMF5YlMUUTIZaqqosc",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "wasm-64@1.0",
+      "slug": "execute-a-wasm-function-directly",
+      "txid": "Ae7YyXQFjmpCGvw4kq7uNsXoSxKbV_F05PvVsmAYUWc",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    },
+    {
+      "device": "wasm-64@1.0",
+      "slug": "use-wasm-as-a-process-execution-device",
+      "txid": "pNnplsv7JKPJB56qNZGMS6120bsEfcMuuKJgGNNc1MM",
+      "class": "legacy-unverified-recipe",
+      "reason": "Quarantined by 2026-06-25 docs-test audit: current on-weave recipes include unseeded workflows, localhost-only assumptions, local files, placeholders, extra shell tooling, operator mutations, or state-dependent routes. Re-enable only after a replacement recipe passes the recipe standards validator.",
+      "replacement_status": "pending-tested-on-weave-replacement"
+    }
+  ]
+}

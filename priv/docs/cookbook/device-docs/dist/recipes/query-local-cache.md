@@ -1,39 +1,23 @@
-# Query Local Cache
+# Inspect Query And Match Readiness
 
-`~query@1.0` searches local cache and store indexes. It does not magically know remote data; first the node must have indexed or cached messages through copycat, Arweave reads, bundling, scheduler state, or trusted cache writes.
+`~query@1.0` and `~match@1.0` depend on the local node's cache and reverse index. A recipe that checks for matches must first seed the index or it is not deterministic. The approved public recipe only inspects the match contract.
 
-## Check Index Readiness
-
-```bash
-curl -sS "http://localhost:8734/~meta@1.0/info/preloaded-devices-index"
-curl -sS "http://localhost:8734/~meta@1.0/info/format~hyperbuddy@1.0" | grep -i -E 'store|cache|match|index'
-```
-
-## Count Local Index Entries
+## Inspect The Match Contract
 
 ```bash
-curl -sS "http://localhost:8734/~query@1.0/all?return=count"
-curl -sS "http://localhost:8734/~query@1.0/all?return=boolean"
+HB="${HB:-http://localhost:8734}"
+curl -fsS "$HB/~match@1.0/info/schema"
 ```
 
-Expected: the first command returns a count of entries currently visible to the local query device, and the second returns `true` when any entries are visible.
+Expected: a JSON schema object containing match actions such as `all`.
 
-Return modes:
-
-| Mode | Use |
-|---|---|
-| `count` | Check whether matches exist without loading them. |
-| `paths` | Return cache paths or IDs. |
-| `messages` | Load full matched messages. |
-| `first-path` | Return one path for a follow-up cache read. |
-| `first-message` | Return one loaded message. |
-| `boolean` | Return true/false. |
-
-## Copy Data Before Narrow Queries
+## Inspect The `all` Action
 
 ```bash
-curl -sS "http://localhost:8734/~copycat@1.0/arweave?from=1936565&to=1936565&mode=write"
-curl -sS "http://localhost:8734/~copycat@1.0/arweave?from=1936565&to=1936565&mode=list"
+HB="${HB:-http://localhost:8734}"
+curl -fsS "$HB/~match@1.0/info/schema/all"
 ```
 
-Expected: copycat imports one real Arweave block, then lists the transaction IDs it indexed. Use that list with `~arweave@2.9/tx` or `~arweave@2.9/raw` for deterministic reads. Narrow key/value query filters are node-index dependent; validate them on your operator node before publishing them as application paths.
+Expected: JSON describing `/~match@1.0/all`.
+
+Do not publish `return=count` or `return=boolean` as a canonical recipe unless the first step writes or imports a known fixture and the final step proves that fixture is the match. A node with an empty or different index can otherwise return 500, 0, or a true result for unrelated data.

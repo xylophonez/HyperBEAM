@@ -157,6 +157,8 @@ node_info_route([<<"forge">> | Parts], Req, _Opts) ->
     boilerplate_page_response([<<"forge">> | Parts], Req);
 node_info_route([<<"processes">> | Parts], Req, _Opts) ->
     boilerplate_page_response([<<"processes">> | Parts], Req);
+node_info_route([<<"reference">> | Parts], Req, _Opts) ->
+    boilerplate_page_response([<<"reference">> | Parts], Req);
 node_info_route([<<"boilerplate">> | _Parts], _Req, _Opts) ->
     {ok, not_found_response()};
 node_info_route([<<"concepts">>], Req, Opts) ->
@@ -428,7 +430,7 @@ on_weave_info_data(Device, SpecID, Opts) ->
     SpecSigner = maps:get(<<"signer">>, Spec, <<>>),
     {Schema, SchemaOrder, SchemaSource} =
         docs_schema_for_device(Device, SpecID, Opts),
-    Recipes = on_weave_recipe_docs(SpecID, SpecSigner, Opts),
+    Recipes = on_weave_recipe_docs(Device, SpecID, SpecSigner, Opts),
     {Name, Version} = split_device_id(Device),
     maps:merge(device_doc_link_fields(Device), #{
         <<"kind">> => <<"device-info">>,
@@ -828,14 +830,15 @@ on_weave_key_summaries(Device, Schema, Order) ->
         map_size(KeySchema) > 0
     ].
 
-on_weave_recipe_docs(SpecID, SpecSigner, Opts) ->
+on_weave_recipe_docs(Device, SpecID, SpecSigner, Opts) ->
     case on_weave_doc_items(<<"Device-Recipe">>, <<"recipe-for-device">>, SpecID, [], 20, Opts) of
         {ok, Nodes} ->
-            Recipes = [
+            LoadedRecipes = [
                 Recipe
             || Node <- Nodes,
                 {ok, Recipe} <- [on_weave_recipe_doc(Node, SpecSigner, Opts)]
             ],
+            Recipes = apply_recipe_blacklist(Device, SpecID, LoadedRecipes, Opts),
             lists:foldl(
                 fun(Recipe, Acc) ->
                     Slug = maps:get(<<"name">>, Recipe),
@@ -850,6 +853,100 @@ on_weave_recipe_docs(SpecID, SpecSigner, Opts) ->
         {error, _Reason} ->
             #{}
     end.
+
+apply_recipe_blacklist(Device, SpecID, Recipes, Opts) ->
+    [
+        Recipe
+    || Recipe <- Recipes,
+        not recipe_blacklisted(Device, SpecID, Recipe, Opts)
+    ].
+
+recipe_blacklisted(Device, SpecID, Recipe, Opts) ->
+    Entries = docs_recipe_blacklist(Opts),
+    lists:any(
+        fun(Entry) -> recipe_blacklist_entry_matches(Device, SpecID, Recipe, Entry) end,
+        Entries
+    ).
+
+docs_recipe_blacklist(Opts) ->
+    normalize_recipe_blacklist_entries(
+        hb_opts:get(
+            <<"docs-recipe-blacklist">>,
+            hb_opts:get(docs_recipe_blacklist, [], Opts),
+            Opts
+        )
+    ) ++ docs_recipe_blacklist_file_entries(Opts).
+
+docs_recipe_blacklist_file_entries(Opts) ->
+    case hb_opts:get(
+        <<"docs-recipe-blacklist-file">>,
+        hb_opts:get(docs_recipe_blacklist_file, <<>>, Opts),
+        Opts
+    ) of
+        <<>> ->
+            [];
+        Path0 ->
+            Path = binary_to_list(hb_util:bin(Path0)),
+            case file:read_file(Path) of
+                {ok, Body} ->
+                    try normalize_recipe_blacklist_entries(hb_json:decode(Body))
+                    catch _:_ -> []
+                    end;
+                {error, _Reason} ->
+                    []
+            end
+    end.
+
+normalize_recipe_blacklist_entries(Entries) when is_list(Entries) ->
+    [Entry || Entry <- Entries, is_map(Entry)];
+normalize_recipe_blacklist_entries(#{ <<"recipes">> := Entries }) ->
+    normalize_recipe_blacklist_entries(Entries);
+normalize_recipe_blacklist_entries(#{ <<"blacklist">> := Entries }) ->
+    normalize_recipe_blacklist_entries(Entries);
+normalize_recipe_blacklist_entries(Entry) when is_map(Entry) ->
+    [Entry];
+normalize_recipe_blacklist_entries(_Entries) ->
+    [].
+
+recipe_blacklist_entry_matches(Device, SpecID, Recipe, Entry) when is_map(Entry) ->
+    recipe_blacklist_txid_matches(Recipe, Entry) orelse
+        recipe_blacklist_slug_matches(Device, SpecID, Recipe, Entry);
+recipe_blacklist_entry_matches(_Device, _SpecID, _Recipe, _Entry) ->
+    false.
+
+recipe_blacklist_txid_matches(Recipe, Entry) ->
+    EntryTXID = trim(hb_util:bin(maps:get(<<"txid">>, Entry, <<>>))),
+    EntryTXID =/= <<>> andalso
+        lists:member(EntryTXID, recipe_blacklist_txids(Recipe)).
+
+recipe_blacklist_txids(Recipe) ->
+    lists:usort([
+        TXID
+    || Value <- [
+            maps:get(<<"txid">>, Recipe, <<>>),
+            maps:get(<<"source">>, Recipe, <<>>),
+            maps:get(<<"source-relative">>, Recipe, <<>>)
+        ],
+        TXID <- [strip_weave_prefix(trim(hb_util:bin(Value)))],
+        TXID =/= <<>>
+    ]).
+
+strip_weave_prefix(<<"weave:", Rest/binary>>) ->
+    Rest;
+strip_weave_prefix(Value) ->
+    Value.
+
+recipe_blacklist_slug_matches(Device, SpecID, Recipe, Entry) ->
+    EntrySlug = trim(hb_util:bin(maps:get(<<"slug">>, Entry, <<>>))),
+    EntryDevice = trim(hb_util:bin(maps:get(<<"device">>, Entry, <<>>))),
+    EntrySpecID = trim(hb_util:bin(maps:get(<<"spec-id">>, Entry, <<>>))),
+    Slug = maps:get(<<"name">>, Recipe, <<>>),
+    EntrySlug =/= <<>> andalso
+        EntrySlug =:= Slug andalso
+        (
+            (EntryDevice =/= <<>> andalso EntryDevice =:= Device) orelse
+            (EntrySpecID =/= <<>> andalso EntrySpecID =:= SpecID)
+        ).
 
 on_weave_recipe_doc(Node, SpecSigner, Opts) ->
     ID = maps:get(<<"id">>, Node),
@@ -1513,6 +1610,10 @@ boilerplate_pages() ->
         {<<"Device Forge">>, <<"docs/forge/runbook.md">>, <<"Runbook">>},
         {<<"Device Forge">>, <<"docs/forge/test-package-verify.md">>, <<"Test Package Verify">>},
         {<<"Device Forge">>, <<"docs/forge/trusted-signers-and-pins.md">>, <<"Trusted Signers And Pins">>}
+    ] ++ [
+        {<<"Reference">>, <<"docs/reference/example-validation.md">>, <<"Example Validation">>},
+        {<<"Reference">>, <<"docs/reference/recipe-standards.md">>, <<"Recipe Standards">>},
+        {<<"Reference">>, <<"docs/reference/recipe-audit-2026-06-25.md">>, <<"Recipe Audit 2026-06-25">>}
     ].
 
 boilerplate_process_route(Slug) ->
@@ -5381,7 +5482,7 @@ node_info_contract_test() ->
     ?assertNot(maps:is_key(<<"arweave-info">>, Data)),
     ?assertNot(maps:is_key(<<"message-info">>, Data)),
     ?assertEqual(<<"/info/guides">>, maps:get(<<"boilerplate-link">>, Data)),
-    ?assertEqual(20, length(maps:get(<<"pages">>, maps:get(<<"boilerplate">>, Data)))),
+    ?assertEqual(23, length(maps:get(<<"pages">>, maps:get(<<"boilerplate">>, Data)))),
     ?assertEqual(<<"cookbook@1.0">>, maps:get(<<"device">>, maps:get(<<"renderer">>, Data))),
     ?assertEqual([], maps:get(<<"devices">>, Data)).
 
@@ -5709,6 +5810,56 @@ recipe_route_test() ->
     {true, {ok, Response}} = maybe_info_request(Msgs, Req, #{}),
     ?assertEqual(404, maps:get(<<"status">>, Response)).
 
+recipe_blacklist_filters_operator_config_test() ->
+    Good = #{
+        <<"name">> => <<"keep-this-recipe">>,
+        <<"title">> => <<"Keep this recipe">>,
+        <<"txid">> => <<"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa">>
+    },
+    Bad = #{
+        <<"name">> => <<"bad-template">>,
+        <<"title">> => <<"Bad template">>,
+        <<"txid">> => <<"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb">>
+    },
+    Opts = #{
+        <<"docs-recipe-blacklist">> => [
+            #{
+                <<"device">> => <<"match@1.0">>,
+                <<"slug">> => <<"bad-template">>,
+                <<"reason">> => <<"requires unseeded query index">>
+            }
+        ]
+    },
+    ?assert(recipe_blacklisted(<<"match@1.0">>, <<"spec-id">>, Bad, Opts)),
+    ?assertNot(recipe_blacklisted(<<"match@1.0">>, <<"spec-id">>, Good, Opts)),
+    ?assertEqual(
+        [Good],
+        apply_recipe_blacklist(<<"match@1.0">>, <<"spec-id">>, [Good, Bad], Opts)
+    ).
+
+recipe_blacklist_loads_operator_file_test() ->
+    TXID = <<"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb">>,
+    Dir = filename:join(["/tmp", "hb-docs-recipe-blacklist-test"]),
+    ok = filelib:ensure_dir(filename:join(Dir, "blacklist.json")),
+    Path = filename:join(Dir, "blacklist.json"),
+    JSON =
+        <<"{\"recipes\":[{\"txid\":\"", TXID/binary,
+            "\",\"reason\":\"known bad fixture\"}]}">>,
+    ok = file:write_file(Path, JSON),
+    Recipe = #{
+        <<"name">> => <<"bad-template">>,
+        <<"title">> => <<"Bad template">>,
+        <<"txid">> => TXID
+    },
+    Opts = #{ <<"docs-recipe-blacklist-file">> => hb_util:bin(Path) },
+    ?assert(recipe_blacklisted(<<"match@1.0">>, <<"spec-id">>, Recipe, Opts)),
+    BadPath = filename:join(Dir, "bad.json"),
+    ok = file:write_file(BadPath, <<"{bad json">>),
+    ?assertEqual(
+        [],
+        docs_recipe_blacklist(#{ <<"docs-recipe-blacklist-file">> => hb_util:bin(BadPath) })
+    ).
+
 footer_nav_test() ->
     {ok, SpecSectionHTML} = device_info_route(
         ?MESSAGE_DEVICE,
@@ -5832,7 +5983,7 @@ boilerplate_routes_test() ->
     ?assertEqual(<<"node-boilerplate-index">>, maps:get(<<"kind">>, Index)),
     ?assertEqual(<<"/info/guides">>, maps:get(<<"href">>, Index)),
     Pages = maps:get(<<"pages">>, Index),
-    ?assertEqual(20, length(Pages)),
+    ?assertEqual(23, length(Pages)),
     RelPaths = [maps:get(<<"source-relative">>, Page) || Page <- Pages],
     ProcessPages = boilerplate_pages_for_section(<<"Processes">>, Pages),
     ?assertEqual(7, length(ProcessPages)),
@@ -5866,6 +6017,9 @@ boilerplate_routes_test() ->
     ?assertNot(lists:member(<<"docs/recipes/index.md">>, RelPaths)),
     ?assertNot(lists:member(<<"docs/device-recipes/index.md">>, RelPaths)),
     ?assertNot(lists:member(<<"docs/reference/device-inventory.md">>, RelPaths)),
+    ?assert(lists:member(<<"docs/reference/example-validation.md">>, RelPaths)),
+    ?assert(lists:member(<<"docs/reference/recipe-standards.md">>, RelPaths)),
+    ?assert(lists:member(<<"docs/reference/recipe-audit-2026-06-25.md">>, RelPaths)),
     ?assertNot(lists:member(
         <<"docs/devices/compute-and-processes/process-at-1-0/index.md">>,
         RelPaths
@@ -5991,6 +6145,8 @@ boilerplate_routes_test() ->
     ?assert(binary:match(GuidesBody, <<"href=\"/introduction/what-is-ao-core\"">>) =/= nomatch),
     ?assert(binary:match(GuidesBody, <<"href=\"/info/processes/state-and-reads\"">>) =/= nomatch),
     ?assert(binary:match(GuidesBody, <<"href=\"/info/forge/create-a-device\"">>) =/= nomatch),
+    ?assert(binary:match(GuidesBody, <<"href=\"/info/reference/recipe-standards\"">>) =/= nomatch),
+    ?assert(binary:match(GuidesBody, <<"Recipe Standards">>) =/= nomatch),
     ?assertEqual(nomatch, binary:match(GuidesBody, <<"Merged from the HyperBEAM">>)),
     ?assertEqual(nomatch, binary:match(GuidesBody, <<"/info/boilerplate">>)),
     ?assertEqual(nomatch, binary:match(GuidesBody, <<"01-intro-to-process">>)),
@@ -6014,6 +6170,14 @@ boilerplate_routes_test() ->
     ?assertEqual(404, maps:get(<<"status">>, OldDeviceRecipes)),
     {ok, OldDeviceInventory} = node_info_route([<<"boilerplate">>, <<"reference">>, <<"device-inventory">>], #{ <<"accept">> => <<"application/json">> }, #{}),
     ?assertEqual(404, maps:get(<<"status">>, OldDeviceInventory)),
+    {ok, StandardsJSONResponse} = node_info_route([<<"reference">>, <<"recipe-standards">>], #{ <<"accept">> => <<"application/json">> }, #{}),
+    StandardsJSON = decoded_json_response(StandardsJSONResponse),
+    ?assertEqual(<<"docs/reference/recipe-standards.md">>, maps:get(<<"source-relative">>, StandardsJSON)),
+    {ok, AuditJSONResponse} = node_info_route([<<"reference">>, <<"recipe-audit-2026-06-25">>], #{ <<"accept">> => <<"application/json">> }, #{}),
+    AuditJSON = decoded_json_response(AuditJSONResponse),
+    ?assertEqual(<<"docs/reference/recipe-audit-2026-06-25.md">>, maps:get(<<"source-relative">>, AuditJSON)),
+    {ok, DeviceInventory} = node_info_route([<<"reference">>, <<"device-inventory">>], #{ <<"accept">> => <<"application/json">> }, #{}),
+    ?assertEqual(404, maps:get(<<"status">>, DeviceInventory)),
     {ok, ProcessIndex} = node_info_route([<<"processes">>, <<"index">>], #{ <<"accept">> => <<"application/json">> }, #{}),
     ?assertEqual(404, maps:get(<<"status">>, ProcessIndex)),
     {ok, ProcessSummary} = node_info_route([<<"processes">>, <<"summary">>], #{ <<"accept">> => <<"application/json">> }, #{}),

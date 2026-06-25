@@ -1,37 +1,23 @@
-# Relay, Fetch, And Transform
+# Inspect Relay Contract And Route Policy
 
-`~relay@1.0` lets a path fetch another URL through the node. This example relays a local HyperBEAM path, then serializes the relayed result.
+`~relay@1.0` makes HTTP calls through node-controlled route policy. Relay examples are easy to get wrong because a route can return a browser shell or a policy response while still using HTTP 200. The public recipe inspects the contract instead of relaying arbitrary URLs.
 
-## Relay A Local Device Call
-
-```bash
-HB="http://localhost:8734"
-curl -sS -G "$HB/~relay@1.0/call" \
-  --data-urlencode 'relay-method=GET' \
-  --data-urlencode "relay-path=$HB/~meta@1.0/info/address"
-```
-
-Expected: the same address returned by `~meta@1.0/info/address`.
-
-## Relay Then Transform
+## Inspect Relay Schema
 
 ```bash
-HB="http://localhost:8734"
-curl -sS -G "$HB/~relay@1.0/call" \
-  --data-urlencode 'relay-method=GET' \
-  --data-urlencode "relay-path=$HB/~message@1.0&body=relayed/~gzip@1.0/zip/~gzip@1.0/unzip/body"
+HB="${HB:-http://localhost:8734}"
+curl -fsS "$HB/~relay@1.0/info/schema"
 ```
 
-## Remote URL Check
+Expected: a JSON schema object with `call`, `cast`, and `request`.
+
+## Inspect The `call` Action
 
 ```bash
-curl -sS -G "http://localhost:8734/~relay@1.0/call" \
-  --data-urlencode 'relay-method=GET' \
-  --data-urlencode 'relay-path=https://example.com'
+HB="${HB:-http://localhost:8734}"
+curl -fsS "$HB/~relay@1.0/info/schema/call"
 ```
 
-Remote access depends on route policy. If the node refuses the route, check routes:
+Expected: JSON describing the `method`, `peer`, `relay-path`, and `target` parameters.
 
-```bash
-curl -sS "http://localhost:8734/~meta@1.0/info/routes/format~hyperbuddy@1.0"
-```
+A relay recipe that fetches a URL must assert the content it expected, not only that the HTTP status was 200. Remote URL and route-policy examples belong in operator tests until they have a fixture.

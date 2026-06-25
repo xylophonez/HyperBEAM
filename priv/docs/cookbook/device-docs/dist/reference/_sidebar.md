@@ -1,4 +1,6 @@
 - Reference
   - [Device Inventory](/reference/device-inventory.md)
-  - [Local Checks](/reference/example-validation.md)
+  - [Example Validation](/reference/example-validation.md)
   - [Glossary](/reference/glossary.md)
+  - [Recipe Audit 2026-06-25](/reference/recipe-audit-2026-06-25.md)
+  - [Recipe Standards](/reference/recipe-standards.md)

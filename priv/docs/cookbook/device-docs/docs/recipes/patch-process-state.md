@@ -1,33 +1,23 @@
-# Patch Process State
+# Patch A Message Key
 
-`~patch@1.0` moves values between paths so later devices see the keys they expect. This is common before Lua/WASM compute and after compute before push.
+`~patch@1.0` moves values between message keys so later devices see the shape they expect. This replacement recipe avoids POST bodies and local fixtures: all inputs are in the URL.
 
-## Start With A Message Shape
-
-```bash
-curl -sS "http://localhost:8734/~message@1.0&input=hello&target=body/format~hyperbuddy@1.0"
-```
-
-## Apply A Patch Shape
+## Move `source` Into `body`
 
 ```bash
-curl -sS -X POST -H 'content-type: application/json' \
-  --data-binary '{"patch-from":"input","patch-to":"state","input":{"greeting":"hello"},"state":{}}' \
-  "http://localhost:8734/~patch@1.0/all/~json@1.0/serialize"
+HB="${HB:-http://localhost:8734}"
+curl -fsS "$HB/~message@1.0&source=hello&body=old&from=source&to=body/~patch@1.0/all/body"
 ```
 
-Expected: `state/greeting` is populated from `input/greeting`. In process stacks, the same `patch-from` and `patch-to` instructions usually live in the process or stack definition.
+Expected output: `hello`.
 
-## Stack Pattern
-
-```text
-message assignment -> patch input/body -> lua compute -> patch result/messages -> push
-```
-
-## Operator Check
+## Inspect The Patched Message
 
 ```bash
-curl -sS "http://localhost:8734/~meta@1.0/info/format~hyperbuddy@1.0" | grep -i -E 'patch|stack|process|compute'
+HB="${HB:-http://localhost:8734}"
+curl -fsS "$HB/~message@1.0&source=hello&body=old&from=source&to=body/~patch@1.0/all/~json@1.0/serialize"
 ```
 
-Patch definitions should be treated like executable configuration. Review them before using the output of a signed process or a trusted remote device.
+Expected: JSON where `body` is `hello`, `from` is `source`, and `to` is `body`.
+
+For process examples, the same idea is useful before Lua/WASM compute and after compute before push. The public recipe stops at the deterministic key move; process state mutation needs a separate fixture.
