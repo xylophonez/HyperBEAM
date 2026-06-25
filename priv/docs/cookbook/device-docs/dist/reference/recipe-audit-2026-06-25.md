@@ -62,7 +62,7 @@ The broader docs curl scan is not yet clean:
 
 ```text
 HB=https://docs-test.mystical.computer node scripts/validate-curl-examples.mjs
-Summary: 90 passed, 31 failed, 65 skipped
+Summary: 102 passed, 30 failed, 53 skipped
 ```
 
 Those failures are outside the approved recipe directory, mostly device/reference examples that still need the recipe-standard treatment or should be marked operator-only.
