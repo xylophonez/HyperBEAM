@@ -361,6 +361,11 @@ unsupported_device_info_data(Device) ->
             <<"No on-weave spec-loaded documentation is available for this device.">>
     }.
 
+device_summary(#{ <<"spec-status">> := <<"missing">>, <<"summary">> := Summary }) ->
+    Summary;
+device_summary(_Spec) ->
+    <<>>.
+
 canonical_spec_device(Device) ->
     lists:member(Device, canonical_spec_devices()).
 
@@ -424,12 +429,6 @@ on_weave_info_data(Device, SpecID, Opts) ->
     {Schema, SchemaOrder, SchemaSource} =
         docs_schema_for_device(Device, SpecID, Opts),
     Recipes = on_weave_recipe_docs(SpecID, SpecSigner, Opts),
-    Summary =
-        maps:get(
-            <<"summary">>,
-            Spec,
-            <<"On-weave device docs discovered from the device spec ID.">>
-        ),
     {Name, Version} = split_device_id(Device),
     maps:merge(device_doc_link_fields(Device), #{
         <<"kind">> => <<"device-info">>,
@@ -442,7 +441,7 @@ on_weave_info_data(Device, SpecID, Opts) ->
         <<"device-id">> => Device,
         <<"device-name">> => Name,
         <<"device-version">> => Version,
-        <<"summary">> => Summary,
+        <<"summary">> => device_summary(Spec),
         <<"renderer">> => cookbook_renderer(),
         <<"keys">> => on_weave_key_summaries(Device, Schema, SchemaOrder),
         <<"schema">> => Schema,
@@ -1619,12 +1618,11 @@ render_device_html(Data) ->
         [
             <<"<p class=\"eyebrow\">Device</p><h1>~">>,
             esc(maps:get(<<"id">>, Device)),
-            <<"</h1><p>">>, esc(maps:get(<<"summary">>, Data)), <<"</p>">>,
+            <<"</h1>">>,
+            device_summary_paragraph(Data),
             schema_source_note(Data),
-            <<"<h2 id=\"schema\">Schema</h2><table><thead><tr>"
-                "<th>Key</th><th>Description</th><th>Parameters</th></tr></thead><tbody>">>,
-            schema_rows(DeviceID, Schema, SchemaOrder),
-            <<"</tbody></table>">>,
+            <<"<h2 id=\"schema\">Schema</h2>">>,
+            schema_table(DeviceID, Schema, SchemaOrder),
             render_spec_section(DeviceID, Spec),
             <<"<h2 id=\"recipes\">Recipes</h2><div class=\"hb-docs-card-grid\">">>,
             recipe_nav(DeviceID, Recipes),
@@ -1647,10 +1645,7 @@ render_schema_index_html(Data) ->
             <<"<p class=\"eyebrow\">Schema</p><h1>~">>, esc(DeviceID),
             <<" schema</h1>">>,
             schema_source_note(Data),
-            <<"<table><thead><tr><th>Key</th><th>Description</th>"
-                "<th>Parameters</th></tr></thead><tbody>">>,
-            schema_rows(DeviceID, Schema, SchemaOrder),
-            <<"</tbody></table>">>
+            schema_table(DeviceID, Schema, SchemaOrder)
         ],
     docs_page_html(
         <<"HyperBEAM Schema">>,
@@ -1658,6 +1653,12 @@ render_schema_index_html(Data) ->
         device_sidebar(Data, device_schema_path(DeviceID)),
         Content
     ).
+
+device_summary_paragraph(Data) ->
+    case trim(maps:get(<<"summary">>, Data, <<>>)) of
+        <<>> -> [];
+        Summary -> [<<"<p>">>, esc(Summary), <<"</p>">>]
+    end.
 
 render_schema_key_html(Payload) ->
     Data = maps:get(<<"device-data">>, Payload),
@@ -2223,6 +2224,57 @@ body.hb-docs-protocol .sidebar-viewing-back.is-active {
 }
 .hb-docs-section-link:hover {
   color: var(--text) !important;
+}
+.markdown-section .theme-invert-video {
+  width: 100%;
+  height: auto;
+  display: block;
+  margin: 0 0 1.5rem;
+  background: var(--bg-muted);
+}
+@media (prefers-color-scheme: dark) {
+  .markdown-section .theme-invert-video {
+    filter: invert(1) hue-rotate(180deg);
+    background: #000;
+  }
+}
+.markdown-section .core-concepts-flex {
+  display: flex;
+  align-items: flex-start;
+  gap: 2rem;
+  width: 100%;
+  margin: 1.75rem 0 2rem;
+}
+.markdown-section .core-concepts-fig {
+  flex: 1 0 100px;
+  width: 100px;
+  max-width: 160px !important;
+  height: auto;
+  margin: 0.25rem 0 0;
+}
+.markdown-section .core-concepts-column {
+  display: flex;
+  flex: 1 1 auto;
+  min-width: 0;
+  flex-direction: column;
+}
+.markdown-section .core-concepts-column p {
+  margin: 0 0 1rem;
+}
+.markdown-section .core-concept-header-messages,
+.markdown-section .core-concept-header-devices,
+.markdown-section .core-concept-header-paths {
+  margin: 0 0 0.25rem;
+  line-height: 1.25;
+}
+.markdown-section .core-concept-subtitle {
+  margin: 0 0 1rem;
+  color: var(--text-tertiary);
+  font-size: var(--text-caption);
+  line-height: 1.3;
+}
+.markdown-section .core-concept-copy {
+  line-height: 1.65;
 }
 .hb-docs-device-grid {
   display: grid;
@@ -3113,7 +3165,31 @@ concept_rows(Concepts) ->
     || {Key, Value} <- lists:sort(maps:to_list(Concepts))
     ].
 
-schema_rows(DeviceID, Schema, Order) ->
+schema_table(DeviceID, Schema, Order) ->
+    IncludeDescriptions = schema_has_descriptions(Schema, Order),
+    [
+        <<"<table><thead><tr><th>Key</th>">>,
+        case IncludeDescriptions of
+            true -> <<"<th>Description</th>">>;
+            false -> []
+        end,
+        <<"<th>Parameters</th></tr></thead><tbody>">>,
+        schema_rows(DeviceID, Schema, Order, IncludeDescriptions),
+        <<"</tbody></table>">>
+    ].
+
+schema_has_descriptions(Schema, Order) ->
+    lists:any(
+        fun(Name) ->
+            case maps:get(Name, Schema, undefined) of
+                undefined -> false;
+                KeySchema -> trim(maps:get(<<"description">>, KeySchema, <<>>)) =/= <<>>
+            end
+        end,
+        Order
+    ).
+
+schema_rows(DeviceID, Schema, Order, IncludeDescriptions) ->
     [
         case maps:get(Name, Schema, undefined) of
             undefined -> [];
@@ -3121,15 +3197,20 @@ schema_rows(DeviceID, Schema, Order) ->
                 [
                     <<"<tr><td><a href=\"">>,
                     esc(device_schema_key_path(DeviceID, Name)),
-                    <<"\">">>, esc(Name), <<"</a></td><td>">>,
-                    esc(maps:get(<<"description">>, KeySchema, <<>>)),
-                    <<"</td><td>">>,
+                    <<"\">">>, esc(Name), <<"</a></td>">>,
+                    schema_description_cell(KeySchema, IncludeDescriptions),
+                    <<"<td>">>,
                     param_pills(DeviceID, Name, maps:get(<<"parameters">>, KeySchema, #{})),
                     <<"</td></tr>">>
                 ]
         end
     || Name <- Order
     ].
+
+schema_description_cell(KeySchema, true) ->
+    [<<"<td>">>, esc(maps:get(<<"description">>, KeySchema, <<>>)), <<"</td>">>];
+schema_description_cell(_KeySchema, false) ->
+    [].
 
 param_pills(_DeviceID, _Key, Params) when map_size(Params) =:= 0 ->
     <<"<span class=\"param-pills-none\">none</span>">>;
@@ -4399,6 +4480,7 @@ docs_asset_content_type(Parts) ->
         ".json" -> <<"application/json">>;
         ".woff2" -> <<"font/woff2">>;
         ".png" -> <<"image/png">>;
+        ".svg" -> <<"image/svg+xml">>;
         ".ico" -> <<"image/x-icon">>;
         ".mp4" -> <<"video/mp4">>;
         _ -> <<"application/octet-stream">>
@@ -5075,8 +5157,47 @@ heading(_Line) -> false.
 
 raw_html_line(<<"<video class=\"hb-page-figure\" src=\"../assets/images/what-is-hyperbeam-fig.mp4\" autoplay loop muted playsinline aria-label=\"HyperBEAM modular compute blocks\"></video>">> = Line) ->
     {ok, Line};
+raw_html_line(<<"<video class=\"theme-invert-video\" src=\"https://arweave.net/pc73dj9tZtj7AOeIKBGiiOm5ta13FYXzgsqWSePAxiM\" style=\"width: 100%; height: auto; display: block;\" autoplay=\"\" muted=\"\" playsinline=\"\" loop=\"\" controlslist=\"nodownload nofullscreen noremoteplayback\" disablepictureinpicture=\"\" preload=\"auto\"></video>">> = Line) ->
+    {ok, Line};
+raw_html_line(<<"<div class=\"core-concepts-flex\">">> = Line) ->
+    {ok, Line};
+raw_html_line(<<"<div class=\"core-concepts-column\">">> = Line) ->
+    {ok, Line};
+raw_html_line(<<"</div>">> = Line) ->
+    {ok, Line};
+raw_html_line(<<"<img class=\"core-concepts-fig ", Rest/binary>> = Line) ->
+    case allowed_core_concepts_img(Rest) of
+        true -> {ok, Line};
+        false -> false
+    end;
+raw_html_line(<<"<p class=\"core-concept-header-", Rest/binary>> = Line) ->
+    case allowed_core_concept_header(Rest) of
+        true -> {ok, Line};
+        false -> false
+    end;
+raw_html_line(<<"<span class=\"core-concept-subtitle\">", Rest/binary>> = Line) ->
+    case ends_with(Rest, <<"</span>">>) of
+        true -> {ok, Line};
+        false -> false
+    end;
+raw_html_line(<<"<p class=\"core-concept-copy\">", Rest/binary>> = Line) ->
+    case ends_with(Rest, <<"</p>">>) andalso binary:match(Rest, <<"<script">>) =:= nomatch of
+        true -> {ok, Line};
+        false -> false
+    end;
 raw_html_line(_Line) ->
     false.
+
+allowed_core_concepts_img(Rest) ->
+    (starts_with(Rest, <<"messages\" src=\"/info/assets/images/aosvg1.svg\"">>) orelse
+        starts_with(Rest, <<"devices\" src=\"/info/assets/images/aosvg2.svg\"">>) orelse
+        starts_with(Rest, <<"paths\" src=\"/info/assets/images/aosvg3.svg\"">>)) andalso
+        ends_with(Rest, <<" alt=\"\" loading=\"lazy\">">>).
+
+allowed_core_concept_header(Rest) ->
+    (starts_with(Rest, <<"messages\"><b>Messages</b></p>">>) orelse
+        starts_with(Rest, <<"devices\"><b>Devices</b></p>">>) orelse
+        starts_with(Rest, <<"paths\"><b>Paths</b></p>">>)).
 
 bullet_text(<<"- ", Text/binary>>) -> {ok, trim(Text)};
 bullet_text(<<"-   ", Text/binary>>) -> {ok, trim(Text)};
@@ -5292,11 +5413,26 @@ markdown_star_bullet_rendering_test() ->
 
 markdown_video_figure_rendering_test() ->
     Video =
-        <<"<video class=\"hb-page-figure\" src=\"../assets/images/what-is-hyperbeam-fig.mp4\" "
-            "autoplay loop muted playsinline aria-label=\"HyperBEAM modular compute blocks\"></video>">>,
+        <<"<video class=\"theme-invert-video\" "
+            "src=\"https://arweave.net/pc73dj9tZtj7AOeIKBGiiOm5ta13FYXzgsqWSePAxiM\" "
+            "style=\"width: 100%; height: auto; display: block;\" autoplay=\"\" muted=\"\" "
+            "playsinline=\"\" loop=\"\" controlslist=\"nodownload nofullscreen noremoteplayback\" "
+            "disablepictureinpicture=\"\" preload=\"auto\"></video>">>,
     HTML = render_markdown(Video),
     ?assertEqual(Video, HTML),
-    ?assertEqual(nomatch, binary:match(HTML, <<"&lt;video">>)).
+    ?assertEqual(nomatch, binary:match(HTML, <<"&lt;video">>)),
+    Concept =
+        <<"<div class=\"core-concepts-flex\">\n"
+            "<img class=\"core-concepts-fig messages\" src=\"/info/assets/images/aosvg1.svg\" alt=\"\" loading=\"lazy\">\n"
+            "<div class=\"core-concepts-column\">\n"
+            "<p class=\"core-concept-header-messages\"><b>Messages</b></p>\n"
+            "<span class=\"core-concept-subtitle\">Modular Data Packets</span>\n"
+            "<p class=\"core-concept-copy\">Every interaction is a <b>message</b>.</p>\n"
+            "</div>\n"
+            "</div>">>,
+    ConceptHTML = render_markdown(Concept),
+    ?assertEqual(nomatch, binary:match(ConceptHTML, <<"&lt;div class=&quot;core-concepts-flex">>)),
+    ?assert(binary:match(ConceptHTML, <<"src=\"/info/assets/images/aosvg1.svg\"">>) =/= nomatch).
 
 device_page_omits_section_index_test() ->
     Data = #{
@@ -5444,6 +5580,36 @@ schema_source_contract_test() ->
     ?assertEqual(<<"none">>, maps:get(<<"description-source">>, DocsSchema)),
     ?assertNot(maps:is_key(<<"description">>, DocsSchema)),
     ?assertNot(maps:is_key(<<"generated">>, Schema)).
+
+schema_table_hides_blank_description_column_test() ->
+    BlankSchema = #{
+        <<"lookup">> => #{
+            <<"description">> => <<>>,
+            <<"parameters">> => #{}
+        }
+    },
+    BlankHTML = iolist_to_binary(schema_table(<<"match@1.0">>, BlankSchema, [<<"lookup">>])),
+    ?assertEqual(nomatch, binary:match(BlankHTML, <<"<th>Description</th>">>)),
+    ?assert(binary:match(BlankHTML, <<"<th>Parameters</th>">>) =/= nomatch),
+    ?assert(binary:match(BlankHTML, <<"param-pills-none\">none</span>">>) =/= nomatch),
+    DescribedSchema = #{
+        <<"lookup">> => #{
+            <<"description">> => <<"Find matching messages.">>,
+            <<"parameters">> => #{}
+        }
+    },
+    DescribedHTML = iolist_to_binary(schema_table(<<"match@1.0">>, DescribedSchema, [<<"lookup">>])),
+    ?assert(binary:match(DescribedHTML, <<"<th>Description</th>">>) =/= nomatch),
+    ?assert(binary:match(DescribedHTML, <<"Find matching messages.">>) =/= nomatch).
+
+device_summary_omits_spec_derived_prose_test() ->
+    Summary = <<"match@1.0 maintains a **reverse index** that maps a (key, value) pair to">>,
+    ?assertEqual(<<>>, device_summary(#{ <<"spec-status">> => <<"present">>, <<"summary">> => Summary })),
+    ?assertEqual([], device_summary_paragraph(#{ <<"summary">> => <<>> })),
+    ?assertEqual(
+        [<<"<p>">>, <<"No published spec.">>, <<"</p>">>],
+        device_summary_paragraph(#{ <<"summary">> => <<"No published spec.">> })
+    ).
 
 json_safe_schema_payload_test() ->
     ?assertEqual(
@@ -5734,7 +5900,9 @@ boilerplate_routes_test() ->
     ?assertEqual(nomatch, binary:match(Body, <<"Merged from the HyperBEAM">>)),
     ?assertEqual(nomatch, binary:match(Body, <<"/devices/">>)),
     ?assertEqual(nomatch, binary:match(Body, <<"href=\"/~process@1.0/info\"">>)),
-    ?assert(binary:match(Body, <<"<code>~process@1.0</code>">>) =/= nomatch),
+    ?assert(binary:match(Body, <<"class=\"theme-invert-video\"">>) =/= nomatch),
+    ?assert(binary:match(Body, <<"src=\"/info/assets/images/aosvg1.svg\"">>) =/= nomatch),
+    ?assert(binary:match(Body, <<"class=\"core-concepts-flex\"">>) =/= nomatch),
     ?assertEqual(nomatch, binary:match(Body, <<"/info/boilerplate">>)),
     {ok, IntroHTML} = node_info_route(
         [<<"introduction">>, <<"index">>],
