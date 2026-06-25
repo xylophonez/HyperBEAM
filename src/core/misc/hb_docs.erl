@@ -891,11 +891,10 @@ on_weave_recipe_docs_if_enabled(_Device, <<>>, _SpecSigner, _Opts) ->
     #{};
 on_weave_recipe_docs_if_enabled(Device, SpecID, SpecSigner, Opts) ->
     case docs_recipe_source_mode(Opts) of
-        <<"static-curated">> ->
-            #{};
-        <<"static-only">> ->
-            #{};
-        <<"off">> ->
+        StaticOnly when
+                StaticOnly =:= <<"static-curated">>;
+                StaticOnly =:= <<"static-only">>;
+                StaticOnly =:= <<"off">> ->
             #{};
         _ ->
             on_weave_recipe_docs(Device, SpecID, SpecSigner, Opts)
@@ -909,20 +908,14 @@ docs_recipe_source_mode(Opts) ->
     ).
 
 static_device_recipes(Device) ->
-    lists:foldl(
-        fun({Slug, RelPath, Devices}, Acc) ->
-            case lists:member(Device, Devices) of
-                true ->
-                    Acc#{Slug => static_recipe_doc(Slug, RelPath, Devices)};
-                false ->
-                    Acc
-            end
-        end,
-        #{},
-        static_recipe_pages()
-    ).
+    maps:from_list([
+        {Slug, static_recipe_doc(Slug, Devices)}
+    || {Slug, Devices} <- static_recipe_pages(),
+        lists:member(Device, Devices)
+    ]).
 
-static_recipe_doc(Slug, RelPath, Devices) ->
+static_recipe_doc(Slug, Devices) ->
+    RelPath = static_recipe_relpath(Slug),
     Source = device_docs_path(RelPath),
     case file:read_file(binary_to_list(Source)) of
         {ok, RawMarkdown} ->
@@ -957,37 +950,40 @@ static_recipe_doc(Slug, RelPath, Devices) ->
             }
     end.
 
+static_recipe_relpath(Slug) ->
+    <<"docs/recipes/", Slug/binary, ".md">>.
+
 static_recipe_pages() ->
     [
-        {<<"arweave-json-to-lua">>, <<"docs/recipes/arweave-json-to-lua.md">>,
+        {<<"arweave-json-to-lua">>,
             [<<"lua@5.3a">>, <<"json@1.0">>, <<"message@1.0">>]},
-        {<<"bundle-data-locally">>, <<"docs/recipes/bundle-data-locally.md">>,
+        {<<"bundle-data-locally">>,
             [<<"ans104@1.0">>, <<"message@1.0">>]},
-        {<<"check-node-readiness">>, <<"docs/recipes/check-node-readiness.md">>,
+        {<<"check-node-readiness">>,
             [<<"meta@1.0">>, <<"message@1.0">>, <<"gzip@1.0">>]},
-        {<<"create-a-process">>, <<"docs/recipes/create-a-process.md">>,
+        {<<"create-a-process">>,
             [<<"message@1.0">>, <<"scheduler@1.0">>, <<"push@1.0">>, <<"lua@5.3a">>, <<"node-process@1.0">>]},
-        {<<"gzip-round-trip">>, <<"docs/recipes/gzip-round-trip.md">>,
+        {<<"gzip-round-trip">>,
             [<<"gzip@1.0">>, <<"message@1.0">>]},
-        {<<"inspect-transaction-codec">>, <<"docs/recipes/inspect-transaction-codec.md">>,
+        {<<"inspect-transaction-codec">>,
             [<<"tx@1.0">>, <<"ans104@1.0">>]},
-        {<<"message-to-json-pipe">>, <<"docs/recipes/message-to-json-pipe.md">>,
+        {<<"message-to-json-pipe">>,
             [<<"message@1.0">>, <<"json@1.0">>]},
-        {<<"paid-device-access">>, <<"docs/recipes/paid-device-access.md">>,
+        {<<"paid-device-access">>,
             [<<"metering@1.0">>, <<"p4@1.0">>]},
-        {<<"patch-process-state">>, <<"docs/recipes/patch-process-state.md">>,
+        {<<"patch-process-state">>,
             [<<"patch@1.0">>, <<"message@1.0">>, <<"node-process@1.0">>]},
-        {<<"query-local-cache">>, <<"docs/recipes/query-local-cache.md">>,
+        {<<"query-local-cache">>,
             [<<"match@1.0">>]},
-        {<<"read-seeded-process-state">>, <<"docs/recipes/read-seeded-process-state.md">>,
+        {<<"read-seeded-process-state">>,
             [<<"node-process@1.0">>, <<"scheduler@1.0">>, <<"push@1.0">>]},
-        {<<"recorder-debug-flight">>, <<"docs/recipes/recorder-debug-flight.md">>,
+        {<<"recorder-debug-flight">>,
             [<<"recorder@1.0">>]},
-        {<<"relay-fetch-transform">>, <<"docs/recipes/relay-fetch-transform.md">>,
+        {<<"relay-fetch-transform">>,
             [<<"relay@1.0">>, <<"router@1.0">>]},
-        {<<"scheduled-lua-process">>, <<"docs/recipes/scheduled-lua-process.md">>,
+        {<<"scheduled-lua-process">>,
             [<<"lua@5.3a">>, <<"scheduler@1.0">>, <<"message@1.0">>, <<"node-process@1.0">>]},
-        {<<"trusted-custom-device">>, <<"docs/recipes/trusted-custom-device.md">>,
+        {<<"trusted-custom-device">>,
             [<<"meta@1.0">>]}
     ].
 
@@ -3199,15 +3195,6 @@ device_row(Device) ->
         <<"</span></div></a>">>
     ].
 
-devices_section(Devices) ->
-    [
-        <<"<div class=\"hb-docs-section-header\"><h2>Devices</h2>">>,
-        <<"<a class=\"hb-docs-section-link\" href=\"/info/schema\">">>,
-        <<"View all</a></div><div class=\"hb-docs-device-grid\">">>,
-        [device_row(Device) || Device <- Devices],
-        <<"</div>">>
-    ].
-
 device_card_label(#{<<"device">> := Id}) ->
     Id;
 device_card_label(Device) ->
@@ -4732,9 +4719,6 @@ render_markdown(Markdown, Opts) ->
     Lines = binary:split(Markdown, <<"\n">>, [global]),
     iolist_to_binary(render_markdown_lines(Lines, [], [], false, #{}, Opts)).
 
-render_markdown_with_heading_ids(Markdown) ->
-    render_markdown_with_heading_ids(Markdown, #{}).
-
 render_markdown_with_heading_ids(Markdown, Opts) ->
     Lines = binary:split(Markdown, <<"\n">>, [global]),
     iolist_to_binary(render_markdown_lines(Lines, [], [], true, #{}, Opts)).
@@ -4942,9 +4926,6 @@ parse_table_row(Row) ->
             false -> WithoutLeading
         end,
     [trim(Cell) || Cell <- binary:split(WithoutOuter, <<"|">>, [global])].
-
-render_inline(Text) ->
-    render_inline(Text, #{}).
 
 render_inline(Text, Opts) ->
     render_inline(Text, [], Opts).
