@@ -6,4 +6,5 @@ Start here for the conceptual base:
 
 - [What is HyperBEAM?](what-is-hyperbeam.md)
 - [What is AO-Core?](what-is-ao-core.md)
+- [AO Devices](ao-devices.md)
 - [Pathing in AO-Core](pathing-in-ao-core.md)
