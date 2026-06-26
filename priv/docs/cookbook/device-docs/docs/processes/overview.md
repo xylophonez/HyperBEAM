@@ -133,7 +133,7 @@ Use your selected node and process ID:
 
 ```sh
 HB="${HB:-http://localhost:8734}"
-PROCESS_ID="co-MIhejkMR8v3-oIvW8m_u3YfV7zXoII0ja1wk-IOo"
+PROCESS_ID="<process-id>"
 curl -fsS "$HB/$PROCESS_ID~process@1.0/compute/counter"
 ```
 

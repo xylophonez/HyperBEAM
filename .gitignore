@@ -22,10 +22,8 @@ logs
 rebar3.crashdump
 *~
 /venv
-.hyperbeam-dev-server.*
 
 *.json
-!config/docs-test-recipe-blacklist.json
 !.vscode/*
 
 *.bin
@@ -53,7 +51,3 @@ mkdocs-site-manifest.csv
 !priv/docs/
 !priv/docs/**
 priv/docs/cookbook/device-docs/node_modules/**
-!priv/docs/cookbook/device-docs/node_modules/
-!priv/docs/cookbook/device-docs/node_modules/prismjs/
-!priv/docs/cookbook/device-docs/node_modules/prismjs/components/
-!priv/docs/cookbook/device-docs/node_modules/prismjs/components/prism-core.min.js

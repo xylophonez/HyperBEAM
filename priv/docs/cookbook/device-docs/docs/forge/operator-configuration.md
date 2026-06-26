@@ -1,6 +1,6 @@
 # Operator Configuration
 
-Device loading, cache writes, auth, payments, routes, and remote fetches are operator decisions. Review your own node's configuration and public operator info before changing behavior; docs-test is a public docs node and does not expose every operator policy value as a runnable example.
+Device loading, cache writes, auth, payments, routes, and remote fetches are operator decisions. Review your own node's configuration and public operator info before changing behavior; a public docs node may not expose every operator policy value as a runnable example.
 
 Common device-related keys:
 

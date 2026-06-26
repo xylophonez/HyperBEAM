@@ -71,7 +71,7 @@ To get the complete, real-time state of a process identified by `<procId>`, use 
 
 ```bash
 HB="${HB:-http://localhost:8734}"
-PROCESS_ID="co-MIhejkMR8v3-oIvW8m_u3YfV7zXoII0ja1wk-IOo"
+PROCESS_ID="<process-id>"
 curl -fsS "$HB/$PROCESS_ID~process@1.0/now/counter"
 ```
 
@@ -83,13 +83,13 @@ If a process maintains its state in a map and you want to access a specific fiel
 
 ```bash
 HB="${HB:-http://localhost:8734}"
-PROCESS_ID="co-MIhejkMR8v3-oIvW8m_u3YfV7zXoII0ja1wk-IOo"
+PROCESS_ID="<process-id>"
 curl -fsS "$HB/$PROCESS_ID~process@1.0/compute/status"
 ```
 
 This accesses the `compute` key on the [`~process@1.0`](/~process@1.0/docs) device and then navigates to a patched state key. Every piece of relevant information your process exposes can be accessed similarly, effectively providing a native API.
 
-(Note: This represents direct navigation within the process state structure. For accessing data specifically published via the `~patch@1.0` device, see [`~patch@1.0`](/~patch@1.0/docs) and the [Patch process state](/recipes/patch-process-state.md) recipe, which typically use the `/cache/` path.)
+This represents direct navigation within the process state structure. For accessing data specifically published via the `~patch@1.0` device, see [`~patch@1.0`](/~patch@1.0/docs).
 
 ### Example 3: Basic `~message@1.0` Usage
 
@@ -114,7 +114,7 @@ The same path model works without a process ID. This request builds a transient 
 curl -sS 'http://localhost:8734/~message@1.0&greeting="Hello"&count+integer=42/~json@1.0/serialize'
 ```
 
-The output of the message device becomes the input to the JSON device. For a larger version of the same idea, see [Compute over Arweave JSON with Lua](/recipes/arweave-json-to-lua.md), which copies Arweave data locally, serializes it through HyperBEAM, and computes over it with Lua.
+The output of the message device becomes the input to the JSON device. Larger pipelines follow the same pattern: each path segment receives the message produced by the previous segment.
 
 ### Example 5: Using the `~message@1.0` Device with Type Casting
 

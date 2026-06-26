@@ -135,8 +135,6 @@ node_info_route([<<"forge">> | Parts], Req, _Opts) ->
     boilerplate_page_response([<<"forge">> | Parts], Req);
 node_info_route([<<"processes">> | Parts], Req, _Opts) ->
     boilerplate_page_response([<<"processes">> | Parts], Req);
-node_info_route([<<"reference">> | Parts], Req, _Opts) ->
-    boilerplate_page_response([<<"reference">> | Parts], Req);
 node_info_route([<<"boilerplate">> | _Parts], _Req, _Opts) ->
     {ok, not_found_response()};
 node_info_route([<<"concepts">>], Req, Opts) ->
@@ -337,10 +335,7 @@ device_recipes_data(Device, Opts) ->
             {ok, ResolvedSpecID} -> ResolvedSpecID;
             _ -> <<>>
         end,
-    Recipes = maps:merge(
-        static_device_recipes(Device),
-        on_weave_recipe_docs_if_enabled(Device, SpecID, <<>>, Opts)
-    ),
+    Recipes = device_recipe_docs(Device, SpecID, <<>>, Opts),
     maps:merge(device_doc_link_fields(Device), #{
         <<"kind">> => <<"device-info">>,
         <<"device">> => #{
@@ -438,10 +433,7 @@ on_weave_info_data(Device, SpecID, Opts) ->
     SpecSigner = maps:get(<<"signer">>, Spec, <<>>),
     {Schema, SchemaOrder, SchemaSource} =
         docs_schema_for_device(Device, SpecID, Opts),
-    Recipes = maps:merge(
-        static_device_recipes(Device),
-        on_weave_recipe_docs_if_enabled(Device, SpecID, SpecSigner, Opts)
-    ),
+    Recipes = device_recipe_docs(Device, SpecID, SpecSigner, Opts),
     {Name, Version} = split_device_id(Device),
     maps:merge(device_doc_link_fields(Device), #{
         <<"kind">> => <<"device-info">>,
@@ -841,6 +833,11 @@ on_weave_key_summaries(Device, Schema, Order) ->
         map_size(KeySchema) > 0
     ].
 
+device_recipe_docs(_Device, <<>>, _SpecSigner, _Opts) ->
+    #{};
+device_recipe_docs(Device, SpecID, SpecSigner, Opts) ->
+    on_weave_recipe_docs(Device, SpecID, SpecSigner, Opts).
+
 on_weave_recipe_docs(Device, SpecID, SpecSigner, Opts) ->
     case on_weave_doc_items(<<"Device-Recipe">>, <<"recipe-for-device">>, SpecID, [], 20, Opts) of
         {ok, Nodes} ->
@@ -864,108 +861,6 @@ on_weave_recipe_docs(Device, SpecID, SpecSigner, Opts) ->
         {error, _Reason} ->
             #{}
     end.
-
-on_weave_recipe_docs_if_enabled(_Device, <<>>, _SpecSigner, _Opts) ->
-    #{};
-on_weave_recipe_docs_if_enabled(Device, SpecID, SpecSigner, Opts) ->
-    case docs_recipe_source_mode(Opts) of
-        <<"static-curated">> ->
-            #{};
-        <<"static-only">> ->
-            #{};
-        <<"off">> ->
-            #{};
-        _ ->
-            on_weave_recipe_docs(Device, SpecID, SpecSigner, Opts)
-    end.
-
-docs_recipe_source_mode(Opts) ->
-    hb_opts:get(
-        <<"docs-recipe-source-mode">>,
-        hb_opts:get(docs_recipe_source_mode, <<"on-weave-and-static">>, Opts),
-        Opts
-    ).
-
-static_device_recipes(Device) ->
-    lists:foldl(
-        fun({Slug, RelPath, Devices}, Acc) ->
-            case lists:member(Device, Devices) of
-                true ->
-                    Acc#{Slug => static_recipe_doc(Slug, RelPath, Devices)};
-                false ->
-                    Acc
-            end
-        end,
-        #{},
-        static_recipe_pages()
-    ).
-
-static_recipe_doc(Slug, RelPath, Devices) ->
-    Source = device_docs_path(RelPath),
-    case file:read_file(binary_to_list(Source)) of
-        {ok, RawMarkdown} ->
-            Markdown = sanitize_boilerplate_markdown(RawMarkdown),
-            Blocks = code_blocks(Markdown),
-            Runnable = [Block || Block <- Blocks, maps:get(<<"runnable">>, Block, false) =:= true],
-            #{
-                <<"name">> => Slug,
-                <<"title">> => markdown_title(Markdown, Slug),
-                <<"summary">> => markdown_summary(Markdown),
-                <<"source">> => <<"static-cookbook">>,
-                <<"source-relative">> => RelPath,
-                <<"recipe-status">> => <<"curated">>,
-                <<"block-count">> => length(Blocks),
-                <<"runnable-block-count">> => length(Runnable),
-                <<"blocks">> => Blocks,
-                <<"markdown">> => Markdown,
-                <<"devices">> => Devices
-            };
-        {error, Reason} ->
-            #{
-                <<"name">> => Slug,
-                <<"title">> => Slug,
-                <<"summary">> => <<"Curated recipe source could not be loaded.">>,
-                <<"source">> => <<"static-cookbook">>,
-                <<"source-relative">> => RelPath,
-                <<"recipe-status">> => <<"missing">>,
-                <<"error">> => format_reason(Reason),
-                <<"block-count">> => 0,
-                <<"runnable-block-count">> => 0,
-                <<"devices">> => Devices
-            }
-    end.
-
-static_recipe_pages() ->
-    [
-        {<<"arweave-json-to-lua">>, <<"docs/recipes/arweave-json-to-lua.md">>,
-            [<<"lua@5.3a">>, <<"json@1.0">>, <<"message@1.0">>]},
-        {<<"bundle-data-locally">>, <<"docs/recipes/bundle-data-locally.md">>,
-            [<<"ans104@1.0">>, <<"message@1.0">>]},
-        {<<"create-a-process">>, <<"docs/recipes/create-a-process.md">>,
-            [<<"message@1.0">>, <<"scheduler@1.0">>, <<"push@1.0">>, <<"lua@5.3a">>, <<"node-process@1.0">>]},
-        {<<"gzip-round-trip">>, <<"docs/recipes/gzip-round-trip.md">>,
-            [<<"gzip@1.0">>, <<"message@1.0">>]},
-        {<<"inspect-transaction-codec">>, <<"docs/recipes/inspect-transaction-codec.md">>,
-            [<<"tx@1.0">>, <<"ans104@1.0">>]},
-        {<<"message-to-json-pipe">>, <<"docs/recipes/message-to-json-pipe.md">>,
-            [<<"message@1.0">>, <<"json@1.0">>]},
-        {<<"paid-device-access">>, <<"docs/recipes/paid-device-access.md">>,
-            [<<"metering@1.0">>, <<"p4@1.0">>]},
-        {<<"patch-process-state">>, <<"docs/recipes/patch-process-state.md">>,
-            [<<"patch@1.0">>, <<"message@1.0">>, <<"node-process@1.0">>]},
-        {<<"query-local-cache">>, <<"docs/recipes/query-local-cache.md">>,
-            [<<"match@1.0">>]},
-        {<<"read-meta-node-info">>, <<"docs/recipes/read-meta-node-info.md">>,
-            [<<"meta@1.0">>]},
-        {<<"read-seeded-process-state">>, <<"docs/recipes/read-seeded-process-state.md">>,
-            [<<"node-process@1.0">>, <<"scheduler@1.0">>, <<"push@1.0">>]},
-        {<<"recorder-debug-flight">>, <<"docs/recipes/recorder-debug-flight.md">>,
-            [<<"recorder@1.0">>]},
-        {<<"relay-fetch-transform">>, <<"docs/recipes/relay-fetch-transform.md">>,
-            [<<"relay@1.0">>, <<"router@1.0">>]},
-        {<<"scheduled-lua-process">>, <<"docs/recipes/scheduled-lua-process.md">>,
-            [<<"lua@5.3a">>, <<"scheduler@1.0">>, <<"message@1.0">>, <<"node-process@1.0">>]}
-    ].
 
 apply_recipe_blacklist(Device, SpecID, Recipes, Opts) ->
     [
@@ -1726,11 +1621,6 @@ boilerplate_pages() ->
         {<<"Device Forge">>, <<"docs/forge/runbook.md">>, <<"Runbook">>},
         {<<"Device Forge">>, <<"docs/forge/test-package-verify.md">>, <<"Test Package Verify">>},
         {<<"Device Forge">>, <<"docs/forge/trusted-signers-and-pins.md">>, <<"Trusted Signers And Pins">>}
-    ] ++ [
-        {<<"Reference">>, <<"docs/reference/example-validation.md">>, <<"Example Validation">>},
-        {<<"Reference">>, <<"docs/reference/process-fixture.md">>, <<"Process Fixture">>},
-        {<<"Reference">>, <<"docs/reference/recipe-standards.md">>, <<"Recipe Standards">>},
-        {<<"Reference">>, <<"docs/reference/recipe-audit-2026-06-25.md">>, <<"Recipe Audit 2026-06-25">>}
     ].
 
 boilerplate_process_route(Slug) ->
@@ -3175,15 +3065,6 @@ device_row(Device) ->
         <<"<span class=\"hb-docs-device-card-desc\">">>,
         esc(card_summary(Summary)),
         <<"</span></div></a>">>
-    ].
-
-devices_section(Devices) ->
-    [
-        <<"<div class=\"hb-docs-section-header\"><h2 id=\"devices\">Devices</h2>">>,
-        <<"<a class=\"hb-docs-section-link\" href=\"/docs#devices\">">>,
-        <<"View all</a></div><div class=\"hb-docs-device-grid\">">>,
-        [device_row(Device) || Device <- Devices],
-        <<"</div>">>
     ].
 
 device_card_label(#{<<"device">> := Id}) ->
@@ -4722,9 +4603,6 @@ render_markdown(Markdown, Opts) ->
     Lines = binary:split(Markdown, <<"\n">>, [global]),
     iolist_to_binary(render_markdown_lines(Lines, [], [], false, #{}, Opts)).
 
-render_markdown_with_heading_ids(Markdown) ->
-    render_markdown_with_heading_ids(Markdown, #{}).
-
 render_markdown_with_heading_ids(Markdown, Opts) ->
     Lines = binary:split(Markdown, <<"\n">>, [global]),
     iolist_to_binary(render_markdown_lines(Lines, [], [], true, #{}, Opts)).
@@ -4932,9 +4810,6 @@ parse_table_row(Row) ->
             false -> WithoutLeading
         end,
     [trim(Cell) || Cell <- binary:split(WithoutOuter, <<"|">>, [global])].
-
-render_inline(Text) ->
-    render_inline(Text, #{}).
 
 render_inline(Text, Opts) ->
     render_inline(Text, [], Opts).
@@ -5620,7 +5495,7 @@ node_info_contract_test() ->
     ?assertNot(maps:is_key(<<"arweave-info">>, Data)),
     ?assertNot(maps:is_key(<<"message-info">>, Data)),
     ?assertEqual(<<"/docs/guides">>, maps:get(<<"boilerplate-link">>, Data)),
-    ?assertEqual(25, length(maps:get(<<"pages">>, maps:get(<<"boilerplate">>, Data)))),
+    ?assertEqual(21, length(maps:get(<<"pages">>, maps:get(<<"boilerplate">>, Data)))),
     ?assertEqual(<<"cookbook@1.0">>, maps:get(<<"device">>, maps:get(<<"renderer">>, Data))),
     ?assertEqual([], maps:get(<<"devices">>, Data)).
 
@@ -5718,8 +5593,7 @@ message_info_contract_test() ->
 
 packaged_device_docs_root_test() ->
     Root = hb_util:bin(packaged_device_docs_root()),
-    ?assert(binary:match(Root, <<"priv/docs/cookbook/device-docs">>) =/= nomatch),
-    ?assertEqual(nomatch, binary:match(Root, <<"/home/fn/Dev/device-docs">>)).
+    ?assert(binary:match(Root, <<"priv/docs/cookbook/device-docs">>) =/= nomatch).
 
 html_negotiation_test() ->
     {ok, JSON} = device_info(<<"json@1.0">>, #{ <<"accept">> => <<"application/json">> }, #{}),
@@ -5996,40 +5870,6 @@ recipe_blacklist_loads_operator_file_test() ->
         docs_recipe_blacklist(#{ <<"docs-recipe-blacklist-file">> => hb_util:bin(BadPath) })
     ).
 
-static_recipes_attach_to_device_pages_test() ->
-    MessageRecipes = static_device_recipes(<<"message@1.0">>),
-    RouterRecipes = static_device_recipes(<<"router@1.0">>),
-    MetaRecipes = static_device_recipes(<<"meta@1.0">>),
-    TXRecipes = static_device_recipes(<<"tx@1.0">>),
-    ?assert(maps:is_key(<<"message-to-json-pipe">>, MessageRecipes)),
-    ?assert(maps:is_key(<<"relay-fetch-transform">>, RouterRecipes)),
-    ?assert(maps:is_key(<<"read-meta-node-info">>, MetaRecipes)),
-    ?assertNot(maps:is_key(<<"check-node-readiness">>, MetaRecipes)),
-    ?assertNot(maps:is_key(<<"trusted-custom-device">>, MetaRecipes)),
-    ?assert(maps:is_key(<<"inspect-transaction-codec">>, TXRecipes)),
-    TXRecipe = maps:get(<<"inspect-transaction-codec">>, TXRecipes),
-    ?assertEqual(<<"static-cookbook">>, maps:get(<<"source">>, TXRecipe)),
-    ?assertEqual(
-        <<"docs/recipes/inspect-transaction-codec.md">>,
-        maps:get(<<"source-relative">>, TXRecipe)
-    ),
-    ?assertEqual(2, maps:get(<<"runnable-block-count">>, TXRecipe)),
-    Body = iolist_to_binary(recipe_nav(<<"tx@1.0">>, TXRecipes)),
-    ?assert(binary:match(Body, <<"href=\"/~tx@1.0/docs/recipes/inspect-transaction-codec\"">>) =/= nomatch),
-    ?assert(binary:match(Body, <<"Inspect The Transaction Codec">>) =/= nomatch).
-
-static_curated_recipe_mode_skips_on_weave_lookup_test() ->
-    Opts = #{ <<"docs-recipe-source-mode">> => <<"static-curated">> },
-    ?assertEqual(
-        #{},
-        on_weave_recipe_docs_if_enabled(
-            <<"message@1.0">>,
-            <<"spec-id">>,
-            <<"spec-signer">>,
-            Opts
-        )
-    ).
-
 footer_nav_test() ->
     {ok, SpecSectionHTML} = device_info_route(
         ?MESSAGE_DEVICE,
@@ -6153,7 +5993,7 @@ boilerplate_routes_test() ->
     ?assertEqual(<<"node-boilerplate-index">>, maps:get(<<"kind">>, Index)),
     ?assertEqual(<<"/docs/guides">>, maps:get(<<"href">>, Index)),
     Pages = maps:get(<<"pages">>, Index),
-    ?assertEqual(25, length(Pages)),
+    ?assertEqual(21, length(Pages)),
     RelPaths = [maps:get(<<"source-relative">>, Page) || Page <- Pages],
     ProcessPages = boilerplate_pages_for_section(<<"Processes">>, Pages),
     ?assertEqual(7, length(ProcessPages)),
@@ -6191,10 +6031,10 @@ boilerplate_routes_test() ->
         fun(RelPath) -> binary:match(RelPath, <<"docs/devices/">>) =:= nomatch end,
         RelPaths
     )),
-    ?assert(lists:member(<<"docs/reference/example-validation.md">>, RelPaths)),
-    ?assert(lists:member(<<"docs/reference/process-fixture.md">>, RelPaths)),
-    ?assert(lists:member(<<"docs/reference/recipe-standards.md">>, RelPaths)),
-    ?assert(lists:member(<<"docs/reference/recipe-audit-2026-06-25.md">>, RelPaths)),
+    ?assert(lists:all(
+        fun(RelPath) -> binary:match(RelPath, <<"docs/reference/">>) =:= nomatch end,
+        RelPaths
+    )),
     ?assertNot(lists:member(
         <<"docs/devices/compute-and-processes/process-at-1-0/index.md">>,
         RelPaths
@@ -6207,7 +6047,6 @@ boilerplate_routes_test() ->
         <<"docs/devices/compute-and-processes/process-at-1-0/SOURCE-MAP.md">>,
         RelPaths
     )),
-    ?assertEqual(nomatch, binary:match(maps:get(<<"source-root">>, Index), <<"/home/fn/Dev/device-docs">>)),
     {ok, JSONResponse} = node_info_route(
         [<<"introduction">>, <<"what-is-hyperbeam">>],
         #{ <<"accept">> => <<"application/json">> },
@@ -6321,9 +6160,6 @@ boilerplate_routes_test() ->
     ?assert(binary:match(GuidesBody, <<"href=\"/docs/introduction/what-is-ao-core\"">>) =/= nomatch),
     ?assert(binary:match(GuidesBody, <<"href=\"/docs/processes/state-and-reads\"">>) =/= nomatch),
     ?assert(binary:match(GuidesBody, <<"href=\"/docs/forge/create-a-device\"">>) =/= nomatch),
-    ?assert(binary:match(GuidesBody, <<"href=\"/docs/reference/recipe-standards\"">>) =/= nomatch),
-    ?assert(binary:match(GuidesBody, <<"href=\"/docs/reference/process-fixture\"">>) =/= nomatch),
-    ?assert(binary:match(GuidesBody, <<"Recipe Standards">>) =/= nomatch),
     ?assertEqual(nomatch, binary:match(GuidesBody, <<"Merged from the HyperBEAM">>)),
     ?assertEqual(nomatch, binary:match(GuidesBody, <<"/docs/boilerplate">>)),
     ?assertEqual(nomatch, binary:match(GuidesBody, <<"01-intro-to-process">>)),
@@ -6347,15 +6183,8 @@ boilerplate_routes_test() ->
     ?assertEqual(404, maps:get(<<"status">>, OldDeviceRecipes)),
     {ok, OldDeviceInventory} = node_info_route([<<"boilerplate">>, <<"reference">>, <<"device-inventory">>], #{ <<"accept">> => <<"application/json">> }, #{}),
     ?assertEqual(404, maps:get(<<"status">>, OldDeviceInventory)),
-    {ok, StandardsJSONResponse} = node_info_route([<<"reference">>, <<"recipe-standards">>], #{ <<"accept">> => <<"application/json">> }, #{}),
-    StandardsJSON = decoded_json_response(StandardsJSONResponse),
-    ?assertEqual(<<"docs/reference/recipe-standards.md">>, maps:get(<<"source-relative">>, StandardsJSON)),
-    {ok, AuditJSONResponse} = node_info_route([<<"reference">>, <<"recipe-audit-2026-06-25">>], #{ <<"accept">> => <<"application/json">> }, #{}),
-    AuditJSON = decoded_json_response(AuditJSONResponse),
-    ?assertEqual(<<"docs/reference/recipe-audit-2026-06-25.md">>, maps:get(<<"source-relative">>, AuditJSON)),
-    {ok, FixtureJSONResponse} = node_info_route([<<"reference">>, <<"process-fixture">>], #{ <<"accept">> => <<"application/json">> }, #{}),
-    FixtureJSON = decoded_json_response(FixtureJSONResponse),
-    ?assertEqual(<<"docs/reference/process-fixture.md">>, maps:get(<<"source-relative">>, FixtureJSON)),
+    {ok, ReferenceJSONResponse} = node_info_route([<<"reference">>, <<"example">>], #{ <<"accept">> => <<"application/json">> }, #{}),
+    ?assertEqual(404, maps:get(<<"status">>, ReferenceJSONResponse)),
     {ok, DeviceInventory} = node_info_route([<<"reference">>, <<"device-inventory">>], #{ <<"accept">> => <<"application/json">> }, #{}),
     ?assertEqual(404, maps:get(<<"status">>, DeviceInventory)),
     {ok, ProcessIndex} = node_info_route([<<"processes">>, <<"index">>], #{ <<"accept">> => <<"application/json">> }, #{}),

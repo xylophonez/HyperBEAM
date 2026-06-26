@@ -10,15 +10,12 @@ against a live `device-docs` checkout.
 
 The packaged snapshot contains:
 
-- `docs/`: source Markdown for boilerplate guides and device-attached recipes,
-  plus docs image assets.
+- `docs/`: source Markdown for boilerplate guides plus docs image assets.
 - `site/assets/`: the docs UI shell assets served at `/docs/assets/...`.
-- `scripts/`: source checks for packaged assets and runnable examples.
-- `package.json`: npm entry points for those checks.
+- `scripts/`: source checks for packaged assets.
+- `package.json`: an npm entry point for those checks.
 
 There is intentionally no committed `dist/`, docsify app, copied Markdown tree,
 or tracked `node_modules/` content. HyperBEAM renders docs in Erlang, reads
 Markdown from `docs/`, and serves assets directly from `site/assets/` and
 `docs/assets/`.
-
-See `device-docs/AGENTS.md` for the UI-side editing and rebuild workflow.

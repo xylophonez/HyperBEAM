@@ -1101,7 +1101,7 @@
         '',
         String(error && error.message ? error.message : error),
         '',
-        'If the docs are served over HTTPS and the node is http://localhost, the browser may block the request. Try ?node=https://mystical.computer or another HTTPS HyperBEAM node.'
+        'If the docs are served over HTTPS and the node is http://localhost, the browser may block the request. Try another HTTPS HyperBEAM node.'
       ].join('\n');
       setRunnerStatus('Failed', 'failed');
       const result = { output: detail, detail, status: 'Failed', failed: true };

@@ -21,15 +21,15 @@ Send({
 Read selected state:
 
 ```text
-GET /co-MIhejkMR8v3-oIvW8m_u3YfV7zXoII0ja1wk-IOo~process@1.0/compute/counter
-GET /co-MIhejkMR8v3-oIvW8m_u3YfV7zXoII0ja1wk-IOo~process@1.0/compute/status
+GET /<process-id>~process@1.0/compute/counter
+GET /<process-id>~process@1.0/compute/status
 ```
 
 With a node:
 
 ```sh
 HB="${HB:-http://localhost:8734}"
-PROCESS_ID="co-MIhejkMR8v3-oIvW8m_u3YfV7zXoII0ja1wk-IOo"
+PROCESS_ID="<process-id>"
 curl -fsS "$HB/$PROCESS_ID~process@1.0/compute/counter"
 ```
 
