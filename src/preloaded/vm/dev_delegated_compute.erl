@@ -3,7 +3,6 @@
 %%% bring trusted results into the local node, or as the `Execution-Device' of
 %%% an AO process.
 -module(dev_delegated_compute).
--specification("../../../specs/delegated-compute@1.0.md").
 -device_libraries([lib_process]).
 -export([init/3, compute/3, normalize/3, snapshot/3]).
 -include("include/hb.hrl").

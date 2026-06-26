@@ -1,8 +1,7 @@
 %%% @doc Cookbook renderer implementation for HyperBEAM docs payloads.
 %%%
-%%% This module is compiled with the core app so `/info' interception can use
-%%% it directly. The preloaded `~cookbook@1.0' device delegates here to expose
-%%% the same renderer over the device protocol.
+%%% This module is compiled with the core app so the `~cookbook@1.0' device can
+%%% expose the same renderer over direct device calls and the `/docs' hook.
 -module(hb_docs_cookbook).
 -export([render/3, respond_html_or_json/4, unsupported_device_response/2]).
 -export([renderer_metadata/0]).
@@ -48,7 +47,7 @@ renderer_metadata() ->
         <<"node-renderer">> => <<"/~cookbook@1.0/index">>,
         <<"device-renderer">> => <<"/~cookbook@1.0/device?for=<device@version>">>,
         <<"source">> => <<"src/preloaded/node/dev_cookbook.erl">>,
-        <<"status">> => <<"prototype-renderer-device">>
+        <<"status">> => <<"renderer-device">>
     }.
 
 wants_html(Req) ->
@@ -85,14 +84,14 @@ html_response(recipe, Data) ->
 html_response(implementations, Data) ->
     html_doc_response(hb_docs:render_implementations_html(Data));
 html_response(node_schema, Data) ->
-    html_doc_response(hb_docs:render_node_component_html(<<"Schema">>, <<"/info/schema">>, Data));
+    html_doc_response(hb_docs:render_node_component_html(<<"Schema">>, <<"/docs/schema">>, Data));
 html_response(node_spec, Data) ->
-    html_doc_response(hb_docs:render_node_component_html(<<"Spec">>, <<"/info/spec">>, Data));
+    html_doc_response(hb_docs:render_node_component_html(<<"Spec">>, <<"/docs/spec">>, Data));
 html_response(node_recipes, Data) ->
-    html_doc_response(hb_docs:render_node_component_html(<<"Recipes">>, <<"/info/recipes">>, Data));
+    html_doc_response(hb_docs:render_node_component_html(<<"Recipes">>, <<"/docs/recipes">>, Data));
 html_response(node_implementations, Data) ->
     html_doc_response(
-        hb_docs:render_node_component_html(<<"Implementations">>, <<"/info/implementations">>, Data)
+        hb_docs:render_node_component_html(<<"Implementations">>, <<"/docs/implementations">>, Data)
     );
 html_response(node_boilerplate, Data) ->
     html_doc_response(hb_docs:render_node_boilerplate_html(Data));

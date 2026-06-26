@@ -25,7 +25,6 @@
 -module(hb_device_load).
 -export([reference/2]).
 -include("include/hb.hrl").
--include_lib("eunit/include/eunit.hrl").
 
 %% @doc A message is already a device. A binary reference is resolved,
 %% then memoised in the process cache unless it is a forge seed.
@@ -34,23 +33,17 @@ reference(Loaded, _Opts) when is_map(Loaded) ->
 reference(Ref, Opts) when is_binary(Ref) ->
     NormRef = hb_ao:normalize_key(Ref),
     case from_forge_bootstrap(NormRef, Opts) of
-        {ok, Mod} -> {ok, Mod};
-        {error, not_found} -> resolve_cached(NormRef, Opts);
-        {error, Err} -> {error, Err}
+        {ok, _} = Ok ->
+            Ok;
+        {error, not_found} ->
+            resolve_cached(NormRef, Opts)
     end.
 
 resolve_cached(Ref, Opts) ->
-    device_load_result(resolve(Ref, Opts), Ref, Opts).
-
-device_load_result({cached, Mod}, _Ref, _Opts) ->
-    {ok, Mod};
-device_load_result({ok, Mod} = Ok, Ref, Opts) ->
-    put_resolved_device(Ref, Mod, Opts),
-    Ok;
-device_load_result({error, Err}, _Ref, _Opts) ->
-    {error, Err};
-device_load_result(Other, _Ref, _Opts) ->
-    {error, {unexpected_device_load_result, Other}}.
+    case resolve(Ref, Opts) of
+        {ok, Mod} = Ok -> put_resolved_device(Ref, Mod, Opts), Ok;
+        {error, _} = Error -> Error
+    end.
 
 %% @doc The resolved-device store, then the high-trust sources, then the
 %% low-trust sources. The first `{ok, _}' wins; a real error from a
@@ -70,20 +63,15 @@ resolve(Ref, Opts) ->
 get_resolved_device(Ref, Opts) ->
     case erlang:get({?MODULE, Ref}) of
         Mod when is_atom(Mod), Mod =/= undefined ->
-            {cached, Mod};
+            {ok, Mod};
         _ ->
             maybe
                 {ok, Bin} ?=
                     hb_store:read(
-                        loaded_device_store(Opts),
-                        store_key(Ref),
-                        Opts
-                    ),
+                        loaded_device_store(Opts), store_key(Ref), Opts),
                 Mod = hb_util:atom(Bin),
-                % Always stash in the process dictionary even if the shared
-                % loaded-device store already had the reference.
                 erlang:put({?MODULE, Ref}, Mod),
-                {cached, Mod}
+                {ok, Mod}
             end
     end.
 
@@ -115,8 +103,6 @@ from_high_trust(Ref, Opts) ->
 from_forge_bootstrap(Ref, Opts) ->
     case hb_opts:get(forge_bootstrap, #{}, Opts) of
         #{ Ref := Mod } when is_atom(Mod) -> {ok, Mod};
-        Seeds when is_map(Seeds), map_size(Seeds) > 0 ->
-            {error, {forge_bootstrap_device_not_found, Ref}};
         _ -> {error, not_found}
     end.
 
@@ -189,7 +175,6 @@ preloaded(Opts) ->
 from_low_trust(Ref, Opts) ->
     maybe
         {ok, SpecID} ?= resolve_spec(Ref, Opts),
-        TrustedSigners = trusted_signer_entries(Ref, SpecID, Opts),
         LocalIterators =
             [
                 fun() ->
@@ -200,25 +185,25 @@ from_low_trust(Ref, Opts) ->
                 end
             ],
         RemoteIterators =
-            case {hb_opts:get(<<"load-remote-devices">>, false, Opts), TrustedSigners} of
-                {true, [_ | _]} ->
+            case hb_opts:get(<<"load-remote-devices">>, false, Opts) of
+                true ->
                     [
                         fun() ->
                             hb_util:ok_or(
                                 hb_client_gateway:device(
                                     SpecID,
-                                    TrustedSigners,
+                                    trusted_signers(Opts),
                                     Opts
                                 ),
                                 []
                             )
                         end
                     ];
-                _ ->
+                false ->
                     []
             end,
         lazy_first(
-            fun(ID) -> verify_and_load(Ref, SpecID, ID, Opts) end,
+            fun(ID) -> verify_and_load(SpecID, ID, Opts) end,
             LocalIterators ++ RemoteIterators
         )
     end.
@@ -239,7 +224,7 @@ resolve_spec(Ref, Opts) ->
 
 %% @doc A low-trust implementation must be signed by a trusted signer,
 %% implement the requested specification, and be machine-compatible.
-verify_and_load(Ref, SpecID, ID, Opts) ->
+verify_and_load(SpecID, ID, Opts) ->
     maybe
         {ok, Msg} ?= hb_cache:read(ID, Opts),
         Signers = signers(Msg, Opts),
@@ -248,7 +233,7 @@ verify_and_load(Ref, SpecID, ID, Opts) ->
                 orelse {error, <<"implementation-signature-invalid">>},
         true ?=
             lists:any(
-                fun(S) -> lists:member(S, trusted_signers(Ref, SpecID, Opts)) end,
+                fun(S) -> lists:member(S, trusted_signers(Opts)) end,
                 Signers
             ) orelse {error, <<"device-signer-untrusted">>},
         ok ?= implements(SpecID, Msg, Opts),
@@ -268,8 +253,7 @@ lazy_first(F, [], [Next | Rest]) ->
 lazy_first(F, [X | Xs], Iterators) ->
     case F(X) of
         {ok, _} = Ok -> Ok;
-        {error, _} -> lazy_first(F, Xs, Iterators);
-        _Other -> lazy_first(F, Xs, Iterators)
+        {error, _} -> lazy_first(F, Xs, Iterators)
     end.
 
 %%% --------------------------------------------------------------------
@@ -324,77 +308,11 @@ signers(Msg, Opts) ->
     ).
 %% @doc Trusted signers, defaulting to the node's own address.
 %% Computed lazily so the default config need not call `hb:address/0'.
-trusted_signers(Ref, SpecID, Opts) ->
-    [
-        Address
-    ||
-        Signer <- trusted_signer_entries(Ref, SpecID, Opts),
-        Address <- [trusted_signer_address(Signer, Opts)],
-        Address =/= undefined
-    ].
-
-trusted_signer_entries(Ref, SpecID, Opts) ->
-    [
-        Signer
-    ||
-        Signer <- trusted_signer_entries(Opts),
-        trusted_signer_accepts(Ref, SpecID, Signer, Opts)
-    ].
-
-trusted_signer_entries(Opts) ->
+trusted_signers(Opts) ->
     case hb_opts:get(trusted_device_signers, [], Opts) of
         [] -> [hb:address()];
         Signers when is_list(Signers) -> Signers
     end.
-
-trusted_signer_accepts(_Ref, _SpecID, Signer, _Opts) when is_binary(Signer) ->
-    true;
-trusted_signer_accepts(Ref, SpecID, Signer, Opts) when is_map(Signer) ->
-    case hb_maps:get(<<"devices">>, Signer, undefined, Opts) of
-        undefined -> true;
-        Devices when is_list(Devices) ->
-            lists:member(Ref, Devices) orelse lists:member(SpecID, Devices);
-        _ ->
-            false
-    end;
-trusted_signer_accepts(_Ref, _SpecID, _Signer, _Opts) ->
-    false.
-
-trusted_signer_address(Signer, _Opts) when is_binary(Signer) ->
-    Signer;
-trusted_signer_address(Signer, Opts) when is_map(Signer) ->
-    hb_maps:get(<<"address">>, Signer, undefined, Opts);
-trusted_signer_address(_Signer, _Opts) ->
-    undefined.
-
-trusted_signer_devices_test() ->
-    Ref = <<"copycat@1.0">>,
-    SpecID = <<"SPEC_ID">>,
-    ?assertEqual(
-        [<<"plain">>, <<"unscoped">>, <<"by-ref">>, <<"by-spec">>],
-        trusted_signers(
-            Ref,
-            SpecID,
-            #{
-                <<"trusted-device-signers">> => [
-                    <<"plain">>,
-                    #{<<"address">> => <<"unscoped">>},
-                    #{<<"address">> => <<"by-ref">>, <<"devices">> => [Ref]},
-                    #{<<"address">> => <<"by-spec">>, <<"devices">> => [SpecID]},
-                    #{
-                        <<"address">> => <<"other">>,
-                        <<"devices">> => [<<"arweave@2.9">>]
-                    }
-                ]
-            }
-        )
-    ).
-
-unexpected_loader_result_returns_error_test() ->
-    ?assertMatch(
-        {error, {unexpected_device_load_result, {failure, failure}}},
-        device_load_result({failure, failure}, <<"REF">>, #{})
-    ).
 
 %% @doc Every `requires-*' key must match this machine's `system_info'.
 compatible(Msg, Opts) ->

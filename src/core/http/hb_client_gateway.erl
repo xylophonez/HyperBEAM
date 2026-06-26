@@ -111,32 +111,23 @@ data(ID, Opts) ->
     case hb_http:request(Req, Opts) of
         {ok, Data} when is_binary(Data) -> {ok, Data};
         {ok, Res} ->
-            extract_data_response(ID, Res, Opts);
+            Data =
+                case hb_maps:find(<<"data">>, Res, Opts) of
+                    {ok, D} -> D;
+                    _ -> hb_ao:get(<<"body">>, Res, <<>>, Opts)
+                end,
+            ?event(gateway,
+                {data,
+                    {id, ID},
+                    {response, Res},
+                    {data, Data}
+                }
+            ),
+            {ok, Data};
         Res ->
             ?event(gateway, {request_error, {id, ID}, {response, Res}}),
             {error, no_viable_gateway}
     end.
-
-extract_data_response(ID, Res, Opts) when is_map(Res) ->
-    Data =
-        case hb_maps:find(<<"data">>, Res, Opts) of
-            {ok, D} -> D;
-            _ -> hb_ao:get(<<"body">>, Res, <<>>, Opts)
-        end,
-    ?event(gateway,
-        {data,
-            {id, ID},
-            {response, Res},
-            {data, Data}
-        }
-    ),
-    case Data of
-        Bin when is_binary(Bin) -> {ok, Bin};
-        Other -> {error, {non_binary_gateway_data, Other}}
-    end;
-extract_data_response(ID, Other, _Opts) ->
-    ?event(gateway, {unexpected_data_response, {id, ID}, {response, Other}}),
-    {error, {unexpected_gateway_data_response, Other}}.
 
 %% @doc Find the location of the scheduler based on its ID, through GraphQL.
 location(Address, Opts) ->
@@ -182,37 +173,19 @@ location(Address, Opts) ->
 %% compatible device implementations we must query for messages with the
 %% appropriate tags and signatures.
 device(SpecID, TrustedSigners, Opts) ->
-    Queries = device_queries(SpecID, TrustedSigners, Opts),
-    case device_result(Queries, Opts) of
-        {error, _} = Error ->
-            Error;
-        {ok, []} ->
-            ?event(
-                device_load,
-                {no_viable_device_implementations, {device, SpecID}}
-            ),
-            {error, not_found};
-        {ok, Items} ->
-            ?event(
-                device_load,
-                {implementations_found_via_graphql,
-                    {device, SpecID},
-                    {implementations, length(Items)}
-                }
-            ),
-            {
-                ok,
-                [
-                    ID
-                ||
-                    #{ <<"node">> := #{ <<"id">> := ID } } <- Items
-                ]
-            }
-    end.
-
-device_result([], _Opts) ->
-    {ok, []};
-device_result([{Query, Variables} | Rest], Opts) ->
+    Query =
+        <<"query($specid: [String!], $trusted: [String!]) { ",
+                "transactions(",
+                "owners: $trusted, ",
+                "tags: { name: \"implements-device\" values: $specid }, ",
+                "first: 1",
+            "){ ",
+                "edges { ",
+                    (item_spec())/binary ,
+                " } ",
+            "} ",
+        "}">>,
+    Variables = #{ <<"trusted">> => TrustedSigners, <<"specid">> => [SpecID] },
     case query(Query, Variables, Opts) of
         {error, Reason} ->
             ?event({device_read_failed, {query, Query}, {error, Reason}}),
@@ -221,79 +194,29 @@ device_result([{Query, Variables} | Rest], Opts) ->
             ?event({device_query_success, {query, Query}, {response, GqlMsg}}),
             case hb_ao:get(<<"data/transactions/edges">>, GqlMsg, Opts) of
                 X when X =:= not_found orelse X =:= [] ->
-                    device_result(Rest, Opts);
+                    ?event(
+                        device_load,
+                        {no_viable_device_implementations, {device, SpecID}}
+                    ),
+                    {error, not_found};
                 Items ->
-                    {ok, Items}
+                    ?event(
+                        device_load,
+                        {implementations_found_via_graphql,
+                            {device, SpecID},
+                            {implementations, length(Items)}
+                        }
+                    ),
+                    {
+                        ok,
+                        [
+                            ID
+                        ||
+                            #{ <<"node">> := #{ <<"id">> := ID } } <- Items
+                        ]
+                    }
             end
     end.
-
-device_queries(SpecID, TrustedSigners, Opts) ->
-    SignerPolicies =
-        [
-            {Address, signer_valid_until_height(Signer, Opts)}
-        ||
-            Signer <- TrustedSigners,
-            Address <- [trusted_signer_address(Signer, Opts)],
-            Address =/= undefined
-        ],
-    case lists:any(fun({_Signer, Height}) -> Height =/= undefined end, SignerPolicies) of
-        false ->
-            Signers = [Signer || {Signer, _Height} <- SignerPolicies],
-            [device_query(SpecID, Signers, undefined)];
-        true ->
-            [
-                device_query(SpecID, [Signer], Height)
-            ||
-                {Signer, Height} <- SignerPolicies
-            ]
-    end.
-
-trusted_signer_address(Signer, _Opts) when is_binary(Signer) ->
-    Signer;
-trusted_signer_address(Signer, Opts) when is_map(Signer) ->
-    hb_maps:get(<<"address">>, Signer, undefined, Opts);
-trusted_signer_address(_Signer, _Opts) ->
-    undefined.
-
-signer_valid_until_height(Signer, Opts) when is_map(Signer) ->
-    case hb_maps:get(<<"valid-until-height">>, Signer, undefined, Opts) of
-        undefined -> undefined;
-        Height -> hb_util:int(Height)
-    end;
-signer_valid_until_height(_Signer, _Opts) ->
-    undefined.
-
-device_query(SpecID, TrustedSigners, ValidUntilHeight) ->
-    BlockFilter =
-        case ValidUntilHeight of
-            undefined -> <<>>;
-            _ -> <<"block: { max: $validUntilHeight }, ">>
-        end,
-    ValidUntilVar =
-        case ValidUntilHeight of
-            undefined -> <<>>;
-            _ -> <<", $validUntilHeight: Int">>
-        end,
-    Query =
-        <<"query($specid: [String!], $trusted: [String!]", ValidUntilVar/binary, ") { ",
-                "transactions(",
-                "owners: $trusted, ",
-                "tags: { name: \"implements-device\" values: $specid }, ",
-                BlockFilter/binary,
-                "first: 1",
-            "){ ",
-                "edges { ",
-                    (item_spec())/binary ,
-                " } ",
-            "} ",
-        "}">>,
-    Variables0 = #{ <<"trusted">> => TrustedSigners, <<"specid">> => [SpecID] },
-    Variables =
-        case ValidUntilHeight of
-            undefined -> Variables0;
-            _ -> Variables0#{ <<"validUntilHeight">> => ValidUntilHeight }
-        end,
-    {Query, Variables}.
 
 %% @doc Run a GraphQL request encoded as a binary. The node message may contain 
 %% a list of URLs to use, optionally as a tuple with an additional map of options
@@ -523,47 +446,6 @@ subindex_to_tags(Subindex) ->
     <<"[", ListInner/binary, "]">>.
 
 %%% Tests
-gateway_data_response_shape_test() ->
-    ID = <<"gateway-data-test">>,
-    ?assertEqual(
-        {ok, <<"from-data">>},
-        extract_data_response(ID, #{ <<"data">> => <<"from-data">> }, #{})
-    ),
-    ?assertEqual(
-        {ok, <<"from-body">>},
-        extract_data_response(ID, #{ <<"body">> => <<"from-body">> }, #{})
-    ),
-    ?assertEqual(
-        {error, {non_binary_gateway_data, checkout_timeout}},
-        extract_data_response(ID, #{ <<"data">> => checkout_timeout }, #{})
-    ),
-    ?assertEqual(
-        {error, {unexpected_gateway_data_response, checkout_timeout}},
-        extract_data_response(ID, checkout_timeout, #{})
-    ).
-
-device_valid_until_height_query_test() ->
-    SpecID = <<"spec">>,
-    Alice = <<"alice">>,
-    Bob = <<"bob">>,
-    [{BaseQuery, BaseVars}] = device_queries(SpecID, [Alice, Bob], #{}),
-    ?assertEqual([Alice, Bob], maps:get(<<"trusted">>, BaseVars)),
-    ?assertEqual(nomatch, binary:match(BaseQuery, <<"validUntilHeight">>)),
-    [{AliceQuery, AliceVars}, {BobQuery, BobVars}] =
-        device_queries(
-            SpecID,
-            [#{ <<"address">> => Alice, <<"valid-until-height">> => 1543210 }, Bob],
-            #{}
-        ),
-    ?assertEqual([Alice], maps:get(<<"trusted">>, AliceVars)),
-    ?assertEqual(1543210, maps:get(<<"validUntilHeight">>, AliceVars)),
-    ?assert(
-        binary:match(AliceQuery, <<"block: { max: $validUntilHeight }">>)
-            =/= nomatch
-    ),
-    ?assertEqual([Bob], maps:get(<<"trusted">>, BobVars)),
-    ?assertEqual(nomatch, binary:match(BobQuery, <<"validUntilHeight">>)).
-
 ans104_no_data_item_test() ->
     % Start a random node so that all of the services come up.
     _Node = hb_http_server:start_node(#{}),

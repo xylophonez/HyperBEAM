@@ -14,7 +14,6 @@
 %%% `metering-rates' in the node message as a map of resource name to AO token
 %%% units per resource unit.
 -module(dev_metering).
--specification("../../../specs/metering@1.0.md").
 -export([info/1, estimate/3, price/3, is_active/0, consume/3]).
 
 -include_lib("eunit/include/eunit.hrl").
@@ -33,7 +32,6 @@ info(_) ->
     }.
 
 %% @doc Start a metering session for the request.
--spec estimate(#{ _ => _ }, #{ _ => _ }, #{ _ => _ }) -> {ok, 0}.
 estimate(_Base, _EstimateReq, _Opts) ->
     {reductions, Reductions} = erlang:process_info(self(), reductions),
     erlang:put(
@@ -46,11 +44,6 @@ estimate(_Base, _EstimateReq, _Opts) ->
     {ok, 0}.
 
 %% @doc Close the metering session and calculate the final AO token price.
--spec price(
-    #{ _ => _ },
-    #{ _ => _ },
-    #{ 'metering-rates' => #{ binary() => integer() | binary() }, _ => _ }
-) -> {ok, integer()}.
 price(_Base, _PriceReq, Opts) ->
     Rates = hb_opts:get(<<"metering-rates">>, #{}, Opts),
     Price =

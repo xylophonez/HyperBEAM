@@ -5,7 +5,6 @@
 %%% are found in this module, while the codec functions are relayed to the 
 %%% `dev_httpsig_conv' module.
 -module(dev_httpsig).
--specification("../../../specs/httpsig@1.0.md").
 %%% Codec API functions
 -export([to/3, from/3]).
 %%% Uni-directional codec support (_to_ binary/header+body components), but not 

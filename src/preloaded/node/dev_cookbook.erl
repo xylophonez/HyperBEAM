@@ -1,13 +1,12 @@
-%%% @doc Prototype renderer device for HyperBEAM `/info' docs payloads.
+%%% @doc Renderer device for HyperBEAM `/docs' documentation payloads.
 %%%
 %%% `hb_docs' discovers and assembles documentation data. This device owns the
 %%% renderer-facing contract: HTML negotiation, page dispatch, and the
 %%% protocol-native cookbook surface.
 -module(dev_cookbook).
--specification("../../../specs/cookbook@1.0.md").
 -implements(<<"cookbook@1.0">>).
 -export([info/1, info/3]).
--export([index/3, node/3, device/3, schema/3, spec/3, recipes/3]).
+-export([request/3, route/3, index/3, node/3, device/3, schema/3, spec/3, recipes/3]).
 -export([render/3, respond_html_or_json/4, unsupported_device_response/2]).
 -export([renderer_metadata/0]).
 
@@ -18,6 +17,8 @@ info(_Opts) ->
     #{
         exports => [
             <<"info">>,
+            <<"request">>,
+            <<"route">>,
             <<"index">>,
             <<"node">>,
             <<"device">>,
@@ -31,6 +32,31 @@ info(_Opts) ->
 -spec info(#{ _ => _ }, #{ _ => _ }, #{ _ => _ }) -> {ok, _} | {error, _}.
 info(_Base, Req, Opts) ->
     hb_docs:device_info(<<"cookbook@1.0">>, Req, Opts).
+
+%% @doc Request-hook entrypoint for mounting `/docs' without changing `meta@1.0'.
+-spec request(#{ _ => _ }, #{ _ => _ }, #{ _ => _ }) -> {ok, map()}.
+request(_Base, Req, Opts) ->
+    hb_docs:request_hook(Req, Opts).
+
+%% @doc Dispatch a docs route produced by `request/3'.
+-spec route(#{ _ => _ }, #{ _ => _ }, #{ _ => _ }) -> {ok, _} | {error, _}.
+route(_Base, Req, Opts) ->
+    RenderReq = render_request(Req, Opts),
+    case hb_maps:get(<<"docs-kind">>, Req, <<"node">>, Opts) of
+        <<"device">> ->
+            hb_docs:device_info_route(
+                hb_maps:get(<<"docs-device">>, Req, ?DEFAULT_DEVICE, Opts),
+                hb_maps:get(<<"docs-tail">>, Req, [], Opts),
+                RenderReq,
+                Opts
+            );
+        _ ->
+            hb_docs:node_info_route(
+                hb_maps:get(<<"docs-tail">>, Req, [], Opts),
+                RenderReq,
+                Opts
+            )
+    end.
 
 %% @doc Render the node documentation index.
 -spec index(#{ _ => _ }, #{ _ => _ }, #{ _ => _ }) -> {ok, _} | {error, _}.
@@ -97,3 +123,9 @@ strip_device_prefix(<<"~", Device/binary>>) ->
     Device;
 strip_device_prefix(Device) ->
     Device.
+
+render_request(Req, Opts) ->
+    case hb_maps:get(<<"request">>, Req, #{}, Opts) of
+        Request when is_map(Request) -> Request;
+        _ -> Req
+    end.

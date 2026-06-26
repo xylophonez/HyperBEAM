@@ -5,7 +5,6 @@
 %%% Definitions of singleton processes are expected to be found with their 
 %%% names in the `node_processes' section of the node message.
 -module(dev_node_process).
--specification("../../../specs/node-process@1.0.md").
 -export([info/1]).
 -include("include/hb.hrl").
 -include_lib("eunit/include/eunit.hrl").

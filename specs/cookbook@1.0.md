@@ -2,29 +2,46 @@
 
 - **Device name:** `cookbook@1.0`
 - **Depends-on:** `message@1.0` for normal message dispatch and `hb_docs` for the shared documentation object.
-- **Status:** Prototype
+- **Status:** Implemented
 
 ## 1. Overview
 
-`cookbook@1.0` is the protocol-native renderer device for the prototype
-HyperBEAM `/info` documentation pages. It exposes the same documentation object
-that `hb_docs` builds for the node and device info routes, but gives that object
-a normal AO-Core device surface so callers can resolve documentation through a
-device instead of relying only on a meta-route special case.
+`cookbook@1.0` is the protocol-native renderer device for HyperBEAM `/docs`
+documentation pages. It exposes the documentation object that `hb_docs` builds
+for node and device docs routes, while keeping the renderer behind a normal
+AO-Core device surface.
 
-The device is intentionally thin. It does not own the long-term information
-architecture or replace the full HyperBuddy documentation shell. It dispatches
-renderer keys to `hb_docs`, which supplies schemas, specs, recipes, component
-indexes, HTML rendering, JSON payloads, and on-weave recipe artifact discovery.
+The device is intentionally thin. It dispatches renderer keys to `hb_docs`,
+which supplies schemas, specs, recipes, component indexes, HTML rendering, JSON
+payloads, packaged guide Markdown, and on-weave recipe artifact discovery.
+
+Operators that want the public `/docs` mount SHOULD install `cookbook@1.0` as a
+request hook:
+
+```erlang
+#{
+    <<"on">> => #{
+        <<"request">> => #{
+            <<"device">> => <<"cookbook@1.0">>,
+            <<"path">> => <<"request">>
+        }
+    }
+}
+```
+
+The hook MUST pass non-docs requests through unchanged. In particular, `/info`
+and `/~meta@1.0/info/...` remain normal device paths.
 
 ## 2. Device interface
 
 | Key | Required parameters | Behaviour |
 | --- | --- | --- |
 | `info` | none | Return documentation for `cookbook@1.0` itself. |
-| `index` | none | Render the node-level `/info` documentation index. |
+| `request` | hook request | Rewrite `/docs` and `/~device@version/docs` requests to the renderer route. |
+| `route` | `docs-kind`, `docs-tail` | Dispatch a rewritten docs route. |
+| `index` | none | Render the node-level `/docs` documentation index. |
 | `node` | none | Alias of `index`. |
-| `device` | optional `for` | Render the `/~device@version/info` page for the requested device. |
+| `device` | optional `for` | Render the `/~device@version/docs` page for the requested device. |
 | `schema` | optional `for` | Render the schema page for the requested device. |
 | `spec` | optional `for` | Render the spec page for the requested device. |
 | `recipes` | optional `for` | Render the recipes page for the requested device. |
@@ -40,22 +57,21 @@ they MUST return the structured documentation payload. The structured payloads
 MUST preserve stable links to the node index, device pages, schema pages, spec
 pages, recipe pages, and implementation metadata.
 
-The renderer MUST expose the docs shell assets under `/info/assets/...` so the
-browser page can load the same CSS and JavaScript runner used by the imported
-device-docs cookbook pages.
+The renderer MUST expose the docs shell assets under `/docs/assets/...` when the
+request hook is installed.
 
 ## 4. Data sources
 
 The shared documentation object MUST include:
 
-1. Static device metadata for the documented devices.
+1. Device metadata discovered from spec-loaded devices in the node's resolver configuration.
 2. Generated schema data from the implementation where available.
-3. Parameter documentation for known runnable keys.
-4. The inline spec body when `specs/<device>.md` exists.
-5. Curated recipe blocks imported from `~/Dev/device-docs`, without treating an
-   entire device documentation page as one recipe.
-6. Implementation traceability for the source modules backing the documented
-   device.
+3. Parameter documentation inferred from implementation specs where available.
+4. Spec bodies loaded by spec transaction ID.
+5. On-weave `Device-Recipe` messages whose `recipe-for-device` tag matches the
+   spec transaction ID.
+6. Packaged introductory and operator guide Markdown from `priv/docs/cookbook`.
+7. Implementation traceability for published implementation transactions when available.
 
 Missing coverage MUST be explicit in the structured payload. A missing spec,
 recipe set, or implementation record MUST be reported as missing or empty rather
@@ -65,14 +81,16 @@ than silently linked to a page that cannot explain itself.
 
 An implementation conforms when:
 
-1. `/~cookbook@1.0/info` returns a `device-info` payload whose `device-id` is
-   `cookbook@1.0`.
-2. `/~cookbook@1.0/index` and `/~cookbook@1.0/node` render the node info index.
+1. `/~cookbook@1.0/info` returns a `device-info` payload for `cookbook@1.0`.
+2. `/~cookbook@1.0/index` and `/~cookbook@1.0/node` render the node docs index.
 3. `/~cookbook@1.0/device?for=message@1.0` renders the same device page as
-   `/~message@1.0/info`.
+   `/~message@1.0/docs` when the same device is spec-loaded.
 4. `/~cookbook@1.0/schema?for=message@1.0`,
    `/~cookbook@1.0/spec?for=message@1.0`, and
    `/~cookbook@1.0/recipes?for=message@1.0` render the corresponding device
    component pages.
-5. The renderer preserves runnable command formatting from device-docs and does
-   not merge unrelated page prose into a single recipe.
+5. With the request hook installed, `/docs`, `/docs/schema`, and
+   `/~device@version/docs` resolve through `cookbook@1.0/request`.
+6. `/info` paths are not intercepted by the docs system.
+7. The renderer preserves runnable command formatting from recipe messages and
+   does not merge unrelated page prose into a single recipe.

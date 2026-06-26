@@ -5,9 +5,8 @@
 %%% `set', `remove', `get', and `verify'. Their function comments describe the 
 %%% behaviour of the device when these keys are set.
 -module(dev_message).
--specification("../../../specs/message@1.0.md").
 %%% Base AO-Core reserved keys:
--export([info/0, info/3, docs/3, schema/3, keys/1, keys/2]).
+-export([info/0, keys/1, keys/2]).
 -export([set/3, set_path/3, remove/3, get/3, get/4]).
 %%% Commitment-specific keys:
 -export([id/1, id/2, id/3]).
@@ -24,10 +23,8 @@
     <<"id">>,
     <<"commitments">>,
     <<"committers">>,
-    <<"docs">>,
     <<"keys">>,
     <<"path">>,
-    <<"schema">>,
     <<"set">>,
     <<"remove">>,
     <<"verify">>
@@ -38,20 +35,6 @@ info() ->
     #{
         default => fun dev_message:get/4
     }.
-
-%% @doc Return protocol-native documentation for this device.
-info(_Base, Request, Opts) ->
-    hb_docs:device_info(<<"message@1.0">>, Request, Opts).
-
-%% @doc Inherited docs key for the base message device surface.
--spec docs(#{ _ => _ }, #{ _ => _ }, #{ _ => _ }) -> {ok, _} | {error, _}.
-docs(Base, Request, Opts) ->
-    info(Base, Request, Opts).
-
-%% @doc Inherited schema key for the base message device surface.
--spec schema(#{ _ => _ }, #{ _ => _ }, #{ _ => _ }) -> {ok, _} | {error, _}.
-schema(_Base, Request, Opts) ->
-    hb_docs:device_info_route(<<"message@1.0">>, [<<"schema">>], Request, Opts).
 
 %% @doc Generate an index page for a message, in the event that the `body' and
 %% `content-type' of a message returned to the client are both empty. We do this

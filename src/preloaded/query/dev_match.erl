@@ -1,6 +1,5 @@
 %%% @doc A reverse index for finding all message IDs with a given key-value pair.
 -module(dev_match).
--specification("../../../specs/match@1.0.md").
 -export([info/0, all/3, write/3]).
 -include("include/hb.hrl").
 

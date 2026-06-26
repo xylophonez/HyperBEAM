@@ -1,6 +1,13 @@
-%%% @doc Prototype protocol-native documentation payloads for HyperBEAM.
+%%% @doc Protocol-native documentation payloads for HyperBEAM.
 -module(hb_docs).
--export([node_info/2, device_info/3, maybe_info_request/3, is_node_info_request/2]).
+-export([
+    node_info/2,
+    node_info_route/3,
+    device_info/3,
+    maybe_info_request/3,
+    request_hook/2,
+    is_node_info_request/2
+]).
 -export([device_info_route/4]).
 -export([node_info_data/1, device_info_data/2]).
 -export([
@@ -47,6 +54,32 @@ maybe_info_request(Msgs, Req, Opts) ->
         {device, Device, Tail} -> {true, device_info_route(Device, Tail, Req, Opts)};
         false -> false
     end.
+
+request_hook(HookReq, Opts) ->
+    Msgs = hb_maps:get(<<"body">>, HookReq, [], Opts),
+    RawReq = hb_maps:get(<<"request">>, HookReq, #{}, Opts),
+    Body =
+        case info_route(Msgs) of
+            {node, Tail} ->
+                cookbook_route_request(<<"node">>, <<>>, Tail, RawReq);
+            {device, Device, Tail} ->
+                cookbook_route_request(<<"device">>, Device, Tail, RawReq);
+            false ->
+                Msgs
+        end,
+    {ok, #{ <<"body">> => Body }}.
+
+cookbook_route_request(Kind, Device, Tail, RawReq) ->
+    [
+        #{ <<"device">> => ?COOKBOOK_DEVICE },
+        #{
+            <<"path">> => <<"route">>,
+            <<"docs-kind">> => Kind,
+            <<"docs-device">> => Device,
+            <<"docs-tail">> => Tail,
+            <<"request">> => RawReq
+        }
+    ].
 
 info_route([Base, Info | Tail]) when is_map(Base), is_map(Info) ->
     case {maps:is_key(<<"device">>, Base), node_docs_tail(path_key(Info), Tail)} of
@@ -276,7 +309,7 @@ not_found_response() ->
 unsupported_device_info_response(Device, Req) ->
     hb_docs_cookbook:unsupported_device_response(Device, Req).
 
-prototype_node_device(DeviceID, Name, Version, Summary) ->
+docs_node_device(DeviceID, Name, Version, Summary) ->
     #{
         <<"name">> => Name,
         <<"version">> => Version,
@@ -421,7 +454,7 @@ loaded_device_for_spec(_DeviceID, SpecID, Opts) ->
 
 on_weave_node_device(DeviceID, SpecID) ->
     {Name, Version} = split_device_id(DeviceID),
-    prototype_node_device(
+    docs_node_device(
         DeviceID,
         Name,
         Version,
@@ -5635,7 +5668,7 @@ spec_sections_test() ->
 
 message_markdown_rendering_test() ->
     SpecBody = iolist_to_binary(render_spec_body(device_spec_status(?MESSAGE_DEVICE))),
-    ?assertEqual(nomatch, binary:match(SpecBody, <<"<strong>Device name:</strong>">>)),
+    ?assert(binary:match(SpecBody, <<"<strong>Device name:</strong>">>) =/= nomatch),
     ?assert(binary:match(SpecBody, <<"<strong>Dispatch shape">>) =/= nomatch),
     ?assertEqual(nomatch, binary:match(SpecBody, <<"**Dispatch shape">>)),
     ?assertEqual(nomatch, binary:match(SpecBody, <<"PRESENT">>)),
@@ -5676,6 +5709,30 @@ node_docs_route_alias_test() ->
     JSON = decoded_json_response(JSONResponse),
     ?assertEqual(<<"node-schema-index">>, maps:get(<<"kind">>, JSON)).
 
+request_hook_rewrites_docs_routes_test() ->
+    Req = #{ <<"path">> => <<"/docs/schema">>, <<"accept">> => <<"application/json">> },
+    Msgs = hb_singleton:from(Req, #{}),
+    {ok, #{ <<"body">> := [#{ <<"device">> := ?COOKBOOK_DEVICE }, Route] }} =
+        request_hook(#{ <<"request">> => Req, <<"body">> => Msgs }, #{}),
+    ?assertEqual(<<"route">>, maps:get(<<"path">>, Route)),
+    ?assertEqual(<<"node">>, maps:get(<<"docs-kind">>, Route)),
+    ?assertEqual([<<"schema">>], maps:get(<<"docs-tail">>, Route)),
+    ?assertEqual(Req, maps:get(<<"request">>, Route)),
+
+    DeviceReq = #{ <<"path">> => <<"/~json@1.0/docs/recipes">> },
+    DeviceMsgs = hb_singleton:from(DeviceReq, #{}),
+    {ok, #{ <<"body">> := [#{ <<"device">> := ?COOKBOOK_DEVICE }, DeviceRoute] }} =
+        request_hook(#{ <<"request">> => DeviceReq, <<"body">> => DeviceMsgs }, #{}),
+    ?assertEqual(<<"device">>, maps:get(<<"docs-kind">>, DeviceRoute)),
+    ?assertEqual(<<"json@1.0">>, maps:get(<<"docs-device">>, DeviceRoute)),
+    ?assertEqual([<<"recipes">>], maps:get(<<"docs-tail">>, DeviceRoute)),
+
+    InfoMsgs = hb_singleton:from(#{ <<"path">> => <<"/~meta@1.0/info/address">> }, #{}),
+    ?assertEqual(
+        {ok, #{ <<"body">> => InfoMsgs }},
+        request_hook(#{ <<"body">> => InfoMsgs }, #{})
+    ).
+
 schema_source_contract_test() ->
     {Schema, _Order, Source} =
         docs_schema_for_device(
@@ -5685,11 +5742,11 @@ schema_source_contract_test() ->
         ),
     ?assertEqual(<<"implementation-derived">>, maps:get(<<"mode">>, Source)),
     ?assertEqual(<<"present">>, maps:get(<<"status">>, Source)),
-    ?assert(maps:is_key(<<"docs">>, Schema)),
-    ?assert(maps:is_key(<<"schema">>, Schema)),
-    DocsSchema = maps:get(<<"docs">>, Schema),
-    ?assertEqual(<<"none">>, maps:get(<<"description-source">>, DocsSchema)),
-    ?assertNot(maps:is_key(<<"description">>, DocsSchema)),
+    ?assertNot(maps:is_key(<<"docs">>, Schema)),
+    ?assertNot(maps:is_key(<<"schema">>, Schema)),
+    SetSchema = maps:get(<<"set">>, Schema),
+    ?assertEqual(<<"none">>, maps:get(<<"description-source">>, SetSchema)),
+    ?assertNot(maps:is_key(<<"description">>, SetSchema)),
     ?assertNot(maps:is_key(<<"generated">>, Schema)).
 
 schema_table_hides_blank_description_column_test() ->
@@ -5739,10 +5796,10 @@ json_safe_schema_payload_test() ->
     ),
     {ok, Schema, _Order, _Source} =
         implementation_derived_schema(?MESSAGE_DEVICE, #{}),
-    DocsSchema = maps:get(<<"docs">>, Schema),
-    DocsRequest = maps:get(<<"request">>, maps:get(<<"type-schema">>, DocsSchema)),
-    DocsWildcard = maps:get(<<"wildcard">>, DocsRequest),
-    ?assertEqual(<<"optional">>, maps:get(<<"presence">>, DocsWildcard)).
+    SetSchema = maps:get(<<"set">>, Schema),
+    SetRequest = maps:get(<<"request">>, maps:get(<<"type-schema">>, SetSchema)),
+    SetWildcard = maps:get(<<"wildcard">>, SetRequest),
+    ?assertEqual(<<"optional">>, maps:get(<<"presence">>, SetWildcard)).
 
 canonical_specs_branch_registry_test() ->
     ?assertEqual(33, length(canonical_spec_devices())),

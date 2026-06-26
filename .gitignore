@@ -47,7 +47,3 @@ mkdocs-site-manifest.csv
 !test/admissible-report-wallet.json
 !test/admissible-report.json
 !test/config.json
-
-!priv/docs/
-!priv/docs/**
-priv/docs/cookbook/device-docs/node_modules/**

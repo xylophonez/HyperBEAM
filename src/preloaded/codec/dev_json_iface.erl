@@ -34,7 +34,6 @@
 %%%             /Results/Outbox
 %%%             /Results/Data</pre>
 -module(dev_json_iface).
--specification("../../../specs/json-iface@1.0.md").
 -implements(<<"json-iface@1.0">>).
 -export([init/3, compute/3, to/3, from/3]).
 %%% Public interface helpers:

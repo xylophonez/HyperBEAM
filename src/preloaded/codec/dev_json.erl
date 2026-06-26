@@ -2,7 +2,6 @@
 %%% message as TABM and returns an encoded JSON string representation.
 %%% This codec utilizes the httpsig@1.0 codec for signing and verifying.
 -module(dev_json).
--specification("../../../specs/json@1.0.md").
 -export([to/3, from/3, commit/3, verify/3, committed/3, content_type/1]).
 -export([deserialize/3, serialize/3]).
 -include_lib("eunit/include/eunit.hrl").

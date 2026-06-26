@@ -8,6 +8,23 @@ Runtime resolution uses `code:priv_dir(hb)/docs/cookbook/device-docs` by
 default. Set `HB_DEVICE_DOCS_ROOT=/path/to/device-docs` only when developing
 against a live `device-docs` checkout.
 
+The public `/docs` mount is provided by the `cookbook@1.0` request hook:
+
+```erlang
+#{
+    <<"on">> => #{
+        <<"request">> => #{
+            <<"device">> => <<"cookbook@1.0">>,
+            <<"path">> => <<"request">>
+        }
+    }
+}
+```
+
+The hook rewrites `/docs` and `/~device@version/docs` into the cookbook
+renderer. It leaves `/info` and all other device paths to normal AO-Core
+resolution.
+
 The packaged snapshot contains:
 
 - `docs/`: source Markdown for boilerplate guides plus docs image assets.
