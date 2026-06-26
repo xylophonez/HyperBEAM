@@ -1839,7 +1839,7 @@ render_node_html(Data) ->
             <<"\">~">>, esc(maps:get(<<"device">>, Renderer)), <<"</a>.</p>">>,
             <<"<h2>Guides</h2>">>,
             boilerplate_structured_index(Boilerplate),
-            <<"<h2>Devices</h2><div class=\"hb-docs-card-grid\">">>,
+            <<"<h2 id=\"devices\">Devices</h2><div class=\"hb-docs-card-grid\">">>,
             [device_row(Device) || Device <- Devices],
             <<"</div><h2>Concepts</h2>">>,
             concept_rows(maps:get(<<"concepts">>, Data))
@@ -2940,7 +2940,7 @@ device_doc_link_fields(DeviceID) ->
     }.
 
 devices_index_path() ->
-    <<"/info/schema">>.
+    <<"/info#devices">>.
 
 active_path_match(ActivePath, Href) when is_binary(ActivePath), is_binary(Href) ->
     ActivePath =:= Href.
@@ -3201,8 +3201,8 @@ device_row(Device) ->
 
 devices_section(Devices) ->
     [
-        <<"<div class=\"hb-docs-section-header\"><h2>Devices</h2>">>,
-        <<"<a class=\"hb-docs-section-link\" href=\"/info/schema\">">>,
+        <<"<div class=\"hb-docs-section-header\"><h2 id=\"devices\">Devices</h2>">>,
+        <<"<a class=\"hb-docs-section-link\" href=\"/info#devices\">">>,
         <<"View all</a></div><div class=\"hb-docs-device-grid\">">>,
         [device_row(Device) || Device <- Devices],
         <<"</div>">>
@@ -6475,7 +6475,14 @@ node_info_sidebar_context_test() ->
     Body = maps:get(<<"body">>, HTML),
     ?assert(binary:match(Body, <<"<p class=\"eyebrow\">You are viewing</p>">>) =/= nomatch),
     ?assert(binary:match(Body, <<"sidebar-viewing-device is-active\" href=\"/info\">Node</a>">>) =/= nomatch),
+    ?assert(binary:match(Body, <<"<h2 id=\"devices\">Devices</h2>">>) =/= nomatch),
     ?assertEqual(nomatch, binary:match(Body, <<"sidebar-viewing-back\" href=\"/info\">View All Node Info</a>">>)).
+
+device_info_sidebar_all_devices_anchor_test() ->
+    Markup = iolist_to_binary(sidebar_device_context(<<"/~json@1.0/info">>, <<"json@1.0">>)),
+    ?assert(binary:match(Markup, <<"href=\"/info#devices\"">>) =/= nomatch),
+    ?assert(binary:match(Markup, <<"View All Devices</a>">>) =/= nomatch),
+    ?assertEqual(nomatch, binary:match(Markup, <<"href=\"/info/schema\"">>)).
 
 node_info_request_match_test() ->
     Msgs = hb_singleton:from(#{ <<"path">> => <<"/info">> }, #{}),
