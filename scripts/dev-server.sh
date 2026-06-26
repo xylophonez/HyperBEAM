@@ -27,7 +27,7 @@ Environment:
   HB_PORT     HTTP port (default: 8734)
 
 Prefer 'restart' after code changes — it compiles, replaces the listener, and
-waits until http://localhost:${PORT}/info responds. For cookbook docs work
+waits until http://localhost:${PORT}/docs responds. For cookbook docs work
 (hb_docs.erl and related assets), use 'restart' only; 'reload' is unreliable.
 Do not run bare 'rebar3 shell' on an occupied port; that boots a node without
 HTTP (eaddrinuse).
@@ -40,7 +40,7 @@ port_pids() {
 }
 
 http_ok() {
-  curl -sf -m 2 -o /dev/null "http://localhost:${PORT}/info" 2>/dev/null
+  curl -sf -m 2 -o /dev/null "http://localhost:${PORT}/docs" 2>/dev/null
 }
 
 rebar_shell_cmd() {

@@ -6,7 +6,7 @@
 
 ```bash
 HB="${HB:-http://localhost:8734}"
-curl -fsS "$HB/~tx@1.0/info/schema"
+curl -fsS "$HB/~tx@1.0/docs/schema"
 ```
 
 Expected: a JSON schema object with `to`, `commit`, and `verify` actions.
@@ -15,8 +15,8 @@ Expected: a JSON schema object with `to`, `commit`, and `verify` actions.
 
 ```bash
 HB="${HB:-http://localhost:8734}"
-curl -fsS "$HB/~tx@1.0/info/schema/commit"
-curl -fsS "$HB/~tx@1.0/info/schema/verify"
+curl -fsS "$HB/~tx@1.0/docs/schema/commit"
+curl -fsS "$HB/~tx@1.0/docs/schema/verify"
 ```
 
 Expected: JSON describing the unsigned or signed commitment request and the verification action.

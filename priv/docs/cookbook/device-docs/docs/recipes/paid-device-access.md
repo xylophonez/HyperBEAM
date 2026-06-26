@@ -6,7 +6,7 @@ Payment recipes are operator-sensitive. Balance checks, topups, charges, request
 
 ```bash
 HB="${HB:-http://localhost:8734}"
-curl -fsS "$HB/~metering@1.0/info/schema"
+curl -fsS "$HB/~metering@1.0/docs/schema"
 ```
 
 Expected: a JSON schema object with metering actions such as `estimate` and `price`.
@@ -25,7 +25,7 @@ Expected output on docs-test: `0` and `0`.
 
 ```bash
 HB="${HB:-http://localhost:8734}"
-curl -fsS "$HB/~p4@1.0/info/schema"
+curl -fsS "$HB/~p4@1.0/docs/schema"
 ```
 
 Expected: a JSON schema object describing P4 actions.

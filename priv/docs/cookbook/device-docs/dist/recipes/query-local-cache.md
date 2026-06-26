@@ -6,7 +6,7 @@
 
 ```bash
 HB="${HB:-http://localhost:8734}"
-curl -fsS "$HB/~match@1.0/info/schema"
+curl -fsS "$HB/~match@1.0/docs/schema"
 ```
 
 Expected: a JSON schema object containing match actions such as `all`.
@@ -15,7 +15,7 @@ Expected: a JSON schema object containing match actions such as `all`.
 
 ```bash
 HB="${HB:-http://localhost:8734}"
-curl -fsS "$HB/~match@1.0/info/schema/all"
+curl -fsS "$HB/~match@1.0/docs/schema/all"
 ```
 
 Expected: JSON describing `/~match@1.0/all`.

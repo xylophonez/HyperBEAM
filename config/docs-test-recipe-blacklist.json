@@ -1,6 +1,6 @@
 {
   "generated_at": "2026-06-25T12:27:47+00:00",
-  "source": "https://docs-test.mystical.computer/info",
+  "source": "https://docs-test.mystical.computer/docs",
   "policy": "docs-test quarantines all legacy on-weave recipes until each has a self-contained tested replacement.",
   "recipes": [
     {

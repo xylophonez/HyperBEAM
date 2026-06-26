@@ -9,7 +9,7 @@ HyperBEAM is the primary, production-ready implementation of the [AO-Core protoc
 HyperBEAM transforms the abstract concepts of AO-Core—Messages, Devices, and Paths—into a concrete, operational system. It provides the runtime environment and essential services to execute these computations across a network of distributed nodes.
 
 <div class="core-concepts-flex">
-<img class="core-concepts-fig messages" src="/info/assets/images/aosvg1.svg" alt="" loading="lazy">
+<img class="core-concepts-fig messages" src="/docs/assets/images/aosvg1.svg" alt="" loading="lazy">
 <div class="core-concepts-column">
 <p class="core-concept-header-messages"><b>Messages</b></p>
 <span class="core-concept-subtitle">Modular Data Packets</span>
@@ -18,7 +18,7 @@ HyperBEAM transforms the abstract concepts of AO-Core—Messages, Devices, and P
 </div>
 
 <div class="core-concepts-flex">
-<img class="core-concepts-fig devices" src="/info/assets/images/aosvg2.svg" alt="" loading="lazy">
+<img class="core-concepts-fig devices" src="/docs/assets/images/aosvg2.svg" alt="" loading="lazy">
 <div class="core-concepts-column">
 <p class="core-concept-header-devices"><b>Devices</b></p>
 <span class="core-concept-subtitle">Extensible Execution Engines</span>
@@ -27,7 +27,7 @@ HyperBEAM transforms the abstract concepts of AO-Core—Messages, Devices, and P
 </div>
 
 <div class="core-concepts-flex">
-<img class="core-concepts-fig paths" src="/info/assets/images/aosvg3.svg" alt="" loading="lazy">
+<img class="core-concepts-fig paths" src="/docs/assets/images/aosvg3.svg" alt="" loading="lazy">
 <div class="core-concepts-column">
 <p class="core-concept-header-paths"><b>Paths</b></p>
 <span class="core-concept-subtitle">Composable Pipelines</span>

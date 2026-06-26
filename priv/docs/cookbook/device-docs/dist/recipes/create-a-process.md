@@ -15,7 +15,7 @@ Expected: JSON with `device`, `scheduler`, `execution-device`, and `push-device`
 
 ```bash
 HB="${HB:-http://localhost:8734}"
-curl -fsS "$HB/~scheduler@1.0/info/schema"
+curl -fsS "$HB/~scheduler@1.0/docs/schema"
 ```
 
 Expected: a JSON schema object for scheduler actions.
@@ -24,7 +24,7 @@ Expected: a JSON schema object for scheduler actions.
 
 ```bash
 HB="${HB:-http://localhost:8734}"
-curl -fsS "$HB/~push@1.0/info/schema"
+curl -fsS "$HB/~push@1.0/docs/schema"
 ```
 
 Expected: a JSON schema object for push actions.

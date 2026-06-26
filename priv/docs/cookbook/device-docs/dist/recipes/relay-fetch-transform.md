@@ -6,7 +6,7 @@
 
 ```bash
 HB="${HB:-http://localhost:8734}"
-curl -fsS "$HB/~relay@1.0/info/schema"
+curl -fsS "$HB/~relay@1.0/docs/schema"
 ```
 
 Expected: a JSON schema object with `call`, `cast`, and `request`.
@@ -15,7 +15,7 @@ Expected: a JSON schema object with `call`, `cast`, and `request`.
 
 ```bash
 HB="${HB:-http://localhost:8734}"
-curl -fsS "$HB/~relay@1.0/info/schema/call"
+curl -fsS "$HB/~relay@1.0/docs/schema/call"
 ```
 
 Expected: JSON describing the `method`, `peer`, `relay-path`, and `target` parameters.

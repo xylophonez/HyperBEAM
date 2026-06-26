@@ -6,7 +6,7 @@ Bundling is a write workflow: a real submission requires signed ANS-104 bytes an
 
 ```bash
 HB="${HB:-http://localhost:8734}"
-curl -fsS "$HB/~ans104@1.0/info/schema"
+curl -fsS "$HB/~ans104@1.0/docs/schema"
 ```
 
 Expected: a JSON schema object with codec operations such as `commit`, `serialize`, or `deserialize`.

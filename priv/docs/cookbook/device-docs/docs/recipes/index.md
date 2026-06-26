@@ -6,7 +6,7 @@ Earlier on-weave recipes that depend on placeholders, local files, or hidden nod
 
 ## Approved Runnable Recipes
 
-- [Check docs-test readiness](check-node-readiness.md)
+- [Read meta node information](read-meta-node-info.md)
 - [Build a message and serialize it](message-to-json-pipe.md)
 - [Gzip round trip](gzip-round-trip.md)
 - [Patch a message key](patch-process-state.md)
@@ -22,6 +22,5 @@ Earlier on-weave recipes that depend on placeholders, local files, or hidden nod
 ## Inspect Workflows
 
 - [Recorder debug flights](recorder-debug-flight.md)
-- [Trusted custom devices](trusted-custom-device.md)
 
 Inspect workflow pages describe the operation and acceptance criteria while omitting runnable commands for actions that require wallets, local files, privileged configuration, or seeded node state.

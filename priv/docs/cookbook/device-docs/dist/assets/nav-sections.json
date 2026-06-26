@@ -406,11 +406,6 @@
           "description": "Inspect ANS-104 bundling prerequisites"
         },
         {
-          "title": "Check Docs-Test Readiness",
-          "href": "/recipes/check-node-readiness.md",
-          "description": "Smoke test docs-test before harder examples"
-        },
-        {
           "title": "Build A Process-Shaped Message",
           "href": "/recipes/create-a-process.md",
           "description": "Build a process shaped message from devices"
@@ -446,6 +441,11 @@
           "description": "Inspect match/query readiness without hidden state"
         },
         {
+          "title": "Read Meta Node Information",
+          "href": "/recipes/read-meta-node-info.md",
+          "description": "Read public meta node identity and build fields"
+        },
+        {
           "title": "Read Seeded Process State",
           "href": "/recipes/read-seeded-process-state.md",
           "description": "Read a real public counter process fixture"
@@ -464,11 +464,6 @@
           "title": "Inspect A Scheduled Lua Process Shape",
           "href": "/recipes/scheduled-lua-process.md",
           "description": "Pattern for a scheduled Lua backed process"
-        },
-        {
-          "title": "Trusted Custom Devices",
-          "href": "/recipes/trusted-custom-device.md",
-          "description": "Operator requirements for custom device trust"
         }
       ]
     },

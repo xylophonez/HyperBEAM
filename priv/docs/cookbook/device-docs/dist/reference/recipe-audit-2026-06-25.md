@@ -37,7 +37,7 @@ The quarantined on-weave corpus contains these non-exclusive bad patterns:
 
 Approved public replacement pages now cover:
 
-- docs-test readiness and schema introspection
+- meta node reads and schema introspection
 - message construction and JSON serialization
 - gzip round trips
 - inline Lua transforms
@@ -50,7 +50,7 @@ Approved public replacement pages now cover:
 - metering and P4 contract inspection without ledger mutation
 - relay contract inspection without arbitrary URL fetches
 
-Inspect workflows remain for recorder debug flights, signing-heavy ANS-104 and bundler paths, trusted custom device loading, payment mutation, and local Forge commands. They show the shape of the operation while keeping prerequisite-bound commands out of the runnable corpus.
+Inspect workflows remain for recorder debug flights, signing-heavy ANS-104 and bundler paths, payment mutation, and local Forge commands. Trusted custom device loading belongs in Forge/operator documentation until a packaged device, signer, implementation transaction, policy, and read-only smoke path are all present.
 
 ## Test Result
 

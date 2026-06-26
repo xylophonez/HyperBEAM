@@ -30,16 +30,16 @@
 -define(COOKBOOK_DEVICE, <<"cookbook@1.0">>).
 -define(PACKAGED_DEVICE_DOCS_ROOT, ["docs", "cookbook", "device-docs"]).
 
-%% @doc Return true when an inbound request addresses node-root `/info`.
+%% @doc Return true when an inbound request addresses node-root `/docs`.
 is_node_info_request([Base, Req], Opts) when is_map(Base), is_map(Req) ->
     not maps:is_key(<<"device">>, Base) andalso
-        hb_path:hd(Req, Opts) =:= <<"info">>;
+        hb_path:hd(Req, Opts) =:= <<"docs">>;
 is_node_info_request(_, _Opts) ->
     false.
 
 %% @doc Route complete docs paths before AO-Core resolves the first docs key.
-%% This keeps nested docs URLs such as `/~message@1.0/info/schema/field` and
-%% `/~message@1.0/schema/field` from resolving against the already-rendered
+%% This keeps nested docs URLs such as `/~message@1.0/docs/schema/field` and
+%% `/docs/schema/field` from resolving against the already-rendered
 %% HTML response or a device-specific fallback.
 maybe_info_request(Msgs, Req, Opts) ->
     case info_route(Msgs) of
@@ -61,35 +61,13 @@ info_route([{as, Device, _Base}, Info | Tail]) when is_map(Info) ->
 info_route(_) ->
     false.
 
-node_docs_tail(<<"info">>, Tail) ->
-    {ok, path_tail_keys(Tail)};
 node_docs_tail(<<"docs">>, Tail) ->
     {ok, path_tail_keys(Tail)};
-node_docs_tail(<<"schema">>, Tail) ->
-    {ok, [<<"schema">> | path_tail_keys(Tail)]};
-node_docs_tail(<<"spec">>, Tail) ->
-    {ok, [<<"spec">> | path_tail_keys(Tail)]};
-node_docs_tail(<<"recipes">>, Tail) ->
-    {ok, [<<"recipes">> | path_tail_keys(Tail)]};
-node_docs_tail(<<"implementations">>, Tail) ->
-    {ok, [<<"implementations">> | path_tail_keys(Tail)]};
-node_docs_tail(<<"introduction">>, Tail) ->
-    {ok, [<<"introduction">> | path_tail_keys(Tail)]};
 node_docs_tail(_, _Tail) ->
     false.
 
-device_docs_tail(<<"info">>, Tail) ->
-    {ok, path_tail_keys(Tail)};
 device_docs_tail(<<"docs">>, Tail) ->
     {ok, path_tail_keys(Tail)};
-device_docs_tail(<<"schema">>, Tail) ->
-    {ok, [<<"schema">> | path_tail_keys(Tail)]};
-device_docs_tail(<<"spec">>, Tail) ->
-    {ok, [<<"spec">> | path_tail_keys(Tail)]};
-device_docs_tail(<<"recipes">>, Tail) ->
-    {ok, [<<"recipes">> | path_tail_keys(Tail)]};
-device_docs_tail(<<"implementations">>, Tail) ->
-    {ok, [<<"implementations">> | path_tail_keys(Tail)]};
 device_docs_tail(_, _Tail) ->
     false.
 
@@ -322,7 +300,7 @@ node_info_data(Opts) ->
             <<"HyperBEAM documentation for the spec-loaded devices this node "
                 "can resolve and run.">>,
         <<"renderer">> => cookbook_renderer(),
-        <<"boilerplate-link">> => <<"/info/guides">>,
+        <<"boilerplate-link">> => <<"/docs/guides">>,
         <<"devices">> => on_weave_node_devices(Opts),
         <<"boilerplate">> => boilerplate_index(),
         <<"concepts">> => #{
@@ -537,7 +515,7 @@ on_weave_spec_status(Device, SpecID, Opts) ->
         {ok, Markdown} ->
             maps:merge(on_weave_spec_metadata(Metadata, SpecID, Opts), #{
                 <<"kind">> => <<"device-spec">>,
-                <<"href">> => <<"/~", Device/binary, "/info/spec">>,
+                <<"href">> => <<"/~", Device/binary, "/docs/spec">>,
                 <<"spec-status">> => <<"present">>,
                 <<"coverage-status">> => <<"present">>,
                 <<"source-path">> => <<>>,
@@ -573,7 +551,7 @@ on_weave_spec_metadata({error, Reason}, SpecID, _Opts) ->
 missing_on_weave_spec(Device, SpecID, Reason) ->
             #{
                 <<"kind">> => <<"device-spec">>,
-                <<"href">> => <<"/~", Device/binary, "/info/spec">>,
+                <<"href">> => <<"/~", Device/binary, "/docs/spec">>,
                 <<"spec-status">> => <<"missing">>,
                 <<"coverage-status">> => <<"missing">>,
                 <<"source-path">> => <<>>,
@@ -963,8 +941,6 @@ static_recipe_pages() ->
             [<<"lua@5.3a">>, <<"json@1.0">>, <<"message@1.0">>]},
         {<<"bundle-data-locally">>, <<"docs/recipes/bundle-data-locally.md">>,
             [<<"ans104@1.0">>, <<"message@1.0">>]},
-        {<<"check-node-readiness">>, <<"docs/recipes/check-node-readiness.md">>,
-            [<<"meta@1.0">>, <<"message@1.0">>, <<"gzip@1.0">>]},
         {<<"create-a-process">>, <<"docs/recipes/create-a-process.md">>,
             [<<"message@1.0">>, <<"scheduler@1.0">>, <<"push@1.0">>, <<"lua@5.3a">>, <<"node-process@1.0">>]},
         {<<"gzip-round-trip">>, <<"docs/recipes/gzip-round-trip.md">>,
@@ -979,6 +955,8 @@ static_recipe_pages() ->
             [<<"patch@1.0">>, <<"message@1.0">>, <<"node-process@1.0">>]},
         {<<"query-local-cache">>, <<"docs/recipes/query-local-cache.md">>,
             [<<"match@1.0">>]},
+        {<<"read-meta-node-info">>, <<"docs/recipes/read-meta-node-info.md">>,
+            [<<"meta@1.0">>]},
         {<<"read-seeded-process-state">>, <<"docs/recipes/read-seeded-process-state.md">>,
             [<<"node-process@1.0">>, <<"scheduler@1.0">>, <<"push@1.0">>]},
         {<<"recorder-debug-flight">>, <<"docs/recipes/recorder-debug-flight.md">>,
@@ -986,9 +964,7 @@ static_recipe_pages() ->
         {<<"relay-fetch-transform">>, <<"docs/recipes/relay-fetch-transform.md">>,
             [<<"relay@1.0">>, <<"router@1.0">>]},
         {<<"scheduled-lua-process">>, <<"docs/recipes/scheduled-lua-process.md">>,
-            [<<"lua@5.3a">>, <<"scheduler@1.0">>, <<"message@1.0">>, <<"node-process@1.0">>]},
-        {<<"trusted-custom-device">>, <<"docs/recipes/trusted-custom-device.md">>,
-            [<<"meta@1.0">>]}
+            [<<"lua@5.3a">>, <<"scheduler@1.0">>, <<"message@1.0">>, <<"node-process@1.0">>]}
     ].
 
 apply_recipe_blacklist(Device, SpecID, Recipes, Opts) ->
@@ -1485,7 +1461,7 @@ device_spec_status(Device) ->
         {ok, Markdown} ->
             #{
                 <<"kind">> => <<"device-spec">>,
-                <<"href">> => <<"/~", Device/binary, "/info/spec">>,
+                <<"href">> => <<"/~", Device/binary, "/docs/spec">>,
                 <<"spec-status">> => <<"present">>,
                 <<"coverage-status">> => <<"present">>,
                 <<"source-path">> => SourcePath,
@@ -1497,7 +1473,7 @@ device_spec_status(Device) ->
         {error, _Reason} ->
             #{
                 <<"kind">> => <<"device-spec">>,
-                <<"href">> => <<"/~", Device/binary, "/info/spec">>,
+                <<"href">> => <<"/~", Device/binary, "/docs/spec">>,
                 <<"spec-status">> => <<"missing">>,
                 <<"coverage-status">> => <<"missing">>,
                 <<"source-path">> => SourcePath,
@@ -1542,7 +1518,7 @@ boilerplate_index() ->
     Pages = [boilerplate_page_entry(Page) || Page <- boilerplate_pages()],
     #{
         <<"kind">> => <<"node-boilerplate-index">>,
-        <<"href">> => <<"/info/guides">>,
+        <<"href">> => <<"/docs/guides">>,
         <<"summary">> =>
             <<"Conceptual HyperBEAM, AO-Core, process, and Device Forge guides.">>,
         <<"source-root">> => hb_util:bin(device_docs_root()),
@@ -1650,16 +1626,16 @@ boilerplate_href(RelPath) ->
 
 boilerplate_href_override(RelPath) ->
     case lists:keyfind(RelPath, 2, boilerplate_process_pages()) of
-        {Slug, RelPath, _Title} -> <<"/info/processes/", Slug/binary>>;
+        {Slug, RelPath, _Title} -> <<"/docs/processes/", Slug/binary>>;
         false -> undefined
     end.
 
 boilerplate_href_from_doc_path(<<"introduction/", Rest/binary>>) ->
-    <<"/introduction/", Rest/binary>>;
+    <<"/docs/introduction/", Rest/binary>>;
 boilerplate_href_from_doc_path(<<"forge/", Rest/binary>>) ->
-    <<"/info/forge/", Rest/binary>>;
+    <<"/docs/forge/", Rest/binary>>;
 boilerplate_href_from_doc_path(Path) ->
-    <<"/info/", Path/binary>>.
+    <<"/docs/", Path/binary>>.
 
 boilerplate_card_summary(RelPath, Markdown) ->
     case boilerplate_card_summary_override(RelPath) of
@@ -1844,7 +1820,7 @@ render_node_html(Data) ->
             <<"</div><h2>Concepts</h2>">>,
             concept_rows(maps:get(<<"concepts">>, Data))
         ],
-    docs_page_html(<<"HyperBEAM Node Info">>, <<"/info">>, node_sidebar(Devices, <<"/info">>), Content).
+    docs_page_html(<<"HyperBEAM Node Info">>, <<"/docs">>, node_sidebar(Devices, <<"/docs">>), Content).
 
 render_device_html(Data) ->
     Device = maps:get(<<"device">>, Data),
@@ -2076,12 +2052,12 @@ render_node_boilerplate_html(Data) ->
             boilerplate_section_cards(Data, h2)
         ],
     docs_page_html(
-        <<"HyperBEAM Guides">>, <<"/info/guides">>, node_sidebar([], <<"/info/guides">>), Content
+        <<"HyperBEAM Guides">>, <<"/docs/guides">>, node_sidebar([], <<"/docs/guides">>), Content
     ).
 
 render_node_boilerplate_page_html(Data) ->
     Markdown = maps:get(<<"markdown">>, Data, <<>>),
-    ActivePath = maps:get(<<"href">>, Data, <<"/info/guides">>),
+    ActivePath = maps:get(<<"href">>, Data, <<"/docs/guides">>),
     Content =
         [
             <<"<p class=\"eyebrow\">Guide</p><h1>">>,
@@ -2102,12 +2078,12 @@ render_node_concepts_html(Data) ->
             concept_rows(Concepts)
         ],
     docs_page_html(
-        <<"HyperBEAM Concepts">>, <<"/info/concepts">>, node_sidebar([], <<"/info/concepts">>), Content
+        <<"HyperBEAM Concepts">>, <<"/docs/concepts">>, node_sidebar([], <<"/docs/concepts">>), Content
     ).
 
 render_node_concept_html(Data) ->
     Concept = maps:get(<<"concept">>, Data, <<>>),
-    ActivePath = <<"/info/concepts/", Concept/binary>>,
+    ActivePath = <<"/docs/concepts/", Concept/binary>>,
     Content =
         [
             <<"<p class=\"eyebrow\">Concept</p><h1>">>, esc(Concept),
@@ -2122,7 +2098,7 @@ render_unsupported_device_html(Device) ->
             <<"<p class=\"eyebrow\">Device</p><h1>">>,
             esc(device_marked_id(Device)),
             <<" docs not available</h1><p>No on-weave spec-loaded documentation is "
-                "available for this device.</p><p><a href=\"/info\">View All Node Info</a></p>">>
+                "available for this device.</p><p><a href=\"/docs\">View All Node Info</a></p>">>
         ],
     docs_page_html(<<"HyperBEAM Device Docs Not Available">>, ActivePath, node_sidebar([], ActivePath), Content).
 
@@ -2148,7 +2124,7 @@ docs_site_header() ->
         "<header class=\"site-header\" id=\"site-header\">"
         "<div class=\"site-header-top\">"
         "<div class=\"site-header-start\">"
-        "<a class=\"site-brand site-header-home\" href=\"/info\">View All Node Info</a>"
+        "<a class=\"site-brand site-header-home\" href=\"/docs\">View All Node Info</a>"
         "</div>"
         "<div class=\"site-header-actions\">"
         "<button type=\"button\" class=\"mobile-menu-toggle\" id=\"mobile-menu-toggle\" "
@@ -2178,7 +2154,7 @@ docs_mobile_nav_drawer() ->
         "</div>"
         "<div class=\"mobile-nav-panel-body\" id=\"mobile-nav-body\">"
         "<div class=\"mobile-nav-tabs\" id=\"mobile-nav-tabs\">"
-        "<a class=\"mobile-nav-home\" href=\"/info\">View All Node Info</a>"
+        "<a class=\"mobile-nav-home\" href=\"/docs\">View All Node Info</a>"
         "</div>"
         "<div class=\"mobile-nav-search\" id=\"mobile-nav-search\">"
         "<div class=\"mobile-nav-search-wrap\">"
@@ -2206,16 +2182,16 @@ html_head(Title) ->
             "<title>">>,
         esc(Title),
         <<"</title>"
-            "<link rel=\"preload\" href=\"/info/assets/fonts/dm-sans-400.woff2\" "
+            "<link rel=\"preload\" href=\"/docs/assets/fonts/dm-sans-400.woff2\" "
             "as=\"font\" type=\"font/woff2\" crossorigin>"
-            "<link rel=\"preload\" href=\"/info/assets/fonts/dm-sans-500.woff2\" "
+            "<link rel=\"preload\" href=\"/docs/assets/fonts/dm-sans-500.woff2\" "
             "as=\"font\" type=\"font/woff2\" crossorigin>"
-            "<link rel=\"preload\" href=\"/info/assets/fonts/dm-sans-600.woff2\" "
+            "<link rel=\"preload\" href=\"/docs/assets/fonts/dm-sans-600.woff2\" "
             "as=\"font\" type=\"font/woff2\" crossorigin>"
-            "<link rel=\"stylesheet\" href=\"/info/assets/fonts.css\">"
-            "<link rel=\"stylesheet\" href=\"/info/assets/docsify-vue.css\">"
-            "<link rel=\"stylesheet\" href=\"/info/assets/prism.css\">"
-            "<link rel=\"stylesheet\" href=\"/info/assets/site.css\">"
+            "<link rel=\"stylesheet\" href=\"/docs/assets/fonts.css\">"
+            "<link rel=\"stylesheet\" href=\"/docs/assets/docsify-vue.css\">"
+            "<link rel=\"stylesheet\" href=\"/docs/assets/prism.css\">"
+            "<link rel=\"stylesheet\" href=\"/docs/assets/site.css\">"
             "<style>">>,
         hb_docs_overrides_css(),
         <<"</style></head>">>
@@ -2897,25 +2873,25 @@ docs_sidebar(Items) ->
     ].
 
 device_info_path(DeviceID) ->
-    <<"/~", DeviceID/binary, "/info">>.
+    <<"/~", DeviceID/binary, "/docs">>.
 device_docs_route_path(DeviceID) ->
     <<"/~", DeviceID/binary, "/docs">>.
 device_schema_path(DeviceID) ->
-    <<"/~", DeviceID/binary, "/info/schema">>.
+    <<"/~", DeviceID/binary, "/docs/schema">>.
 device_direct_schema_path(DeviceID) ->
-    <<"/~", DeviceID/binary, "/schema">>.
+    device_schema_path(DeviceID).
 device_schema_key_path(DeviceID, Key) ->
-    <<"/~", DeviceID/binary, "/info/schema/", Key/binary>>.
+    <<"/~", DeviceID/binary, "/docs/schema/", Key/binary>>.
 device_spec_path(DeviceID) ->
-    <<"/~", DeviceID/binary, "/info/spec">>.
+    <<"/~", DeviceID/binary, "/docs/spec">>.
 device_spec_section_path(DeviceID, SectionId) ->
-    <<"/~", DeviceID/binary, "/info/spec/", SectionId/binary>>.
+    <<"/~", DeviceID/binary, "/docs/spec/", SectionId/binary>>.
 device_recipes_path(DeviceID) ->
-    <<"/~", DeviceID/binary, "/info/recipes">>.
+    <<"/~", DeviceID/binary, "/docs/recipes">>.
 device_recipe_path(DeviceID, Slug) ->
-    <<"/~", DeviceID/binary, "/info/recipes/", Slug/binary>>.
+    <<"/~", DeviceID/binary, "/docs/recipes/", Slug/binary>>.
 device_implementations_path(DeviceID) ->
-    <<"/~", DeviceID/binary, "/info/implementations">>.
+    <<"/~", DeviceID/binary, "/docs/implementations">>.
 device_schema_param_path(DeviceID, Key, Param) ->
     <<(device_schema_key_path(DeviceID, Key))/binary, "/", Param/binary>>.
 
@@ -2940,7 +2916,7 @@ device_doc_link_fields(DeviceID) ->
     }.
 
 devices_index_path() ->
-    <<"/info#devices">>.
+    <<"/docs#devices">>.
 
 active_path_match(ActivePath, Href) when is_binary(ActivePath), is_binary(Href) ->
     ActivePath =:= Href.
@@ -2959,10 +2935,10 @@ sidebar_li(ActivePath, Href, Content) ->
 
 node_sidebar_index_items() ->
     [
-        {<<"/info/schema">>, <<"Schema">>},
-        {<<"/info/spec">>, <<"Spec">>},
-        {<<"/info/recipes">>, <<"Recipes">>},
-        {<<"/info/implementations">>, <<"Implementations">>}
+        {<<"/docs/schema">>, <<"Schema">>},
+        {<<"/docs/spec">>, <<"Spec">>},
+        {<<"/docs/recipes">>, <<"Recipes">>},
+        {<<"/docs/implementations">>, <<"Implementations">>}
     ].
 
 sidebar_nav_section(ActivePath, SectionLabel, AllLabel, AllHref, ItemLis) ->
@@ -3008,8 +2984,8 @@ sidebar_node_context(ActivePath) ->
         <<"<li class=\"sidebar-viewing-context\">">>,
         <<"<p class=\"eyebrow\">You are viewing</p>">>,
         <<"<a class=\"">>,
-        sidebar_context_link_class(ActivePath, <<"/info">>, <<"sidebar-viewing-device">>),
-        <<"\" href=\"/info\">Node</a>">>,
+        sidebar_context_link_class(ActivePath, <<"/docs">>, <<"sidebar-viewing-device">>),
+        <<"\" href=\"/docs\">Node</a>">>,
         <<"</li>">>
     ].
 
@@ -3025,7 +3001,7 @@ sidebar_device_context(ActivePath, DeviceID) ->
         esc(device_marked_id(DeviceID)),
         <<"</a>">>,
         sidebar_viewing_back_link(ActivePath, DevicesHref, <<"View All Devices">>, <<"stack">>),
-        sidebar_viewing_back_link(ActivePath, <<"/info">>, <<"View All Node Info">>, <<"database">>),
+        sidebar_viewing_back_link(ActivePath, <<"/docs">>, <<"View All Node Info">>, <<"database">>),
         <<"</li>">>
     ].
 
@@ -3063,7 +3039,7 @@ node_sidebar_devices_section(Devices, ActivePath) ->
 boilerplate_sidebar_rows(Index) ->
     Pages = maps:get(<<"pages">>, Index, []),
     [
-        <<"<li><a href=\"/info/guides\">All guides</a></li>">>,
+        <<"<li><a href=\"/docs/guides\">All guides</a></li>">>,
         [
             boilerplate_sidebar_section(Section, Pages)
         || Section <- boilerplate_section_order()
@@ -3202,7 +3178,7 @@ device_row(Device) ->
 devices_section(Devices) ->
     [
         <<"<div class=\"hb-docs-section-header\"><h2 id=\"devices\">Devices</h2>">>,
-        <<"<a class=\"hb-docs-section-link\" href=\"/info#devices\">">>,
+        <<"<a class=\"hb-docs-section-link\" href=\"/docs#devices\">">>,
         <<"View all</a></div><div class=\"hb-docs-device-grid\">">>,
         [device_row(Device) || Device <- Devices],
         <<"</div>">>
@@ -3831,18 +3807,18 @@ recipe_markdown(Recipe) ->
 
 docs_shell_assets() ->
     [
-        <<"<script src=\"/info/assets/prism-core.min.js\"></script>">>,
-        <<"<script src=\"/info/assets/prism-bash.min.js\"></script>">>,
-        <<"<script src=\"/info/assets/prism-json.min.js\"></script>">>,
-        <<"<script src=\"/info/assets/prism-http.min.js\"></script>">>,
-        <<"<script src=\"/info/assets/prism-erlang.min.js\"></script>">>,
-        <<"<script src=\"/info/assets/prism-lua.min.js\"></script>">>,
-        <<"<script src=\"/info/assets/prism-markdown.min.js\"></script>">>,
+        <<"<script src=\"/docs/assets/prism-core.min.js\"></script>">>,
+        <<"<script src=\"/docs/assets/prism-bash.min.js\"></script>">>,
+        <<"<script src=\"/docs/assets/prism-json.min.js\"></script>">>,
+        <<"<script src=\"/docs/assets/prism-http.min.js\"></script>">>,
+        <<"<script src=\"/docs/assets/prism-erlang.min.js\"></script>">>,
+        <<"<script src=\"/docs/assets/prism-lua.min.js\"></script>">>,
+        <<"<script src=\"/docs/assets/prism-markdown.min.js\"></script>">>,
         <<"<script>">>, docs_page_enhancer_js(), <<"</script>">>,
         <<"<script>">>, docs_page_toc_js(), <<"</script>">>,
         <<"<script>">>, docs_footer_nav_js(), <<"</script>">>,
         <<"<script>">>, docs_mobile_nav_js(), <<"</script>">>,
-        <<"<script src=\"/info/assets/example-runner.js\"></script>">>,
+        <<"<script src=\"/docs/assets/example-runner.js\"></script>">>,
         <<"<script>">>,
         <<"window.addEventListener('DOMContentLoaded',function(){">>,
         <<"if(window.Prism){window.Prism.highlightAll();}">>,
@@ -4404,7 +4380,7 @@ docs_mobile_nav_js() ->
     var normalized = normalizePath(path);
     var home = document.querySelector('.mobile-nav-home');
     if (home) {
-      home.classList.toggle('active', normalized === '/info');
+      home.classList.toggle('active', normalized === '/docs');
     }
     document.querySelectorAll('.mobile-nav-tab').forEach(function (tab) {
       var href = tab.getAttribute('href') || '';
@@ -4527,7 +4503,7 @@ docs_mobile_nav_js() ->
         var label = (sectionLabelEl.textContent || '').trim();
         var sectionId = label.toLowerCase().replace(/[^a-z0-9]+/g, '-');
         var firstLink = subUl.querySelector('a[href]');
-        var sectionHome = firstLink ? firstLink.getAttribute('href') : '/info';
+        var sectionHome = firstLink ? firstLink.getAttribute('href') : '/docs';
 
         if (!isMobileNavHomeDuplicate(sectionHome, label)) {
           var tab = document.createElement('a');
@@ -5428,9 +5404,9 @@ raw_html_line(_Line) ->
     false.
 
 allowed_core_concepts_img(Rest) ->
-    (starts_with(Rest, <<"messages\" src=\"/info/assets/images/aosvg1.svg\"">>) orelse
-        starts_with(Rest, <<"devices\" src=\"/info/assets/images/aosvg2.svg\"">>) orelse
-        starts_with(Rest, <<"paths\" src=\"/info/assets/images/aosvg3.svg\"">>)) andalso
+    (starts_with(Rest, <<"messages\" src=\"/docs/assets/images/aosvg1.svg\"">>) orelse
+        starts_with(Rest, <<"devices\" src=\"/docs/assets/images/aosvg2.svg\"">>) orelse
+        starts_with(Rest, <<"paths\" src=\"/docs/assets/images/aosvg3.svg\"">>)) andalso
         ends_with(Rest, <<" alt=\"\" loading=\"lazy\">">>).
 
 allowed_core_concept_header(Rest) ->
@@ -5619,7 +5595,7 @@ node_info_contract_test() ->
     ?assertEqual(<<"node-info">>, maps:get(<<"kind">>, Data)),
     ?assertNot(maps:is_key(<<"arweave-info">>, Data)),
     ?assertNot(maps:is_key(<<"message-info">>, Data)),
-    ?assertEqual(<<"/info/guides">>, maps:get(<<"boilerplate-link">>, Data)),
+    ?assertEqual(<<"/docs/guides">>, maps:get(<<"boilerplate-link">>, Data)),
     ?assertEqual(24, length(maps:get(<<"pages">>, maps:get(<<"boilerplate">>, Data)))),
     ?assertEqual(<<"cookbook@1.0">>, maps:get(<<"device">>, maps:get(<<"renderer">>, Data))),
     ?assertEqual([], maps:get(<<"devices">>, Data)).
@@ -5628,14 +5604,14 @@ node_sidebar_hierarchy_test() ->
     {ok, HTML} = node_info(#{ <<"accept">> => <<"text/html">> }, #{}),
     Body = maps:get(<<"body">>, HTML),
     ?assert(binary:match(Body, <<"<li><p>Guides</p><ul>">>) =/= nomatch),
-    ?assert(binary:match(Body, <<"<li><a href=\"/info/guides\">All guides</a></li>">>) =/= nomatch),
+    ?assert(binary:match(Body, <<"<li><a href=\"/docs/guides\">All guides</a></li>">>) =/= nomatch),
     ?assert(binary:match(Body, <<"<li><p>Introduction</p><ul>">>) =/= nomatch),
     ?assert(binary:match(Body, <<"<li><p>Processes</p><ul>">>) =/= nomatch),
     ?assert(binary:match(Body, <<"<li><p>Device Forge</p><ul>">>) =/= nomatch),
-    ?assertEqual(nomatch, binary:match(Body, <<"/info/boilerplate">>)),
+    ?assertEqual(nomatch, binary:match(Body, <<"/docs/boilerplate">>)),
     ?assertEqual(nomatch, binary:match(Body, <<"Device Recipes">>)),
     ?assertEqual(nomatch, binary:match(Body, <<"AO Devices">>)),
-    ?assertEqual(nomatch, binary:match(Body, <<"/info/boilerplate/devices/index">>)),
+    ?assertEqual(nomatch, binary:match(Body, <<"/docs/boilerplate/devices/index">>)),
     ?assert(binary:match(Body, <<"hb-docs-guide-index">>) =/= nomatch),
     ?assert(binary:match(Body, <<"<section class=\"hb-docs-guide-group\"><h3>Introduction</h3><ul>">>) =/= nomatch),
     ?assertEqual(nomatch, binary:match(Body, <<"<h2>Guides</h2><div class=\"hb-docs-card-grid\">">>)).
@@ -5662,7 +5638,7 @@ markdown_video_figure_rendering_test() ->
     ?assertEqual(nomatch, binary:match(HTML, <<"&lt;video">>)),
     Concept =
         <<"<div class=\"core-concepts-flex\">\n"
-            "<img class=\"core-concepts-fig messages\" src=\"/info/assets/images/aosvg1.svg\" alt=\"\" loading=\"lazy\">\n"
+            "<img class=\"core-concepts-fig messages\" src=\"/docs/assets/images/aosvg1.svg\" alt=\"\" loading=\"lazy\">\n"
             "<div class=\"core-concepts-column\">\n"
             "<p class=\"core-concept-header-messages\"><b>Messages</b></p>\n"
             "<span class=\"core-concept-subtitle\">Modular Data Packets</span>\n"
@@ -5671,7 +5647,7 @@ markdown_video_figure_rendering_test() ->
             "</div>">>,
     ConceptHTML = render_markdown(Concept),
     ?assertEqual(nomatch, binary:match(ConceptHTML, <<"&lt;div class=&quot;core-concepts-flex">>)),
-    ?assert(binary:match(ConceptHTML, <<"src=\"/info/assets/images/aosvg1.svg\"">>) =/= nomatch).
+    ?assert(binary:match(ConceptHTML, <<"src=\"/docs/assets/images/aosvg1.svg\"">>) =/= nomatch).
 
 device_page_omits_section_index_test() ->
     Data = #{
@@ -5735,7 +5711,7 @@ html_negotiation_test() ->
     ?assertEqual(nomatch, binary:match(Body, <<"<h2 id=\"actions\">Actions</h2>">>)),
     ?assertEqual(nomatch, binary:match(Body, <<"hb-docs-action-grid">>)),
     ?assert(binary:match(Body, <<"docs not available">>) =/= nomatch),
-    ?assertEqual(nomatch, binary:match(Body, <<"href=\"/~json@1.0/info/recipes/serialize-message-to-json\"">>)),
+    ?assertEqual(nomatch, binary:match(Body, <<"href=\"/~json@1.0/docs/recipes/serialize-message-to-json\"">>)),
     ?assertEqual(nomatch, binary:match(Body, <<"id=\"recipe-">>)),
     {ok, MissingRecipe} = device_info_route(
         <<"json@1.0">>,
@@ -5768,12 +5744,12 @@ message_markdown_rendering_test() ->
     ?assertEqual(nomatch, binary:match(SpecBody, <<"specs/message@1.0.md">>)),
     ?assert(binary:match(SpecBody, <<"<h4 id=\"1-overview\">Overview</h4>">>) =/= nomatch),
     ?assertEqual(nomatch, binary:match(SpecBody, <<"<h4 id=\"1-overview\">1. Overview</h4>">>)),
-    ?assertEqual(nomatch, binary:match(SpecBody, <<"href=\"/~message@1.0/info/spec#">>)).
+    ?assertEqual(nomatch, binary:match(SpecBody, <<"href=\"/~message@1.0/docs/spec#">>)).
 
 schema_key_route_test() ->
     Msgs = [
         {as, ?MESSAGE_DEVICE, #{}},
-        #{ <<"path">> => <<"info">> },
+        #{ <<"path">> => <<"docs">> },
         #{ <<"path">> => <<"schema">> },
         #{ <<"path">> => <<"docs">> }
     ],
@@ -5781,11 +5757,9 @@ schema_key_route_test() ->
     {true, {ok, Response}} = maybe_info_request(Msgs, Req, #{}),
     ?assertEqual(404, maps:get(<<"status">>, Response)).
 
-direct_schema_route_alias_test() ->
+direct_schema_route_alias_removed_test() ->
     Msgs = hb_singleton:from(#{ <<"path">> => <<"/~message@1.0/schema/docs">> }, #{}),
-    Req = #{ <<"accept">> => <<"text/html">> },
-    {true, {ok, Response}} = maybe_info_request(Msgs, Req, #{}),
-    ?assertEqual(404, maps:get(<<"status">>, Response)).
+    ?assertEqual(false, maybe_info_request(Msgs, #{ <<"accept">> => <<"text/html">> }, #{})).
 
 direct_docs_route_alias_test() ->
     Msgs =
@@ -5894,7 +5868,7 @@ canonical_specs_branch_registry_test() ->
     ?assertEqual(1, length(Listed)),
     [Device] = Listed,
     ?assertEqual(<<"json">>, maps:get(<<"name">>, Device)),
-    ?assertEqual(<<"/~json@1.0/info">>, maps:get(<<"href">>, Device)).
+    ?assertEqual(<<"/~json@1.0/docs">>, maps:get(<<"href">>, Device)).
 
 derived_schema_description_source_test() ->
     {ok, Schema, _Order, _Source} =
@@ -5940,7 +5914,7 @@ recipe_route_test() ->
         hb_singleton:from(
             #{
                 <<"path">> =>
-                    <<"/~message@1.0/info/recipes/build-a-message-and-serialize-it">>
+                    <<"/~message@1.0/docs/recipes/build-a-message-and-serialize-it">>
             },
             #{}
         ),
@@ -6001,9 +5975,13 @@ recipe_blacklist_loads_operator_file_test() ->
 static_recipes_attach_to_device_pages_test() ->
     MessageRecipes = static_device_recipes(<<"message@1.0">>),
     RouterRecipes = static_device_recipes(<<"router@1.0">>),
+    MetaRecipes = static_device_recipes(<<"meta@1.0">>),
     TXRecipes = static_device_recipes(<<"tx@1.0">>),
     ?assert(maps:is_key(<<"message-to-json-pipe">>, MessageRecipes)),
     ?assert(maps:is_key(<<"relay-fetch-transform">>, RouterRecipes)),
+    ?assert(maps:is_key(<<"read-meta-node-info">>, MetaRecipes)),
+    ?assertNot(maps:is_key(<<"check-node-readiness">>, MetaRecipes)),
+    ?assertNot(maps:is_key(<<"trusted-custom-device">>, MetaRecipes)),
     ?assert(maps:is_key(<<"inspect-transaction-codec">>, TXRecipes)),
     TXRecipe = maps:get(<<"inspect-transaction-codec">>, TXRecipes),
     ?assertEqual(<<"static-cookbook">>, maps:get(<<"source">>, TXRecipe)),
@@ -6013,7 +5991,7 @@ static_recipes_attach_to_device_pages_test() ->
     ),
     ?assertEqual(2, maps:get(<<"runnable-block-count">>, TXRecipe)),
     Body = iolist_to_binary(recipe_nav(<<"tx@1.0">>, TXRecipes)),
-    ?assert(binary:match(Body, <<"href=\"/~tx@1.0/info/recipes/inspect-transaction-codec\"">>) =/= nomatch),
+    ?assert(binary:match(Body, <<"href=\"/~tx@1.0/docs/recipes/inspect-transaction-codec\"">>) =/= nomatch),
     ?assert(binary:match(Body, <<"Inspect The Transaction Codec">>) =/= nomatch).
 
 static_curated_recipe_mode_skips_on_weave_lookup_test() ->
@@ -6041,7 +6019,7 @@ spec_section_route_test() ->
     Msgs =
         hb_singleton:from(
             #{
-                <<"path">> => <<"/~message@1.0/info/spec/1-overview">>
+                <<"path">> => <<"/~message@1.0/docs/spec/1-overview">>
             },
             #{}
         ),
@@ -6061,8 +6039,8 @@ device_recipes_summary_test() ->
     ?assertEqual(404, maps:get(<<"status">>, HTML)),
     Body = maps:get(<<"body">>, HTML),
     ?assertEqual(nomatch, binary:match(Body, <<"<h2 id=\"recipes\">Recipes</h2>">>)),
-    ?assertEqual(nomatch, binary:match(Body, <<"href=\"/~message@1.0/info/recipes/build-a-typed-message-and-read-fields\"">>)),
-    ?assertEqual(nomatch, binary:match(Body, <<"href=\"/~message@1.0/info/recipes/">>)),
+    ?assertEqual(nomatch, binary:match(Body, <<"href=\"/~message@1.0/docs/recipes/build-a-typed-message-and-read-fields\"">>)),
+    ?assertEqual(nomatch, binary:match(Body, <<"href=\"/~message@1.0/docs/recipes/">>)),
     ?assertEqual(nomatch, binary:match(Body, <<"id=\"recipe-">>)),
     ?assertEqual(nomatch, binary:match(Body, <<"Runnable Workflows">>)).
 
@@ -6149,7 +6127,7 @@ boilerplate_routes_test() ->
     {ok, IndexResponse} = node_info_route([<<"guides">>], #{ <<"accept">> => <<"application/json">> }, #{}),
     Index = decoded_json_response(IndexResponse),
     ?assertEqual(<<"node-boilerplate-index">>, maps:get(<<"kind">>, Index)),
-    ?assertEqual(<<"/info/guides">>, maps:get(<<"href">>, Index)),
+    ?assertEqual(<<"/docs/guides">>, maps:get(<<"href">>, Index)),
     Pages = maps:get(<<"pages">>, Index),
     ?assertEqual(24, length(Pages)),
     RelPaths = [maps:get(<<"source-relative">>, Page) || Page <- Pages],
@@ -6169,13 +6147,13 @@ boilerplate_routes_test() ->
     ),
     ?assertEqual(
         [
-            <<"/info/processes/overview">>,
-            <<"/info/processes/state-and-reads">>,
-            <<"/info/processes/builder-templates">>,
-            <<"/info/processes/ao-connect-mainnet">>,
-            <<"/info/processes/aos-lua-reference">>,
-            <<"/info/processes/migration-to-hyperbeam">>,
-            <<"/info/processes/legacynet-appendix">>
+            <<"/docs/processes/overview">>,
+            <<"/docs/processes/state-and-reads">>,
+            <<"/docs/processes/builder-templates">>,
+            <<"/docs/processes/ao-connect-mainnet">>,
+            <<"/docs/processes/aos-lua-reference">>,
+            <<"/docs/processes/migration-to-hyperbeam">>,
+            <<"/docs/processes/legacynet-appendix">>
         ],
         [maps:get(<<"href">>, Page) || Page <- ProcessPages]
     ),
@@ -6209,7 +6187,7 @@ boilerplate_routes_test() ->
     ),
     JSON = decoded_json_response(JSONResponse),
     ?assertEqual(<<"node-boilerplate-page">>, maps:get(<<"kind">>, JSON)),
-    ?assertEqual(<<"/introduction/what-is-hyperbeam">>, maps:get(<<"href">>, JSON)),
+    ?assertEqual(<<"/docs/introduction/what-is-hyperbeam">>, maps:get(<<"href">>, JSON)),
     ?assertEqual(<<"docs/introduction/what-is-hyperbeam.md">>, maps:get(<<"source-relative">>, JSON)),
     ?assert(maps:get(<<"markdown-bytes">>, JSON) > 0),
     {ok, HTML} = node_info_route(
@@ -6222,22 +6200,22 @@ boilerplate_routes_test() ->
     ?assert(binary:match(Body, <<"HyperBEAM is the primary">>) =/= nomatch),
     ?assertEqual(nomatch, binary:match(Body, <<"Merged from the HyperBEAM">>)),
     ?assertEqual(nomatch, binary:match(Body, <<"/devices/">>)),
-    ?assertEqual(nomatch, binary:match(Body, <<"href=\"/~process@1.0/info\"">>)),
+    ?assertEqual(nomatch, binary:match(Body, <<"href=\"/~process@1.0/docs\"">>)),
     ?assert(binary:match(Body, <<"class=\"theme-invert-video\"">>) =/= nomatch),
-    ?assert(binary:match(Body, <<"src=\"/info/assets/images/aosvg1.svg\"">>) =/= nomatch),
+    ?assert(binary:match(Body, <<"src=\"/docs/assets/images/aosvg1.svg\"">>) =/= nomatch),
     ?assert(binary:match(Body, <<"class=\"core-concepts-flex\"">>) =/= nomatch),
-    ?assertEqual(nomatch, binary:match(Body, <<"/info/boilerplate">>)),
+    ?assertEqual(nomatch, binary:match(Body, <<"/docs/boilerplate">>)),
     {ok, IntroHTML} = node_info_route(
         [<<"introduction">>, <<"index">>],
         #{ <<"accept">> => <<"text/html">> },
         #{}
     ),
     IntroBody = maps:get(<<"body">>, IntroHTML),
-    ?assert(binary:match(IntroBody, <<"href=\"/introduction/what-is-hyperbeam\"">>) =/= nomatch),
-    ?assertEqual(nomatch, binary:match(IntroBody, <<"href=\"/introduction/ao-devices\"">>)),
-    ?assertEqual(nomatch, binary:match(IntroBody, <<"href=\"/info/getting-started/example-style\"">>)),
-    ?assertEqual(nomatch, binary:match(IntroBody, <<"href=\"/info/devices/index\"">>)),
-    ?assertEqual(nomatch, binary:match(IntroBody, <<"/info/boilerplate">>)),
+    ?assert(binary:match(IntroBody, <<"href=\"/docs/introduction/what-is-hyperbeam\"">>) =/= nomatch),
+    ?assertEqual(nomatch, binary:match(IntroBody, <<"href=\"/docs/introduction/ao-devices\"">>)),
+    ?assertEqual(nomatch, binary:match(IntroBody, <<"href=\"/docs/getting-started/example-style\"">>)),
+    ?assertEqual(nomatch, binary:match(IntroBody, <<"href=\"/docs/devices/index\"">>)),
+    ?assertEqual(nomatch, binary:match(IntroBody, <<"/docs/boilerplate">>)),
     ?assertEqual(nomatch, binary:match(IntroBody, <<"(what-is-hyperbeam.md)">>)),
     {ok, PathingHTML} = node_info_route(
         [<<"introduction">>, <<"pathing-in-ao-core">>],
@@ -6247,21 +6225,21 @@ boilerplate_routes_test() ->
     PathingBody = maps:get(<<"body">>, PathingHTML),
     ?assert(binary:match(PathingBody, <<"Pathing in AO-Core">>) =/= nomatch),
     ?assertEqual(nomatch, binary:match(PathingBody, <<"Merged from the HyperBEAM">>)),
-    ?assertEqual(nomatch, binary:match(PathingBody, <<"href=\"/~message@1.0/info\"">>)),
+    ?assertEqual(nomatch, binary:match(PathingBody, <<"href=\"/~message@1.0/docs\"">>)),
     ?assert(binary:match(PathingBody, <<"<code>~process@1.0</code>">>) =/= nomatch),
     ?assert(binary:match(PathingBody, <<"<code>~patch@1.0</code>">>) =/= nomatch),
     ?assertEqual(nomatch, binary:match(PathingBody, <<"/devices/">>)),
     ?assertEqual(nomatch, binary:match(PathingBody, <<"/recipes/">>)),
-    ?assertEqual(nomatch, binary:match(PathingBody, <<"/info/recipes/patch-process-state">>)),
-    ?assertEqual(nomatch, binary:match(PathingBody, <<"/info/recipes/arweave-json-to-lua">>)),
-    ?assertEqual(nomatch, binary:match(PathingBody, <<"/info/boilerplate">>)),
+    ?assertEqual(nomatch, binary:match(PathingBody, <<"/docs/recipes/patch-process-state">>)),
+    ?assertEqual(nomatch, binary:match(PathingBody, <<"/docs/recipes/arweave-json-to-lua">>)),
+    ?assertEqual(nomatch, binary:match(PathingBody, <<"/docs/boilerplate">>)),
     {ok, ProcessRootJSONResponse} = node_info_route(
         [<<"processes">>],
         #{ <<"accept">> => <<"application/json">> },
         #{}
     ),
     ProcessRootJSON = decoded_json_response(ProcessRootJSONResponse),
-    ?assertEqual(<<"/info/processes/overview">>, maps:get(<<"href">>, ProcessRootJSON)),
+    ?assertEqual(<<"/docs/processes/overview">>, maps:get(<<"href">>, ProcessRootJSON)),
     ?assertEqual(<<"Process Overview">>, maps:get(<<"title">>, ProcessRootJSON)),
     {ok, ProcessJSONResponse} = node_info_route(
         [<<"processes">>, <<"state-and-reads">>],
@@ -6289,7 +6267,7 @@ boilerplate_routes_test() ->
         #{}
     ),
     ForgeJSON = decoded_json_response(ForgeJSONResponse),
-    ?assertEqual(<<"/info/forge/index">>, maps:get(<<"href">>, ForgeJSON)),
+    ?assertEqual(<<"/docs/forge/index">>, maps:get(<<"href">>, ForgeJSON)),
     ?assertEqual(<<"docs/forge/index.md">>, maps:get(<<"source-relative">>, ForgeJSON)),
     {ok, ForgeHTML} = node_info_route(
         [<<"forge">>, <<"index">>],
@@ -6298,27 +6276,27 @@ boilerplate_routes_test() ->
     ),
     ForgeBody = maps:get(<<"body">>, ForgeHTML),
     ?assert(binary:match(ForgeBody, <<"Device Forge">>) =/= nomatch),
-    ?assert(binary:match(ForgeBody, <<"href=\"/info/forge/runbook\"">>) =/= nomatch),
-    ?assertEqual(nomatch, binary:match(ForgeBody, <<"/info/boilerplate">>)),
-    IntroMsgs = hb_singleton:from(#{ <<"path">> => <<"/introduction/what-is-ao-core">> }, #{}),
+    ?assert(binary:match(ForgeBody, <<"href=\"/docs/forge/runbook\"">>) =/= nomatch),
+    ?assertEqual(nomatch, binary:match(ForgeBody, <<"/docs/boilerplate">>)),
+    IntroMsgs = hb_singleton:from(#{ <<"path">> => <<"/docs/introduction/what-is-ao-core">> }, #{}),
     {true, {ok, RootIntroHTML}} =
         maybe_info_request(IntroMsgs, #{ <<"accept">> => <<"text/html">> }, #{}),
     RootIntroBody = maps:get(<<"body">>, RootIntroHTML),
     ?assert(binary:match(RootIntroBody, <<"What is AO-Core">>) =/= nomatch),
-    ?assert(binary:match(RootIntroBody, <<"data-active-path=\"/introduction/what-is-ao-core\"">>) =/= nomatch),
+    ?assert(binary:match(RootIntroBody, <<"data-active-path=\"/docs/introduction/what-is-ao-core\"">>) =/= nomatch),
     {ok, GuidesHTML} = node_info_route([<<"guides">>], #{ <<"accept">> => <<"text/html">> }, #{}),
     GuidesBody = maps:get(<<"body">>, GuidesHTML),
     ?assert(binary:match(GuidesBody, <<"hb-docs-recipe-card-title\">Create A Device</strong>">>) =/= nomatch),
     ?assert(binary:match(GuidesBody, <<"hb-docs-recipe-card-title\">Process Overview</strong>">>) =/= nomatch),
     ?assert(binary:match(GuidesBody, <<"hb-docs-recipe-card-cta\">Open &rarr;</span>">>) =/= nomatch),
-    ?assert(binary:match(GuidesBody, <<"href=\"/introduction/what-is-ao-core\"">>) =/= nomatch),
-    ?assert(binary:match(GuidesBody, <<"href=\"/info/processes/state-and-reads\"">>) =/= nomatch),
-    ?assert(binary:match(GuidesBody, <<"href=\"/info/forge/create-a-device\"">>) =/= nomatch),
-    ?assert(binary:match(GuidesBody, <<"href=\"/info/reference/recipe-standards\"">>) =/= nomatch),
-    ?assert(binary:match(GuidesBody, <<"href=\"/info/reference/process-fixture\"">>) =/= nomatch),
+    ?assert(binary:match(GuidesBody, <<"href=\"/docs/introduction/what-is-ao-core\"">>) =/= nomatch),
+    ?assert(binary:match(GuidesBody, <<"href=\"/docs/processes/state-and-reads\"">>) =/= nomatch),
+    ?assert(binary:match(GuidesBody, <<"href=\"/docs/forge/create-a-device\"">>) =/= nomatch),
+    ?assert(binary:match(GuidesBody, <<"href=\"/docs/reference/recipe-standards\"">>) =/= nomatch),
+    ?assert(binary:match(GuidesBody, <<"href=\"/docs/reference/process-fixture\"">>) =/= nomatch),
     ?assert(binary:match(GuidesBody, <<"Recipe Standards">>) =/= nomatch),
     ?assertEqual(nomatch, binary:match(GuidesBody, <<"Merged from the HyperBEAM">>)),
-    ?assertEqual(nomatch, binary:match(GuidesBody, <<"/info/boilerplate">>)),
+    ?assertEqual(nomatch, binary:match(GuidesBody, <<"/docs/boilerplate">>)),
     ?assertEqual(nomatch, binary:match(GuidesBody, <<"01-intro-to-process">>)),
     ?assertEqual(nomatch, binary:match(GuidesBody, <<"SOURCE-MAP">>)),
     ?assert(binary:match(GuidesBody, <<"The HTTP-native protocol for decentralized computation">>) =/= nomatch),
@@ -6411,7 +6389,7 @@ device_card_label_test() ->
     ?assertEqual(<<"~arweave@2.9">>, device_marked_id(<<"arweave@2.9">>)),
     ?assertEqual(<<"~message@1.0">>, device_marked_id(<<"message@1.0">>)),
     ?assertEqual(<<"~arweave@2.9">>, device_marked_id(<<"~arweave@2.9">>)),
-    Msgs = hb_singleton:from(#{ <<"path">> => <<"/info">> }, #{}),
+    Msgs = hb_singleton:from(#{ <<"path">> => <<"/docs">> }, #{}),
     Req = #{ <<"accept">> => <<"text/html">> },
     {true, {ok, HTML}} = maybe_info_request(Msgs, Req, #{}),
     Body = maps:get(<<"body">>, HTML),
@@ -6422,7 +6400,7 @@ device_card_label_test() ->
 docs_asset_route_test() ->
     Msgs = [
         #{},
-        #{ <<"path">> => <<"info">> },
+        #{ <<"path">> => <<"docs">> },
         #{ <<"path">> => <<"assets">> },
         #{ <<"path">> => <<"site.css">> }
     ],
@@ -6432,7 +6410,7 @@ docs_asset_route_test() ->
     ?assert(binary:match(maps:get(<<"body">>, CSS), <<"hb-runner">>) =/= nomatch).
 
 canonical_and_unsupported_device_info_route_test() ->
-    JSONMsgs = hb_singleton:from(#{ <<"path">> => <<"/~json@1.0/info">> }, #{}),
+    JSONMsgs = hb_singleton:from(#{ <<"path">> => <<"/~json@1.0/docs">> }, #{}),
     {true, {ok, JSONResponse}} =
         maybe_info_request(JSONMsgs, #{ <<"accept">> => <<"application/json">> }, #{}),
     JSON = decoded_json_response(JSONResponse),
@@ -6441,7 +6419,7 @@ canonical_and_unsupported_device_info_route_test() ->
     ?assertEqual(<<"not-documented">>, maps:get(<<"docs-status">>, JSON)),
     ?assertNotEqual(<<"message@1.0">>, maps:get(<<"device-id">>, JSON)),
 
-    HTMLMsgs = hb_singleton:from(#{ <<"path">> => <<"/~ans104@1.0/info">> }, #{}),
+    HTMLMsgs = hb_singleton:from(#{ <<"path">> => <<"/~ans104@1.0/docs">> }, #{}),
     {true, {ok, HTML}} =
         maybe_info_request(HTMLMsgs, #{ <<"accept">> => <<"text/html">> }, #{}),
     ?assertEqual(404, maps:get(<<"status">>, HTML)),
@@ -6460,7 +6438,7 @@ canonical_and_unsupported_device_info_route_test() ->
     ?assertEqual(404, maps:get(<<"status">>, StructuredSchemaResponse)),
     ?assertEqual(<<"not-documented">>, maps:get(<<"docs-status">>, StructuredSchema)),
 
-    UnknownMsgs = hb_singleton:from(#{ <<"path">> => <<"/~not-real@1.0/info">> }, #{}),
+    UnknownMsgs = hb_singleton:from(#{ <<"path">> => <<"/~not-real@1.0/docs">> }, #{}),
     {true, {ok, UnknownResponse}} =
         maybe_info_request(UnknownMsgs, #{ <<"accept">> => <<"application/json">> }, #{}),
     Unknown = decoded_json_response(UnknownResponse),
@@ -6469,23 +6447,33 @@ canonical_and_unsupported_device_info_route_test() ->
     ?assertEqual(<<"not-documented">>, maps:get(<<"docs-status">>, Unknown)).
 
 node_info_sidebar_context_test() ->
-    Msgs = hb_singleton:from(#{ <<"path">> => <<"/info">> }, #{}),
+    Msgs = hb_singleton:from(#{ <<"path">> => <<"/docs">> }, #{}),
     Req = #{ <<"accept">> => <<"text/html">> },
     {true, {ok, HTML}} = maybe_info_request(Msgs, Req, #{}),
     Body = maps:get(<<"body">>, HTML),
     ?assert(binary:match(Body, <<"<p class=\"eyebrow\">You are viewing</p>">>) =/= nomatch),
-    ?assert(binary:match(Body, <<"sidebar-viewing-device is-active\" href=\"/info\">Node</a>">>) =/= nomatch),
+    ?assert(binary:match(Body, <<"sidebar-viewing-device is-active\" href=\"/docs\">Node</a>">>) =/= nomatch),
     ?assert(binary:match(Body, <<"<h2 id=\"devices\">Devices</h2>">>) =/= nomatch),
-    ?assertEqual(nomatch, binary:match(Body, <<"sidebar-viewing-back\" href=\"/info\">View All Node Info</a>">>)).
+    ?assertEqual(nomatch, binary:match(Body, <<"sidebar-viewing-back\" href=\"/docs\">View All Node Info</a>">>)).
 
 device_info_sidebar_all_devices_anchor_test() ->
-    Markup = iolist_to_binary(sidebar_device_context(<<"/~json@1.0/info">>, <<"json@1.0">>)),
-    ?assert(binary:match(Markup, <<"href=\"/info#devices\"">>) =/= nomatch),
+    Markup = iolist_to_binary(sidebar_device_context(<<"/~json@1.0/docs">>, <<"json@1.0">>)),
+    ?assert(binary:match(Markup, <<"href=\"/docs#devices\"">>) =/= nomatch),
     ?assert(binary:match(Markup, <<"View All Devices</a>">>) =/= nomatch),
-    ?assertEqual(nomatch, binary:match(Markup, <<"href=\"/info/schema\"">>)).
+    ?assertEqual(nomatch, binary:match(Markup, <<"href=\"/docs/schema\"">>)).
 
 node_info_request_match_test() ->
-    Msgs = hb_singleton:from(#{ <<"path">> => <<"/info">> }, #{}),
+    Msgs = hb_singleton:from(#{ <<"path">> => <<"/docs">> }, #{}),
     ?assert(is_node_info_request(Msgs, #{})),
-    DeviceMsgs = hb_singleton:from(#{ <<"path">> => <<"/~arweave@2.9/info">> }, #{}),
+    DeviceMsgs = hb_singleton:from(#{ <<"path">> => <<"/~arweave@2.9/docs">> }, #{}),
     ?assertNot(is_node_info_request(DeviceMsgs, #{})).
+
+info_paths_remain_device_paths_test() ->
+    NodeInfo = hb_singleton:from(#{ <<"path">> => <<"/info">> }, #{}),
+    MetaInfoAddress =
+        hb_singleton:from(#{ <<"path">> => <<"/~meta@1.0/info/address">> }, #{}),
+    MessageInfoSchema =
+        hb_singleton:from(#{ <<"path">> => <<"/~message@1.0/info/schema">> }, #{}),
+    ?assertEqual(false, maybe_info_request(NodeInfo, #{}, #{})),
+    ?assertEqual(false, maybe_info_request(MetaInfoAddress, #{}, #{})),
+    ?assertEqual(false, maybe_info_request(MessageInfoSchema, #{}, #{})).
