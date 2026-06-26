@@ -209,13 +209,14 @@
         escaped = false;
         continue;
       }
-      if (char === '\\') {
-        escaped = true;
-        continue;
-      }
       if (quote) {
         if (char === quote) quote = '';
+        else if (quote === '"' && char === '\\') escaped = true;
         else token += char;
+        continue;
+      }
+      if (char === '\\') {
+        escaped = true;
         continue;
       }
       if (char === '"' || char === "'") {
@@ -486,10 +487,6 @@
         method = (tokens[++i] || '').toUpperCase();
       } else if (token.startsWith('-X') && token.length > 2) {
         method = token.slice(2).toUpperCase();
-      } else if (/^-[A-Za-z]+$/.test(token)) {
-        if (token.includes('I')) method = 'HEAD';
-        if (token.includes('G')) useGet = true;
-        if (token.includes('i')) includeHeaders = true;
       } else if (token === '-H' || token === '--header') {
         const header = tokens[++i] || '';
         const split = header.indexOf(':');
@@ -513,6 +510,10 @@
         url = tokens[++i] || '';
       } else if (token === '-o' || token === '--output' || token === '-w' || token === '--write-out' || token === '--connect-timeout' || token === '--max-time' || token === '-m') {
         i += 1;
+      } else if (/^-[A-Za-z]+$/.test(token)) {
+        if (token.includes('I')) method = 'HEAD';
+        if (token.includes('G')) useGet = true;
+        if (token.includes('i')) includeHeaders = true;
       } else if (token.startsWith('-')) {
         continue;
       } else if (!url && (/^https?:\/\//i.test(token) || token.startsWith('/'))) {
@@ -642,15 +643,15 @@
   }
 
   function previewCommands(run = selectedRun) {
-    if (!run?.requests.length) return run?.text.trim() || '';
-    if (isRunAllMode(run)) return run.requests.map(commandFor).join('\n');
-    return commandFor(run.requests[run.selected]);
+    const original = run?.context?.originalText || run?.text || '';
+    return displaySnippetText(original).trim();
   }
 
   function previewOpenUrl(run = selectedRun) {
     if (!run?.requests.length) return '';
-    if (isRunAllMode(run)) return requestUrlFor(run.requests[0]);
-    return requestUrlFor(run.requests[run.selected]);
+    const request = isRunAllMode(run) ? run.requests[0] : run.requests[run.selected];
+    if (!['GET', 'HEAD'].includes(request.method)) return '';
+    return requestUrlFor(request);
   }
 
   function quote(value) {
@@ -989,7 +990,14 @@
     if (commandSection) commandSection.classList.toggle('is-run-all', runAllActive);
 
     renderCommandPreview(command, previewCommands(run), 'bash');
-    open.href = previewOpenUrl(run);
+    const openUrl = previewOpenUrl(run);
+    if (openUrl) {
+      open.href = openUrl;
+      open.hidden = false;
+    } else {
+      open.removeAttribute('href');
+      open.hidden = true;
+    }
     renderRunModeTabs();
     updateResultPanelView();
   }

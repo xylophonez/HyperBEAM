@@ -1,6 +1,6 @@
 # Recorder Debug Flights
 
-Recorder examples are operator-only until the docs-test node has a successful structured recorder fixture. The previous recipe returned HTTP 200 while the recorded target result was `not_found`, which is not acceptable for an inherited example.
+Recorder debug flights require a node with `~recorder@1.0`, a structured target request, and a successful recorded target result. A plain HTTP 200 is not enough when the captured target response is `not_found`.
 
 An acceptable recorder recipe must:
 
@@ -10,4 +10,4 @@ An acceptable recorder recipe must:
 - Redact private headers, wallets, cookies, and authorization material.
 - Run on a private or disposable node when request contents are sensitive.
 
-Until that fixture exists, use recorder in Forge/operator test suites rather than as a public runnable recipe.
+Until a successful recorder fixture is available, recorder examples belong in Forge or operator test suites rather than the public runnable recipe set.

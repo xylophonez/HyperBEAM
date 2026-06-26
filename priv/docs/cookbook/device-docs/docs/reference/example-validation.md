@@ -22,7 +22,7 @@ Run the static example lint before building:
 npm run docs:lint:examples
 ```
 
-The lint checks that runnable shell examples do not carry local files, placeholder values, extra shell tools, signing flows, or operator-only state. Command-shaped `text` blocks must be documented as inspect workflows.
+The lint checks that runnable shell examples avoid local files, placeholder values, extra shell tools, signing flows, and privileged operator state. Command-shaped `text` blocks must be documented as inspect workflows.
 
 ## Quick Curl Smoke Test
 

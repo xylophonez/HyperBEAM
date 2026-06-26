@@ -24,9 +24,9 @@ The broad docs validator treats every `bash` or `sh` curl block as a public exam
 
 Inspect workflows show the request shape, configuration shape, or operator command sequence for flows that require local prerequisites. Use them for signing, wallet-backed requests, ANS-104 and bundler operations, binary artifacts, local build commands, private node policy, payment ledgers, recorder flights, and other stateful workflows.
 
-An inspect workflow should state the prerequisite and the expected success shape. It should not be marked as shell-runnable unless the page also provides every required artifact and the validator can execute the block on a fresh node.
+An inspect workflow should state the prerequisite and the expected success shape. Mark it as shell-runnable only when the page also provides every required artifact and the validator can execute the block on a fresh node.
 
-## Not Acceptable In Public Recipes
+## Excluded From Public Recipes
 
 - Placeholders such as `PROCESS_ID`, `USER_ADDRESS`, `RECIPIENT`, `WALLET`, or `NAME_FROM_YOUR_RESOLVER`.
 - Commands that assume `/tmp` files, local project directories, wallet files, signed item files, or prior shell history.
@@ -45,7 +45,7 @@ If the setup requires operator authority, wallets, signing keys, node config, or
 
 Use `co-MIhejkMR8v3-oIvW8m_u3YfV7zXoII0ja1wk-IOo` for public process read examples that need an existing process. The process exposes `counter`, `status`, `name`, `version`, and `lastupdate` through `process@1.0/compute`.
 
-Do not publish the node used to seed the fixture. docs-test resolves the fixture through operator routing.
+The seed node URL is intentionally omitted from public examples. docs-test resolves the fixture through operator routing.
 
 ## Blacklist Policy
 
@@ -63,4 +63,4 @@ docs-test loads a recipe blacklist from operator config. A blacklisted recipe ca
 - Does `curl -fsS` fail if the endpoint is missing?
 - Is the expected output observable without another tool?
 - Are all prerequisites created by the recipe itself?
-- Are operator-only actions clearly kept out of public runnable examples?
+- Are privileged operator actions clearly kept out of public runnable examples?

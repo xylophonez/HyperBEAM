@@ -1,6 +1,6 @@
 # Run An Inline Lua Transform
 
-The old Arweave-to-Lua recipe depended on copycat state, local temporary files, and transaction data availability. This replacement keeps the useful device composition: post a Lua module inline, execute one function, and serialize the resulting message.
+This recipe posts a Lua module inline, executes one function, and serializes the resulting message without local files or preloaded transaction state.
 
 ## Run The Transform
 
@@ -26,4 +26,4 @@ curl -fsS -X POST \
 
 Expected: JSON with `body` equal to `hello hyperbeam`.
 
-Use this as the public Lua fixture. Arweave-backed compute recipes need an explicit first step that imports or fetches the data and a validation step proving the target transaction bytes exist.
+For Arweave-backed Lua compute, add a first step that imports or fetches the source transaction data and a validation step that proves the expected bytes are present before the transform runs.

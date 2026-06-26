@@ -63,7 +63,7 @@ Expected: balance returns the ledger amount for a syntactically valid address. C
 
 ## Trust And Operation
 
-Top-ups and balances are local ledger state. Treat operator-only paths as mutating policy.
+Top-ups and balances are local ledger state. Treat privileged payment paths as mutating policy.
 
 ## Source
 

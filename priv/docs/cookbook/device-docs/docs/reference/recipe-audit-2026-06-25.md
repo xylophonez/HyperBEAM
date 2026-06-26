@@ -14,7 +14,7 @@ This audit covers the docs-test on-weave `Device-Recipe` corpus and the static r
 | Area | Change | Why |
 |---|---|---|
 | Runtime docs | Added file-backed recipe blacklist support in `hb_docs`. | Operators need to hide known bad on-weave recipes without deleting or republishing transactions. |
-| docs-test config | Added `config/docs-test-recipe-blacklist.json` and wired it from `scripts/hyperbeam-docs-test-start`. | The current public on-weave recipe corpus should not be inherited while it contains broken patterns. |
+| docs-test config | Added `config/docs-test-recipe-blacklist.json` and wired it from `scripts/hyperbeam-docs-test-start`. | The current public on-weave recipe corpus is unsuitable for inheritance while it contains broken patterns. |
 | Static recipes | Replaced local-file, placeholder, and operator-mutation examples with deterministic curl-only recipes. | Public recipes must be runnable from a fresh shell and pass on docs-test. |
 | Device recipe UI | Attached curated static recipes to device recipe lists and configured docs-test to skip quarantined on-weave recipe lookup. | Device pages should show tested replacement recipes quickly while bad on-weave transactions remain quarantined. |
 | Device/reference examples | Marked setup-dependent device, operator, payment, cache, WASM, bundler, recorder, and forge examples as `text` instead of runnable shell. | The broad validator must not advertise prerequisite-bound workflows as directly runnable examples. |

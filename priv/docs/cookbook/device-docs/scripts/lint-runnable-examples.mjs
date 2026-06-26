@@ -22,7 +22,17 @@ const publicLanguagePattern = new RegExp([
   'pretending',
   'not safe to fake',
   'fixture-missing',
-  'operator-only guidance'
+  'operator-only guidance',
+  'Use this as',
+  'Do not publish',
+  'do not publish',
+  'previous recipe',
+  'not acceptable',
+  'bad-pattern',
+  'copycat state',
+  'old Arweave',
+  'Until that fixture exists',
+  'should not be'
 ].join('|'), 'i');
 
 const shellRiskPatterns = [

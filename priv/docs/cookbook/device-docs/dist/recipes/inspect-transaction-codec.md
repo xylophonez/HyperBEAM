@@ -21,4 +21,4 @@ curl -fsS "$HB/~tx@1.0/info/schema/verify"
 
 Expected: JSON describing the unsigned or signed commitment request and the verification action.
 
-Do not publish a transaction round-trip recipe unless it provides the exact transaction fixture, signing material, or generated commitment bytes needed by every step.
+A runnable transaction round trip needs exact transaction material, signing material, or generated commitment bytes for every step. This page stays at codec inspection until those artifacts are part of the workflow.

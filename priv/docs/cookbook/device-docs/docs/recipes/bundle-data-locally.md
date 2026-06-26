@@ -20,4 +20,4 @@ curl -fsS "$HB/~message@1.0&body=bundle-example&media-type=text-plain/~json@1.0/
 
 Expected: JSON with `body` equal to `bundle-example` and `media-type` equal to `text-plain`.
 
-A production bundler recipe must add a tested signing step that creates the item bytes in the same recipe, then post those bytes to a node whose bundler route is enabled. Do not publish examples that assume a pre-existing `/tmp` item file.
+A runnable bundler workflow needs a signing step that creates the item bytes in the same recipe, followed by a submission to a node whose bundler route is enabled. Pre-existing local item files are not part of this public recipe.

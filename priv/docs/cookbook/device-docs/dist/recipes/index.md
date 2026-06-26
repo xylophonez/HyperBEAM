@@ -2,7 +2,7 @@
 
 Recipes are examples that a reader can run directly against a HyperBEAM node. The approved public set is intentionally small: each runnable block is self-contained, curl-only, and validated against docs-test.
 
-Bad-pattern recipes from the earlier on-weave corpus are quarantined at the docs-test operator config level. A quarantined recipe should not be re-enabled until it follows the [recipe standards](/reference/recipe-standards.md) and passes the validator.
+Earlier on-weave recipes that depend on placeholders, local files, or hidden node state are quarantined at the docs-test operator config level. Re-enabled recipes are expected to follow the [recipe standards](/reference/recipe-standards.md) and pass validation.
 
 ## Approved Runnable Recipes
 
@@ -24,4 +24,4 @@ Bad-pattern recipes from the earlier on-weave corpus are quarantined at the docs
 - [Recorder debug flights](recorder-debug-flight.md)
 - [Trusted custom devices](trusted-custom-device.md)
 
-Inspect workflow pages describe the operation and acceptance criteria but do not publish runnable commands when the action requires wallets, local files, privileged configuration, or seeded node state.
+Inspect workflow pages describe the operation and acceptance criteria while omitting runnable commands for actions that require wallets, local files, privileged configuration, or seeded node state.

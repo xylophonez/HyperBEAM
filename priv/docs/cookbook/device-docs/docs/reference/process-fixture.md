@@ -24,4 +24,4 @@ curl -fsS "$HB/$PROCESS_ID~process@1.0/compute/counter"
 
 Expected output: `1`.
 
-The fixture is public, but any node used as `HB` must be able to resolve or route the process. docs-test wires that routing through operator configuration so examples do not publish the seeding node URL.
+The fixture is public, but any node used as `HB` must be able to resolve or route the process. docs-test wires that routing through operator configuration, so public examples omit the seeding node URL.

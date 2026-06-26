@@ -30,4 +30,4 @@ curl -fsS "$HB/~p4@1.0/info/schema"
 
 Expected: a JSON schema object describing P4 actions.
 
-Do not publish public recipes containing `USER_ADDRESS`, topup paths, charge paths, or balance checks unless the recipe creates the ledger fixture and signs the request inside the workflow.
+A runnable payment workflow needs a disposable ledger fixture and signed requests inside the workflow before balance, topup, charge, or gate paths can be shown as examples.
