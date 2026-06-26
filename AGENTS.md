@@ -3,8 +3,7 @@ This repository contains HyperBEAM, an implementation of the AO-Core protocol.
 To familiarize yourself with AO-Core, read the `README.md` file.
 
 To understand how to write code for HyperBEAM, read `CONTRIBUTING.md` for 
-repository-level guidelines, and `docs/misc/hacking-on-hyperbeam.md` learn about
-its debugging tools and infrastructure.
+repository-level guidelines.
 
 In addition to the rules outlined in `CONTRIBUTING.md`, you should abide by the
 following:
