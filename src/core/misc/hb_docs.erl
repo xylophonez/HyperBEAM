@@ -4647,8 +4647,7 @@ docs_mobile_nav_js() ->
 docs_asset_response(Parts) ->
     case valid_asset_parts(Parts) of
         true ->
-            Path = docs_asset_path(Parts),
-            case file:read_file(Path) of
+            case read_docs_asset(Parts) of
                 {ok, Body0} ->
                     Body = docs_asset_body(Parts, Body0),
                     {ok, #{
@@ -4675,10 +4674,23 @@ valid_asset_part(Part) when is_binary(Part) ->
 valid_asset_part(_) ->
     false.
 
-docs_asset_path([<<"prism-core.min.js">>]) ->
-    filename:join([device_docs_root(), "node_modules", "prismjs", "components", "prism-core.min.js"]);
-docs_asset_path(Parts) ->
-    filename:join([device_docs_root(), "dist", "assets" | [binary_to_list(Part) || Part <- Parts]]).
+read_docs_asset(Parts) ->
+    read_docs_asset(Parts, docs_asset_paths(Parts)).
+
+read_docs_asset(Parts, [Path | Rest]) ->
+    case file:read_file(Path) of
+        {ok, Body} -> {ok, Body};
+        {error, _Reason} -> read_docs_asset(Parts, Rest)
+    end;
+read_docs_asset(_Parts, []) ->
+    {error, not_found}.
+
+docs_asset_paths(Parts) ->
+    RelParts = [binary_to_list(Part) || Part <- Parts],
+    [
+        filename:join([device_docs_root(), "site", "assets" | RelParts]),
+        filename:join([device_docs_root(), "docs", "assets" | RelParts])
+    ].
 
 docs_asset_body([<<"example-runner.js">>], Body) ->
     binary:replace(
@@ -5384,8 +5396,6 @@ heading(<<"#### ", Text/binary>>) -> {4, Text};
 heading(<<"##### ", Text/binary>>) -> {5, Text};
 heading(_Line) -> false.
 
-raw_html_line(<<"<video class=\"hb-page-figure\" src=\"../assets/images/what-is-hyperbeam-fig.mp4\" autoplay loop muted playsinline aria-label=\"HyperBEAM modular compute blocks\"></video>">> = Line) ->
-    {ok, Line};
 raw_html_line(<<"<video class=\"theme-invert-video\" src=\"https://arweave.net/pc73dj9tZtj7AOeIKBGiiOm5ta13FYXzgsqWSePAxiM\" style=\"width: 100%; height: auto; display: block;\" autoplay=\"\" muted=\"\" playsinline=\"\" loop=\"\" controlslist=\"nodownload nofullscreen noremoteplayback\" disablepictureinpicture=\"\" preload=\"auto\"></video>">> = Line) ->
     {ok, Line};
 raw_html_line(<<"<div class=\"core-concepts-flex\">">> = Line) ->
@@ -6426,7 +6436,18 @@ docs_asset_route_test() ->
     {true, {ok, CSS}} = maybe_info_request(Msgs, #{}, #{}),
     ?assertEqual(200, maps:get(<<"status">>, CSS)),
     ?assertEqual(<<"text/css; charset=utf-8">>, maps:get(<<"content-type">>, CSS)),
-    ?assert(binary:match(maps:get(<<"body">>, CSS), <<"hb-runner">>) =/= nomatch).
+    ?assert(binary:match(maps:get(<<"body">>, CSS), <<"hb-runner">>) =/= nomatch),
+    ImageMsgs = [
+        #{},
+        #{ <<"path">> => <<"docs">> },
+        #{ <<"path">> => <<"assets">> },
+        #{ <<"path">> => <<"images">> },
+        #{ <<"path">> => <<"aosvg1.svg">> }
+    ],
+    {true, {ok, SVG}} = maybe_info_request(ImageMsgs, #{}, #{}),
+    ?assertEqual(200, maps:get(<<"status">>, SVG)),
+    ?assertEqual(<<"image/svg+xml">>, maps:get(<<"content-type">>, SVG)),
+    ?assert(binary:match(maps:get(<<"body">>, SVG), <<"<svg">>) =/= nomatch).
 
 canonical_and_unsupported_device_info_route_test() ->
     JSONMsgs = hb_singleton:from(#{ <<"path">> => <<"/~json@1.0/docs">> }, #{}),

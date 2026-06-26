@@ -4,22 +4,8 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "ship": "npm run docs:build && npm run docs:deploy:bundler",
     "docs:build": "node scripts/build-docs-site.mjs",
-    "docs:serve": "node scripts/serve-docs-site.mjs",
-    "docs:deploy:arweave": "node scripts/deploy-bundler.mjs",
-    "docs:deploy:bundler": "node scripts/deploy-bundler.mjs",
-    "docs:deploy:turbo": "node scripts/deploy-arweave.mjs",
     "docs:validate:curl": "node scripts/validate-curl-examples.mjs",
     "docs:lint:examples": "node scripts/lint-runnable-examples.mjs"
-  },
-  "dependencies": {
-    "@ardrive/turbo-sdk": "^1.41.3",
-    "@dha-team/arbundles": "^1.0.4",
-    "docsify": "^4.13.1"
-  },
-  "devDependencies": {
-    "@fontsource/dm-sans": "^5.2.8",
-    "@fontsource/source-code-pro": "^5.2.7"
   }
 }

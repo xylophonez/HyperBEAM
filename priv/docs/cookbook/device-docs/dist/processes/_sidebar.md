@@ -1,8 +1,0 @@
-- Processes
-  - [Intro to `process@1.0` & Processes](/processes/overview.md)
-  - [State And Reads](/processes/state-and-reads.md)
-  - [Builder Templates](/processes/builder-templates.md)
-  - [AO Connect Mainnet](/processes/ao-connect-mainnet.md)
-  - [AOS Lua Reference](/processes/aos-lua-reference.md)
-  - [Migration To HyperBEAM](/processes/migration-to-hyperbeam.md)
-  - [Legacynet Appendix](/processes/legacynet-appendix.md)

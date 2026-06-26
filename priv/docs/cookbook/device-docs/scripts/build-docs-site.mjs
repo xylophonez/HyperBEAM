@@ -1,272 +1,51 @@
-import { copyFile, cp, mkdir, readdir, readFile, rm, stat, writeFile } from 'node:fs/promises';
+#!/usr/bin/env node
+import { access, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const docsDir = path.join(root, 'docs');
-const siteDir = path.join(root, 'site');
-const distDir = path.join(root, 'dist');
 
-const sectionOrder = [
-  'introduction',
-  'getting-started',
-  'processes',
-  'forge',
-  'recipes',
-  'reference'
+const requiredFiles = [
+  'site/assets/docsify-vue.css',
+  'site/assets/example-runner.js',
+  'site/assets/fonts.css',
+  'site/assets/fonts/dm-sans-400.woff2',
+  'site/assets/fonts/dm-sans-500.woff2',
+  'site/assets/fonts/dm-sans-600.woff2',
+  'site/assets/fonts/dm-sans-700.woff2',
+  'site/assets/fonts/source-code-pro-400.woff2',
+  'site/assets/fonts/source-code-pro-500.woff2',
+  'site/assets/prism.css',
+  'site/assets/prism-core.min.js',
+  'site/assets/prism-bash.min.js',
+  'site/assets/prism-erlang.min.js',
+  'site/assets/prism-http.min.js',
+  'site/assets/prism-json.min.js',
+  'site/assets/prism-lua.min.js',
+  'site/assets/prism-markdown.min.js',
+  'site/assets/site.css',
+  'docs/assets/images/aosvg1.svg',
+  'docs/assets/images/aosvg2.svg',
+  'docs/assets/images/aosvg3.svg'
 ];
 
-const sectionTitles = {
-  introduction: 'Introduction',
-  'getting-started': 'Using These Docs',
-  processes: 'Processes',
-  forge: 'Device Forge',
-  recipes: 'Recipes',
-  reference: 'Reference'
-};
+const missing = [];
 
-const sectionHomePaths = {
-  introduction: '/introduction/index.md',
-  'getting-started': '/getting-started/index.md',
-  processes: '/processes/overview.md',
-  forge: '/forge/index.md',
-  recipes: '/recipes/index.md',
-  reference: '/reference/glossary.md'
-};
-
-const fileOrder = {
-  introduction: [
-    'index.md',
-    'what-is-hyperbeam.md',
-    'what-is-ao-core.md',
-    'ao-devices.md',
-    'pathing-in-ao-core.md'
-  ],
-  'getting-started': [
-    'index.md',
-    'example-style.md'
-  ],
-  processes: [
-    'overview.md',
-    'state-and-reads.md',
-    'builder-templates.md',
-    'ao-connect-mainnet.md',
-    'aos-lua-reference.md',
-    'migration-to-hyperbeam.md',
-    'legacynet-appendix.md'
-  ]
-};
-
-const navItemDescriptions = {
-  'getting-started/index.md': 'How to read the local device examples in this corpus',
-  'getting-started/example-style.md': 'How hyperpaths, keys, and quoting work',
-
-  'concepts/local-vs-remote-devices.md': 'How nodes load core, pinned, and remote devices',
-  'concepts/messages-and-hyperpaths.md': 'How request paths compose message operations',
-  'concepts/processes-as-a-recipe.md': 'Processes as reusable device composition workflows',
-  'concepts/verification-model.md': 'Trust layers to keep separate when reasoning',
-  'concepts/what-devices-are.md': 'What a device is and how paths work',
-
-  'processes/overview.md': 'Create and understand HyperBEAM process@1.0 processes',
-  'processes/state-and-reads.md': 'Expose process state and read it over HTTP',
-  'processes/builder-templates.md': 'Practical Lua process templates for common state patterns',
-  'processes/ao-connect-mainnet.md': 'Use AO Connect JavaScript clients with HyperBEAM processes',
-  'processes/aos-lua-reference.md': 'AOS Lua commands, globals, handlers, and replies',
-  'processes/migration-to-hyperbeam.md': 'Move legacy AO process patterns to HyperBEAM',
-  'processes/legacynet-appendix.md': 'Legacy AO patterns for existing process support',
-
-  'forge/index.md': 'Overview of the Device Forge workflow',
-  'forge/create-a-device.md': 'Author a dev module and define device keys',
-  'forge/install-template.md': 'Install the Forge template from HyperBEAM',
-  'forge/operator-configuration.md': 'Operator settings for loading, auth, and routes',
-  'forge/publish-and-load.md': 'Sign, publish, and load devices on nodes',
-  'forge/run-local.md': 'Run a packaged device on a local node',
-  'forge/runbook.md': 'End to end Forge packaging and verification runbook',
-  'forge/test-package-verify.md': 'Package, verify, and test before you publish',
-  'forge/trusted-signers-and-pins.md': 'Trusted signers, pins, and remote load policy',
-
-  'recipes/index.md': 'Use case workflows that combine multiple devices',
-  'recipes/arweave-json-to-lua.md': 'Run an inline Lua transform without local files',
-  'recipes/bundle-data-locally.md': 'Inspect ANS-104 bundling prerequisites',
-  'recipes/create-a-process.md': 'Build a process shaped message from devices',
-  'recipes/gzip-round-trip.md': 'Compress and decompress a message body locally',
-  'recipes/inspect-transaction-codec.md': 'Inspect Arweave transaction codec commitments',
-  'recipes/message-to-json-pipe.md': 'Construct a message and serialize it to JSON',
-  'recipes/paid-device-access.md': 'Inspect pricing and metering contracts',
-  'recipes/patch-process-state.md': 'Move values between paths before compute runs',
-  'recipes/query-local-cache.md': 'Inspect match/query readiness without hidden state',
-  'recipes/read-meta-node-info.md': 'Read public meta node identity and build fields',
-  'recipes/read-seeded-process-state.md': 'Read a real public counter process fixture',
-  'recipes/recorder-debug-flight.md': 'Operator fixture requirements for recorder',
-  'recipes/relay-fetch-transform.md': 'Inspect relay contract and route policy',
-  'recipes/scheduled-lua-process.md': 'Pattern for a scheduled Lua backed process',
-
-  'reference/example-validation.md': 'Quick smoke tests for docs example commands',
-  'reference/glossary.md': 'Terms used across devices, paths, and Forge',
-  'reference/process-fixture.md': 'Public process ID used by runnable examples',
-  'reference/recipe-audit-2026-06-25.md': 'Current recipe quarantine and validation audit',
-  'reference/recipe-standards.md': 'Rules for public runnable recipes'
-};
-
-function titleFromSlug(slug) {
-  return slug
-    .replace(/\.md$/, '')
-    .replace(/-/g, ' ')
-    .replace(/\bat\b/g, '@')
-    .replace(/\b\w/g, (ch) => ch.toUpperCase());
-}
-
-async function firstHeading(file) {
-  const text = await readFile(file, 'utf8');
-  const match = text.match(/^#\s+(.+)$/m);
-  return match ? match[1].trim() : titleFromSlug(path.basename(file));
-}
-
-function shortNavDescription(section, file) {
-  const key = `${section}/${file}`;
-  if (navItemDescriptions[key]) return navItemDescriptions[key];
-  if (file === 'index.md') return 'Overview of this documentation section';
-
-  const slug = file
-    .replace(/\.md$/, '')
-    .replace(/-at-[\d.]+[a-z]*$/i, '')
-    .split('-')
-    .filter((word) => !['a', 'an', 'the', 'and', 'as', 'to', 'with', 'for', 'of'].includes(word));
-
-  return slug
-    .slice(0, 6)
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
-}
-
-async function mdFiles(dir) {
-  const entries = await readdir(dir, { withFileTypes: true });
-  return entries
-    .filter((entry) => entry.isFile() && entry.name.endsWith('.md'))
-    .map((entry) => entry.name)
-    .sort((a, b) => {
-      if (a === 'index.md') return -1;
-      if (b === 'index.md') return 1;
-      return a.localeCompare(b);
-    });
-}
-
-function orderFiles(section, files) {
-  const order = fileOrder[section];
-  if (!order) return files;
-  const rank = new Map(order.map((file, index) => [file, index]));
-  return [...files].sort((a, b) => {
-    const rankA = rank.has(a) ? rank.get(a) : Number.MAX_SAFE_INTEGER;
-    const rankB = rank.has(b) ? rank.get(b) : Number.MAX_SAFE_INTEGER;
-    if (rankA !== rankB) return rankA - rankB;
-    return a.localeCompare(b);
-  });
-}
-
-async function buildSection(section) {
-  const sectionDir = path.join(docsDir, section);
-  const exists = await stat(sectionDir).then((s) => s.isDirectory()).catch(() => false);
-  if (!exists) return [];
-
-  const lines = [`- ${sectionTitles[section] ?? titleFromSlug(section)}`];
-
-  for (const file of orderFiles(section, await mdFiles(sectionDir))) {
-    const label = file === 'index.md' ? 'Overview' : await firstHeading(path.join(sectionDir, file));
-    lines.push(`  - [${label}](/${section}/${file})`);
-  }
-
-  return lines;
-}
-
-async function buildNavItems(section) {
-  const sectionDir = path.join(docsDir, section);
-  const exists = await stat(sectionDir).then((s) => s.isDirectory()).catch(() => false);
-  if (!exists) return [];
-
-  const items = [];
-
-  for (const file of orderFiles(section, await mdFiles(sectionDir))) {
-    const filePath = path.join(sectionDir, file);
-    items.push({
-      title: file === 'index.md' ? 'Overview' : await firstHeading(filePath),
-      href: `/${section}/${file}`,
-      description: shortNavDescription(section, file)
-    });
-  }
-
-  return items;
-}
-
-async function writeNavConfig() {
-  const sections = [];
-
-  for (const section of sectionOrder) {
-    const items = await buildNavItems(section);
-    if (!items.length) continue;
-    sections.push({
-      id: section,
-      label: sectionTitles[section] ?? titleFromSlug(section),
-      home: sectionHomePaths[section],
-      items
-    });
-  }
-
-  await writeFile(
-    path.join(distDir, 'assets', 'nav-sections.json'),
-    `${JSON.stringify({ sections }, null, 2)}\n`
-  );
-}
-
-async function writeSidebar() {
-  const rootLines = ['- [Home](/)', ''];
-  for (const section of sectionOrder) {
-    const title = sectionTitles[section] ?? titleFromSlug(section);
-    const homePath = sectionHomePaths[section];
-    if (homePath) rootLines.push(`- [${title}](${homePath})`);
-  }
-  await writeFile(path.join(distDir, '_sidebar.md'), `${rootLines.join('\n').trim()}\n`);
-
-  for (const section of sectionOrder) {
-    const sectionLines = await buildSection(section);
-    if (!sectionLines.length) continue;
-    await writeFile(
-      path.join(distDir, section, '_sidebar.md'),
-      `${sectionLines.join('\n').trim()}\n`
-    );
+for (const rel of requiredFiles) {
+  try {
+    await access(path.join(root, rel));
+  } catch {
+    missing.push(rel);
   }
 }
 
-async function vendorDocsify() {
-  const assetsDir = path.join(distDir, 'assets');
-  await mkdir(assetsDir, { recursive: true });
-  const docsifyLib = path.join(root, 'node_modules', 'docsify', 'lib');
-  await copyFile(path.join(docsifyLib, 'docsify.min.js'), path.join(assetsDir, 'docsify.min.js'));
-  await copyFile(path.join(docsifyLib, 'plugins', 'search.min.js'), path.join(assetsDir, 'search.min.js'));
-  await copyFile(path.join(docsifyLib, 'themes', 'vue.css'), path.join(assetsDir, 'docsify-vue.css'));
+await rm(path.join(root, 'dist'), { recursive: true, force: true });
 
-  const prismDir = path.join(root, 'node_modules', 'prismjs');
-  await copyFile(path.join(prismDir, 'themes', 'prism.min.css'), path.join(assetsDir, 'prism.css'));
-  for (const language of ['bash', 'json', 'lua', 'erlang', 'markdown', 'http']) {
-    await copyFile(
-      path.join(prismDir, 'components', `prism-${language}.min.js`),
-      path.join(assetsDir, `prism-${language}.min.js`)
-    );
-  }
+if (missing.length) {
+  console.error('Missing source-served docs assets:');
+  for (const rel of missing) console.error(`- ${rel}`);
+  process.exit(1);
 }
 
-await rm(distDir, { recursive: true, force: true });
-await mkdir(distDir, { recursive: true });
-await cp(docsDir, distDir, { recursive: true });
-await cp(siteDir, distDir, { recursive: true });
-await vendorDocsify();
-await writeSidebar();
-await writeNavConfig();
-
-const fontsDir = path.join(distDir, 'assets', 'fonts');
-const fontsReady = await stat(fontsDir).then((s) => s.isDirectory()).catch(() => false);
-if (!fontsReady) {
-  throw new Error('Missing dist/assets/fonts — ensure site/assets/fonts is populated before build.');
-}
-
-console.log(`Built hash-routed docs site in ${path.relative(root, distDir)}/`);
-console.log('Open dist/index.html locally, or run npm run docs:serve.');
+console.log(`Docs source asset check passed for ${requiredFiles.length} files`);
+console.log('No dist/ tree is emitted; HyperBEAM serves site/assets and docs/assets directly.');

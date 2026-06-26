@@ -1339,16 +1339,6 @@
       .replace(/"/g, '&quot;');
   }
 
-  function install(hook) {
-    hook.mounted(() => {
-      ensureChrome();
-      setActiveNode(activeNode, { writeUrl: Boolean(readNodeFromUrl()) });
-    });
-    hook.doneEach(() => window.requestAnimationFrame(refreshExamples));
-  }
-
-  window.$docsify = window.$docsify || {};
-  window.$docsify.plugins = [].concat(window.$docsify.plugins || [], install);
   window.HBExampleRunner = {
     get node() {
       return activeNode;

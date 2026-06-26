@@ -1,8 +1,8 @@
-# Cookbook docs shell snapshot
+# Cookbook docs source snapshot
 
-This directory packages the `device-docs` inputs used by the prototype
+This directory packages the `device-docs` source inputs used by the
 `cookbook@1.0` renderer so a HyperBEAM checkout can run the docs pages without
-an external `/home/fn/Dev/device-docs` dependency.
+an external docs checkout.
 
 Runtime resolution uses `code:priv_dir(hb)/docs/cookbook/device-docs` by
 default. Set `HB_DEVICE_DOCS_ROOT=/path/to/device-docs` only when developing
@@ -10,12 +10,15 @@ against a live `device-docs` checkout.
 
 The packaged snapshot contains:
 
-- `dist/` from `device-docs`, kept as the complete built runtime tree for the
-  docs shell and Markdown pages.
-- `node_modules/prismjs/components/prism-core.min.js`, which is not emitted into
-  `dist/assets/` but is loaded by the current shell.
-- Editable `site/`, `scripts/`, `package.json`, `package-lock.json`, and `docs/`
-  source from `device-docs`, so reviewers can rebuild the UI shell without an
-  external checkout.
+- `docs/`: source Markdown for boilerplate guides and device-attached recipes,
+  plus docs image assets.
+- `site/assets/`: the docs UI shell assets served at `/docs/assets/...`.
+- `scripts/`: source checks for packaged assets and runnable examples.
+- `package.json`: npm entry points for those checks.
+
+There is intentionally no committed `dist/`, docsify app, copied Markdown tree,
+or tracked `node_modules/` content. HyperBEAM renders docs in Erlang, reads
+Markdown from `docs/`, and serves assets directly from `site/assets/` and
+`docs/assets/`.
 
 See `device-docs/AGENTS.md` for the UI-side editing and rebuild workflow.

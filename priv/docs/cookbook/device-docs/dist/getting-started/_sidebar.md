@@ -1,3 +1,0 @@
-- Using These Docs
-  - [Overview](/getting-started/index.md)
-  - [Reading The Examples](/getting-started/example-style.md)
