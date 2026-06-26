@@ -10,35 +10,6 @@ You can start HyperBEAM with rebar3 as follows:
 	rebar3 shell
 ```
 
-For local docs work on port 8734, prefer the guarded wrapper so multiple
-terminals do not fight for the same port:
-
-```
-	./scripts/dev-server.sh start
-```
-
-`start` is a no-op if something is already listening on `HB_PORT` (default
-8734). Use `./scripts/dev-server.sh status`, `stop`, or `restart` as needed.
-
-### Docs dev loop
-
-When editing the cookbook docs UI (`hb_docs.erl`, `site.css`, or generated
-assets under `priv/docs/cookbook/device-docs/`), always apply changes with a
-full restart:
-
-```
-	./scripts/dev-server.sh restart
-```
-
-`restart` compiles, replaces the detached listener, and waits until
-`http://localhost:8734/info` responds. Do **not** rely on
-`./scripts/dev-server.sh reload` for docs work — hot reload often leaves stale
-HTML, CSS, or Erlang modules in the running node. Hard-refresh the browser after
-a restart if a page still looks cached.
-
-Starting a second `rebar3 shell` on an occupied port fails with `eaddrinuse` and
-leaves a broken node running.
-
 This will drop you into an Erlang shell with all of the necessary modules 
 loaded. Additionally, starting HyperBEAM this way will initialize its HTTP
 server, such that you can begin to send requests to it. There are a few helpful
