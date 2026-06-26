@@ -1,5 +1,6 @@
 # `patch@1.0` — the message-reorganisation / state-patch device
 
+- **Device name:** `patch@1.0`
 - **Depends-on:** `message@1.0` (the `set`/`remove`/`get` resolution semantics every patch operation is expressed in terms of). Its spec is provided to reimplementers.
 - **Status:** Draft
 

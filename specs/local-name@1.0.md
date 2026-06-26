@@ -1,5 +1,6 @@
 # `local-name@1.0` — node-local name registry & resolver
 
+- **Device name:** `local-name@1.0`
 - **Depends-on:** `message@1.0` (the base identity device whose `get`/`keys`/`set` behaviour the looked-up names message and the excluded keys fall through to; commitment/`signers` semantics for authority), `name@1.0` (the multi-resolver host this device plugs into as a resolver), and `meta@1.0` (the node-meta device whose `is-operator` key this device delegates the register authority check to — §7). All three specs are provided to reimplementers.
 - **Status:** Draft
 

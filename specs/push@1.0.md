@@ -1,5 +1,6 @@
 # `push@1.0` — recursive outbox message-passing driver
 
+- **Device name:** `push@1.0`
 - **Depends-on:** `message@1.0` (id / commit / verify / set), `process@1.0` (the `schedule`, `compute`, `slot` surface it drives), `scheduler@1.0` (the default scheduler device whose `schedule` assigns slots and whose `slot` numbering this device relies on). All three specs are provided to reimplementers.
 - **Status:** Draft
 

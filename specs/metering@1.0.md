@@ -1,5 +1,6 @@
 # `metering@1.0` — compute/resource metering and cost accounting
 
+- **Device name:** `metering@1.0`
 - **Depends-on:** `message@1.0` (base device for unhandled keys). Relates to `p4@1.0` (the payment/charging framework that drives this device as its pricing device). The `p4@1.0` spec is provided to reimplementers.
 - **Status:** Draft
 

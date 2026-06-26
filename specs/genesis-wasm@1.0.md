@@ -1,5 +1,6 @@
 # `genesis-wasm@1.0` — legacy-net AO compute bridge (execution device)
 
+- **Device name:** `genesis-wasm@1.0`
 - **Depends-on:** `message@1.0` (message model, `id`/`committers`/`verify`, `set`/`get`/`remove`, commitment selection). Relates to `process@1.0` (the orchestrator that installs this device as a process's *execution device*), `delegated-compute@1.0` (the device this one drives to talk to the legacy CU over HTTP), `patch@1.0` (applies the computation's emitted patches onto state), `dedup@1.0` (once-only assignment semantics), and `json-iface@1.0` (the AOS2 JSON mapping the legacy CU speaks). The `message@1.0` spec is provided to reimplementers; the related specs are named for context.
 - **Status:** Draft
 

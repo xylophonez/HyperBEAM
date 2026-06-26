@@ -1,5 +1,6 @@
 # `name@1.0` — name resolution via configured resolvers
 
+- **Device name:** `name@1.0`
 - **Depends-on:** `message@1.0` (base identity device for excluded/unhandled keys), and — as *resolver types*, not hard build dependencies — `local-name@1.0` and `b32-name@1.0` (the two stock map-shaped resolver devices). A deployment MAY configure any resolver device in their place. The `message@1.0` spec is provided to reimplementers; the resolver specs are provided for context but a conformant `name@1.0` does not embed their behaviour.
 - **Status:** Draft
 

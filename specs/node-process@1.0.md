@@ -1,5 +1,6 @@
 # `node-process@1.0` — node-local singleton processes
 
+- **Device name:** `node-process@1.0`
 - **Depends-on:** `message@1.0` (base identity device — the excluded keys fall
   through to it; commitment/signing/ID semantics used when a process is spawned),
   `process@1.0` (the device the spawned singleton runs; all compute/scheduling

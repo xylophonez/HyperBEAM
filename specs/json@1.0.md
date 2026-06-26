@@ -1,5 +1,6 @@
 # `json@1.0` — JSON codec and HyperPATH-over-JSON device
 
+- **Device name:** `json@1.0`
 - **Depends-on:** `structured@1.0` (typed-message ⇄ TABM codec; this device round-trips through it), `message@1.0` (the surrounding message model and reserved-key surface), `httpsig@1.0` (its `commit`/`verify`/`committed` keys delegate there). All three specs are provided to reimplementers.
 - **Status:** Draft
 

@@ -1,5 +1,6 @@
 # `gzip@1.0` — gzip body compression codec
 
+- **Device name:** `gzip@1.0`
 - **Depends-on:** `none`
 - **Status:** Draft
 

@@ -1,5 +1,6 @@
 # `router@1.0` — outbound request routing by rule matching
 
+- **Device name:** `router@1.0`
 - **Depends-on:** `message@1.0` (base device for reads and the
   mutation/inspection keys), `relay@1.0` and `apply@1.0` (the
   `preprocess` key emits a two-stage pipeline bound to these devices). The

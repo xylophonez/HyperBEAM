@@ -1,5 +1,6 @@
 # `wasi@1.0` — WASI-preview-1 host-function shim and virtual filesystem
 
+- **Device name:** `wasi@1.0`
 - **Depends-on:** `message@1.0` (identity reads/writes, `keys`, `set`, private-key rules), `wasm-64@1.0` (the WASM execution device that drives this shim as its standard-library / import handler). Both specs are provided to reimplementers.
 - **Status:** Draft
 

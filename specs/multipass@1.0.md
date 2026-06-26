@@ -1,5 +1,6 @@
 # `multipass@1.0` — the repass driver device
 
+- **Device name:** `multipass@1.0`
 - **Depends-on:** `message@1.0` (delegated inspection/mutation and key reads), `stack@1.0` (the consumer that interprets the repass signal). Both specs are provided to reimplementers.
 - **Status:** Draft
 

@@ -1,5 +1,6 @@
 # `httpsig@1.0` — the default commitment, ID, and HTTP-message codec device
 
+- **Device name:** `httpsig@1.0`
 - **Depends-on:** `message@1.0` (the commitment data model — `id` / `commit` /
   `verify` / `committers` / `committed` / `commitments` — which delegates the
   cryptography here), `structured@1.0` (the TABM normal form, percent key-escaping,

@@ -1,5 +1,6 @@
 # `wasm-64@1.0` — 64-bit WebAssembly execution device
 
+- **Device name:** `wasm-64@1.0`
 - **Depends-on:** `message@1.0` (reserved-key surface, prefix resolution, `set`/`get` semantics). **Relates to:** `wasi@1.0` (an optional stdlib provider that plugs into the import bridge defined here), `process@1.0` (the usual host stack that drives this device). Only the `message@1.0` spec is required to reimplement; the others are informative.
 - **Status:** Draft
 

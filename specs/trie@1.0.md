@@ -1,5 +1,6 @@
 # `trie@1.0` — prefix-trie message device
 
+- **Device name:** `trie@1.0`
 - **Depends-on:** `message@1.0` (reserved-key surface: `commit`, `verify`, `id`, `commitments`, deep-merge `set` semantics, private-key handling). Its spec is provided to reimplementers.
 - **Status:** Draft
 

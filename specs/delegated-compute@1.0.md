@@ -1,5 +1,6 @@
 # `delegated-compute@1.0` — delegate a process's compute step to a remote/legacy compute unit
 
+- **Device name:** `delegated-compute@1.0`
 - **Depends-on:** `message@1.0` (message model, `id`/`committers`, `set`, identity-key semantics), `process@1.0` (the orchestrator that installs this as a process's execution device and supplies the slot/assignment request), `relay@1.0` (the outbound HTTP mechanism that carries every remote call), `json-iface@1.0` (the AOS2/legacy JSON result mapping used to decode responses). All `Depends-on` specs are provided to reimplementers. **Relates to** `genesis-wasm@1.0` (a thin wrapper that delegates its execution-device keys to this device).
 - **Status:** Draft
 
