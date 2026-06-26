@@ -9,23 +9,24 @@ HB="${HB:-http://localhost:8734}"
 curl -fsS "$HB/~meta@1.0/info/address"
 ```
 
-Expected: JSON with `body` set to the node address.
+Expected: the node address.
 
 ## Read Build Identity
 
 ```bash
 HB="${HB:-http://localhost:8734}"
 curl -fsS "$HB/~meta@1.0/build/node"
+printf '\n'
 curl -fsS "$HB/~meta@1.0/build/version"
 ```
 
-Expected: JSON responses with `body` equal to `HyperBEAM` and the node version.
+Expected: `HyperBEAM` and the node version.
 
 ## Inspect The Public Node Message
 
 ```bash
 HB="${HB:-http://localhost:8734}"
-curl -fsS "$HB/~meta@1.0/info"
+curl -fsS "$HB/~meta@1.0/info/~json@1.0/serialize"
 ```
 
-Expected: a public node message with private keys filtered out.
+Expected: a JSON object for the public node message with private keys filtered out.
