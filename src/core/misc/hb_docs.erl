@@ -1687,6 +1687,20 @@ markdown_star_bullet_rendering_test() ->
     ?assert(binary:match(HTML, <<"<code>Message1(Message2) =&gt; Message3</code>">>) =/= nomatch),
     ?assertEqual(nomatch, binary:match(HTML, <<"*   **Initialization Flow:**">>)).
 
+markdown_blockquote_rendering_test() ->
+    HTML = render_markdown(
+        <<"> Worked examples (informative).\n"
+            "> - Base `{ device: apply@1.0, body: \"/~meta@1.0/build/node\" }`, request\n"
+            ">   `{ path: \"body\" }`: eval mode.\n"
+            "> - Path-string invocation\n"
+            ">   `/~meta@1.0/build/node~apply@1.0&node=TEST&base=request:&request=base:`.">>
+    ),
+    ?assert(binary:match(HTML, <<"<blockquote>">>) =/= nomatch),
+    ?assert(binary:match(HTML, <<"<p>Worked examples (informative).</p>">>) =/= nomatch),
+    ?assert(binary:match(HTML, <<"<ul>">>) =/= nomatch),
+    ?assert(binary:match(HTML, <<"<code>{ device: apply@1.0">>) =/= nomatch),
+    ?assertEqual(nomatch, binary:match(HTML, <<"&gt; Worked examples">>)).
+
 markdown_video_figure_rendering_test() ->
     Video =
         <<"<video class=\"theme-invert-video\" "

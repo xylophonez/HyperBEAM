@@ -3273,19 +3273,23 @@ render_markdown_lines([Line | Rest], Para, Acc, AddHeadingIds, UsedIds, Opts) ->
                 {ok, Table, AfterTable} ->
                     render_markdown_lines(AfterTable, [], [Table, flush_paragraph(Para, Opts) | Acc], AddHeadingIds, UsedIds, Opts);
                 false ->
-                    case {Trim, raw_html_line(Trim), heading(Trim), bullet_text(Trim), numbered_text(Trim)} of
-                        {<<>>, _, _, _, _} ->
+                    case {Trim, blockquote_text(Trim), raw_html_line(Trim), heading(Trim), bullet_text(Trim), numbered_text(Trim)} of
+                        {<<>>, _, _, _, _, _} ->
                             render_markdown_lines(Rest, [], [flush_paragraph(Para, Opts) | Acc], AddHeadingIds, UsedIds, Opts);
-                        {_, {ok, Html}, _, _, _} ->
+                        {_, {ok, Text}, _, _, _, _} ->
+                            {QuoteLines, AfterQuote} = take_blockquote(Rest, [Text]),
+                            Quote = render_blockquote(lists:reverse(QuoteLines), Opts),
+                            render_markdown_lines(AfterQuote, [], [Quote, flush_paragraph(Para, Opts) | Acc], AddHeadingIds, UsedIds, Opts);
+                        {_, _, {ok, Html}, _, _, _} ->
                             render_markdown_lines(Rest, [], [Html, flush_paragraph(Para, Opts) | Acc], AddHeadingIds, UsedIds, Opts);
-                        {_, _, {Level, Text}, _, _} ->
+                        {_, _, _, {Level, Text}, _, _} ->
                             {H, NewUsedIds} = render_heading(Level, Text, AddHeadingIds, UsedIds, Opts),
                             render_markdown_lines(Rest, [], [H, flush_paragraph(Para, Opts) | Acc], AddHeadingIds, NewUsedIds, Opts);
-                        {_, _, _, {ok, Text}, _} ->
+                        {_, _, _, _, {ok, Text}, _} ->
                             {Items, AfterList} = take_list_block(Rest, unordered, [Text], []),
                             List = render_list(<<"ul">>, Items, Opts),
                             render_markdown_lines(AfterList, [], [List, flush_paragraph(Para, Opts) | Acc], AddHeadingIds, UsedIds, Opts);
-                        {_, _, _, _, {ok, Text}} ->
+                        {_, _, _, _, _, {ok, Text}} ->
                             {Items, AfterList} = take_list_block(Rest, ordered, [Text], []),
                             List = render_list(<<"ol">>, Items, Opts),
                             render_markdown_lines(AfterList, [], [List, flush_paragraph(Para, Opts) | Acc], AddHeadingIds, UsedIds, Opts);
@@ -3922,6 +3926,25 @@ heading(<<"### ", Text/binary>>) -> {3, Text};
 heading(<<"#### ", Text/binary>>) -> {4, Text};
 heading(<<"##### ", Text/binary>>) -> {5, Text};
 heading(_Line) -> false.
+
+blockquote_text(<<"> ", Text/binary>>) -> {ok, Text};
+blockquote_text(<<">", Text/binary>>) -> {ok, Text};
+blockquote_text(_Line) -> false.
+
+take_blockquote([Line | Rest], Acc) ->
+    case blockquote_text(trim(Line)) of
+        {ok, Text} -> take_blockquote(Rest, [Text | Acc]);
+        false -> {Acc, [Line | Rest]}
+    end;
+take_blockquote([], Acc) ->
+    {Acc, []}.
+
+render_blockquote(Lines, Opts) ->
+    [
+        <<"<blockquote>">>,
+        render_markdown(iolist_to_binary(lists:join(<<"\n">>, Lines)), Opts),
+        <<"</blockquote>">>
+    ].
 
 raw_html_line(<<"<video class=\"theme-invert-video\" src=\"https://arweave.net/pc73dj9tZtj7AOeIKBGiiOm5ta13FYXzgsqWSePAxiM\" style=\"width: 100%; height: auto; display: block;\" autoplay=\"\" muted=\"\" playsinline=\"\" loop=\"\" controlslist=\"nodownload nofullscreen noremoteplayback\" disablepictureinpicture=\"\" preload=\"auto\"></video>">> = Line) ->
     {ok, Line};
