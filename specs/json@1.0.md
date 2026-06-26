@@ -38,9 +38,9 @@ ubiquitous JSON wire format used by external clients and HTTP APIs.
   type-handling rules (§5) centre on the single asymmetry that JSON can carry
   numbers, strings, booleans, arrays, objects, and `null` natively, but **not**
   atoms.
-- **Codec keys vs resolvable keys:** the codec keys (`from`, `to`, and the
+- **Codec keys vs resolvable keys:** the *codec keys* (`from`, `to`, and the
   commitment passthroughs) are invoked by the conversion subsystem when a caller
-  converts a message to/from the `json@1.0` format; the resolvable keys
+  converts a message to/from the `json@1.0` format; the *resolvable keys*
   (`serialize`, `deserialize`) are reached by ordinary HyperPATH resolution
   (`.../~json@1.0/serialize`). Both surfaces are normative.
 - **Content type:** the MIME type this codec produces/consumes, `application/json`.
