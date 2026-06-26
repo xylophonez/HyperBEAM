@@ -1,5 +1,4 @@
 - Reference
-  - [Device Inventory](/reference/device-inventory.md)
   - [Example Validation](/reference/example-validation.md)
   - [Glossary](/reference/glossary.md)
   - [Process Fixture](/reference/process-fixture.md)

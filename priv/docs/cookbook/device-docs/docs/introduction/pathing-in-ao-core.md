@@ -22,7 +22,7 @@ The node URL is the HyperBEAM node that evaluates the path. The examples in this
 Every path in AO-Core represents a program. Think of the URL bar as a Unix-style command-line interface, providing access to AO's trustless and verifiable compute. Each path component (between `/` characters) represents a step in the computation. In this example, we instruct the AO-Core node to:
 
 1. Load a specific message from its caches (local, another node, or Arweave)
-2. Interpret it with the [`~process@1.0`](/devices/compute-and-processes/process-at-1-0.md) device
+2. Interpret it with the [`~process@1.0`](/~process@1.0/docs) device
 3. The process device implements a shared computing environment with consistent state between users
 
 Process paths are only one example. A path can also call a format, cache, Arweave, Lua, message, bundle, auth, or metering device directly.
@@ -56,7 +56,7 @@ This shows the 'cache' of your process. Each response is:
 Beyond path segments, HyperBEAM URLs can include query parameters that utilize a special type casting syntax. This allows specifying the desired data type for a parameter directly within the URL using the format `key+type=value`.
 
 - **Syntax**: A `+` symbol separates the parameter key from its intended type (e.g., `count+integer=42`, `items+list="apple",7`).
-- **Mechanism**: The HyperBEAM node identifies the `+type` suffix (e.g., `+integer`, `+list`, `+map`, `+float`, `+atom`, `+resolve`). It then uses internal functions ([`hb_singleton:maybe_typed`](https://github.com/permaweb/HyperBEAM/blob/edge/docs/resources/source-code/hb_singleton.md) and [`dev_structured:decode_value`](/devices/codecs-and-formats/structured-at-1-0.md)) to decode and cast the provided value string into the corresponding Erlang data type before incorporating it into the message.
+- **Mechanism**: The HyperBEAM node identifies the `+type` suffix (e.g., `+integer`, `+list`, `+map`, `+float`, `+atom`, `+resolve`). It then uses internal functions ([`hb_singleton:maybe_typed`](https://github.com/permaweb/HyperBEAM/blob/edge/docs/resources/source-code/hb_singleton.md) and [`dev_structured:decode_value`](/~structured@1.0/docs)) to decode and cast the provided value string into the corresponding Erlang data type before incorporating it into the message.
 - **Supported Types**: Common types include `integer`, `float`, `list`, `map`, `atom`, `binary` (often implicit), and `resolve` (for path resolution). List values often follow the [HTTP Structured Fields format (RFC 8941)](https://www.rfc-editor.org/rfc/rfc8941.html).
 
 This powerful feature enables the expression of complex data structures directly in URLs.
@@ -67,7 +67,7 @@ The following examples illustrate HyperPATHs for both processes and direct devic
 
 ### Example 1: Accessing Full Process State
 
-To get the complete, real-time state of a process identified by `<procId>`, use the `/now` path component with the [`~process@1.0`](/devices/compute-and-processes/process-at-1-0.md) device:
+To get the complete, real-time state of a process identified by `<procId>`, use the `/now` path component with the [`~process@1.0`](/~process@1.0/docs) device:
 
 ```bash
 HB="${HB:-http://localhost:8734}"
@@ -75,7 +75,7 @@ PROCESS_ID="co-MIhejkMR8v3-oIvW8m_u3YfV7zXoII0ja1wk-IOo"
 curl -fsS "$HB/$PROCESS_ID~process@1.0/now/counter"
 ```
 
-This instructs the AO-Core node to load the process and execute the `now` function on the [`~process@1.0`](/devices/compute-and-processes/process-at-1-0.md) device.
+This instructs the AO-Core node to load the process and execute the `now` function on the [`~process@1.0`](/~process@1.0/docs) device.
 
 ### Example 2: Navigating to Specific Process Data
 
@@ -87,20 +87,20 @@ PROCESS_ID="co-MIhejkMR8v3-oIvW8m_u3YfV7zXoII0ja1wk-IOo"
 curl -fsS "$HB/$PROCESS_ID~process@1.0/compute/status"
 ```
 
-This accesses the `compute` key on the [`~process@1.0`](/devices/compute-and-processes/process-at-1-0.md) device and then navigates to a patched state key. Every piece of relevant information your process exposes can be accessed similarly, effectively providing a native API.
+This accesses the `compute` key on the [`~process@1.0`](/~process@1.0/docs) device and then navigates to a patched state key. Every piece of relevant information your process exposes can be accessed similarly, effectively providing a native API.
 
-(Note: This represents direct navigation within the process state structure. For accessing data specifically published via the `~patch@1.0` device, see [`~patch@1.0`](/devices/compute-and-processes/patch-at-1-0.md) and the [Patch process state](/recipes/patch-process-state.md) recipe, which typically use the `/cache/` path.)
+(Note: This represents direct navigation within the process state structure. For accessing data specifically published via the `~patch@1.0` device, see [`~patch@1.0`](/~patch@1.0/docs) and the [Patch process state](/recipes/patch-process-state.md) recipe, which typically use the `/cache/` path.)
 
 ### Example 3: Basic `~message@1.0` Usage
 
-Here's a simple example of using [`~message@1.0`](/devices/foundations/message-at-1-0.md) to create a message and retrieve a value:
+Here's a simple example of using [`~message@1.0`](/~message@1.0/docs) to create a message and retrieve a value:
 
 ```bash
 curl -sS 'http://localhost:8734/~message@1.0&greeting="Hello"&count+integer=42/count'
 ```
 
 1.  **Base:** `/` - The base URL of the HyperBEAM node.
-2.  **Root Device:** [`~message@1.0`](/devices/foundations/message-at-1-0.md)
+2.  **Root Device:** [`~message@1.0`](/~message@1.0/docs)
 3.  **Query Params:** `greeting="Hello"` (binary) and `count+integer=42` (integer), forming the message `#{ <<"greeting">> => <<"Hello">>, <<"count">> => 42 }`.
 4.  **Path:** `/count` tells `~message@1.0` to retrieve the value associated with the key `count`.
 
@@ -118,7 +118,7 @@ The output of the message device becomes the input to the JSON device. For a lar
 
 ### Example 5: Using the `~message@1.0` Device with Type Casting
 
-The [`~message@1.0`](/devices/foundations/message-at-1-0.md) device can be used to construct and query transient messages, utilizing type casting in query parameters.
+The [`~message@1.0`](/~message@1.0/docs) device can be used to construct and query transient messages, utilizing type casting in query parameters.
 
 Consider the following URL:
 
@@ -129,7 +129,7 @@ curl -sS 'http://localhost:8734/~message@1.0&name="Alice"&age+integer=30&items+l
 HyperBEAM processes this as follows:
 
 1.  **Base:** `/` - The base URL of the HyperBEAM node.
-2.  **Root Device:** [`~message@1.0`](/devices/foundations/message-at-1-0.md)
+2.  **Root Device:** [`~message@1.0`](/~message@1.0/docs)
 3.  **Query Parameters (with type casting):**
     *   `name="Alice"` -> `#{ <<"name">> => <<"Alice">> }` (binary)
     *   `age+integer=30` -> `#{ <<"age">> => 30 }` (integer)

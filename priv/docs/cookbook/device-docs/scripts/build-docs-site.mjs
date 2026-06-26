@@ -10,7 +10,7 @@ const distDir = path.join(root, 'dist');
 const sectionOrder = [
   'introduction',
   'getting-started',
-  'devices',
+  'processes',
   'forge',
   'recipes',
   'reference'
@@ -19,7 +19,7 @@ const sectionOrder = [
 const sectionTitles = {
   introduction: 'Introduction',
   'getting-started': 'Using These Docs',
-  devices: 'Devices',
+  processes: 'Processes',
   forge: 'Device Forge',
   recipes: 'Recipes',
   reference: 'Reference'
@@ -28,7 +28,7 @@ const sectionTitles = {
 const sectionHomePaths = {
   introduction: '/introduction/index.md',
   'getting-started': '/getting-started/index.md',
-  devices: '/devices/index.md',
+  processes: '/processes/overview.md',
   forge: '/forge/index.md',
   recipes: '/recipes/index.md',
   reference: '/reference/glossary.md'
@@ -45,29 +45,16 @@ const fileOrder = {
   'getting-started': [
     'index.md',
     'example-style.md'
+  ],
+  processes: [
+    'overview.md',
+    'state-and-reads.md',
+    'builder-templates.md',
+    'ao-connect-mainnet.md',
+    'aos-lua-reference.md',
+    'migration-to-hyperbeam.md',
+    'legacynet-appendix.md'
   ]
-};
-
-const deviceGroupTitles = {
-  'arweave-and-data': 'Arweave And Data',
-  'foundations': 'Foundations',
-  'compute-and-processes': 'Compute And Processes',
-  'codecs-and-formats': 'Codecs And Formats',
-  'node-operations': 'Node Operations',
-  'auth-and-access': 'Auth And Access',
-  'payment-and-metering': 'Payment And Metering',
-  'support-and-test': 'Support And Test'
-};
-
-const deviceGroupDescriptions = {
-  'arweave-and-data': 'Read, bundle, copy, and query Arweave data',
-  foundations: 'Messages, meta, relay, naming, and debugging',
-  'compute-and-processes': 'Processes, Lua, WASM, scheduling, and composition',
-  'codecs-and-formats': 'JSON, gzip, manifests, signatures, and codecs',
-  'node-operations': 'Routing, cache, profiles, and node policy',
-  'auth-and-access': 'Secrets, cookies, HTTP auth, and hooks',
-  'payment-and-metering': 'Payments, metering, and paid device access',
-  'support-and-test': 'Recording, debug flights, and test devices'
 };
 
 const navItemDescriptions = {
@@ -80,7 +67,13 @@ const navItemDescriptions = {
   'concepts/verification-model.md': 'Trust layers to keep separate when reasoning',
   'concepts/what-devices-are.md': 'What a device is and how paths work',
 
-  'devices/index.md': 'Inventory of core HyperBEAM edge devices by purpose',
+  'processes/overview.md': 'Create and understand HyperBEAM process@1.0 processes',
+  'processes/state-and-reads.md': 'Expose process state and read it over HTTP',
+  'processes/builder-templates.md': 'Practical Lua process templates for common state patterns',
+  'processes/ao-connect-mainnet.md': 'Use AO Connect JavaScript clients with HyperBEAM processes',
+  'processes/aos-lua-reference.md': 'AOS Lua commands, globals, handlers, and replies',
+  'processes/migration-to-hyperbeam.md': 'Move legacy AO process patterns to HyperBEAM',
+  'processes/legacynet-appendix.md': 'Legacy AO patterns for existing process support',
 
   'forge/index.md': 'Overview of the Device Forge workflow',
   'forge/create-a-device.md': 'Author a dev module and define device keys',
@@ -108,7 +101,6 @@ const navItemDescriptions = {
   'recipes/relay-fetch-transform.md': 'Inspect relay contract and route policy',
   'recipes/scheduled-lua-process.md': 'Pattern for a scheduled Lua backed process',
 
-  'reference/device-inventory.md': 'Canonical list of documented edge root devices',
   'reference/example-validation.md': 'Quick smoke tests for docs example commands',
   'reference/glossary.md': 'Terms used across devices, paths, and Forge',
   'reference/process-fixture.md': 'Public process ID used by runnable examples',
@@ -178,23 +170,6 @@ async function buildSection(section) {
 
   const lines = [`- ${sectionTitles[section] ?? titleFromSlug(section)}`];
 
-  if (section === 'devices') {
-    const indexFile = path.join(sectionDir, 'index.md');
-    lines.push(`  - [Overview](/devices/index.md)`);
-    for (const group of Object.keys(deviceGroupTitles)) {
-      const groupDir = path.join(sectionDir, group);
-      const groupExists = await stat(groupDir).then((s) => s.isDirectory()).catch(() => false);
-      if (!groupExists) continue;
-      lines.push(`  - ${deviceGroupTitles[group]}`);
-      for (const file of await mdFiles(groupDir)) {
-        const heading = await firstHeading(path.join(groupDir, file));
-        lines.push(`    - [${heading}](/devices/${group}/${file})`);
-      }
-    }
-    await stat(indexFile).catch(() => undefined);
-    return lines;
-  }
-
   for (const file of orderFiles(section, await mdFiles(sectionDir))) {
     const label = file === 'index.md' ? 'Overview' : await firstHeading(path.join(sectionDir, file));
     lines.push(`  - [${label}](/${section}/${file})`);
@@ -209,35 +184,6 @@ async function buildNavItems(section) {
   if (!exists) return [];
 
   const items = [];
-
-  if (section === 'devices') {
-    items.push({
-      title: 'Overview',
-      href: sectionHomePaths.devices,
-      description: shortNavDescription('devices', 'index.md')
-    });
-    for (const group of Object.keys(deviceGroupTitles)) {
-      const groupDir = path.join(sectionDir, group);
-      const groupExists = await stat(groupDir).then((s) => s.isDirectory()).catch(() => false);
-      if (!groupExists) continue;
-      const files = await mdFiles(groupDir);
-      if (!files.length) continue;
-      const children = [];
-      for (const file of files) {
-        children.push({
-          title: await firstHeading(path.join(groupDir, file)),
-          href: `/devices/${group}/${file}`
-        });
-      }
-      items.push({
-        title: deviceGroupTitles[group],
-        href: `/devices/${group}/${files[0]}`,
-        description: deviceGroupDescriptions[group] ?? deviceGroupTitles[group],
-        children
-      });
-    }
-    return items;
-  }
 
   for (const file of orderFiles(section, await mdFiles(sectionDir))) {
     const filePath = path.join(sectionDir, file);

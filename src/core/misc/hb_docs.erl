@@ -1653,19 +1653,19 @@ boilerplate_card_summary_override(<<"docs/introduction/what-is-ao-core.md">>) ->
     <<"The HTTP-native protocol for decentralized computation on the Arweave permaweb.">>;
 boilerplate_card_summary_override(<<"docs/introduction/pathing-in-ao-core.md">>) ->
     <<"How HyperPATH URLs address messages, devices, and computation results.">>;
-boilerplate_card_summary_override(<<"docs/devices/compute-and-processes/process-at-1-0/01-intro-to-process@1.0.md">>) ->
+boilerplate_card_summary_override(<<"docs/processes/overview.md">>) ->
     <<"Create and understand HyperBEAM process@1.0 processes, messages, and authorities.">>;
-boilerplate_card_summary_override(<<"docs/devices/compute-and-processes/process-at-1-0/02-state-and-reads.md">>) ->
+boilerplate_card_summary_override(<<"docs/processes/state-and-reads.md">>) ->
     <<"Expose process state through patch@1.0 and read it over HTTP.">>;
-boilerplate_card_summary_override(<<"docs/devices/compute-and-processes/process-at-1-0/03-builder-templates.md">>) ->
+boilerplate_card_summary_override(<<"docs/processes/builder-templates.md">>) ->
     <<"Copy practical Lua process templates for tokens, chats, and public state.">>;
-boilerplate_card_summary_override(<<"docs/devices/compute-and-processes/process-at-1-0/04-aoconnect-mainnet.md">>) ->
+boilerplate_card_summary_override(<<"docs/processes/ao-connect-mainnet.md">>) ->
     <<"Spawn, message, and read HyperBEAM processes from JavaScript clients.">>;
-boilerplate_card_summary_override(<<"docs/devices/compute-and-processes/process-at-1-0/05-aos-lua-reference.md">>) ->
+boilerplate_card_summary_override(<<"docs/processes/aos-lua-reference.md">>) ->
     <<"Keep the AOS Lua commands, globals, handlers, and replies close at hand.">>;
-boilerplate_card_summary_override(<<"docs/devices/compute-and-processes/process-at-1-0/06-migration-to-hyperbeam.md">>) ->
+boilerplate_card_summary_override(<<"docs/processes/migration-to-hyperbeam.md">>) ->
     <<"Move legacy AO process patterns to HyperBEAM HTTP reads and patch updates.">>;
-boilerplate_card_summary_override(<<"docs/devices/compute-and-processes/process-at-1-0/07-legacynet-appendix.md">>) ->
+boilerplate_card_summary_override(<<"docs/processes/legacynet-appendix.md">>) ->
     <<"Reference old Legacynet AO patterns only when supporting existing processes.">>;
 boilerplate_card_summary_override(_) ->
     undefined.
@@ -1737,15 +1737,14 @@ boilerplate_process_route(Slug) ->
     end.
 
 boilerplate_process_pages() ->
-    Base = <<"docs/devices/compute-and-processes/process-at-1-0/">>,
     [
-        {<<"overview">>, <<Base/binary, "01-intro-to-process@1.0.md">>, <<"Process Overview">>},
-        {<<"state-and-reads">>, <<Base/binary, "02-state-and-reads.md">>, <<"State And Reads">>},
-        {<<"builder-templates">>, <<Base/binary, "03-builder-templates.md">>, <<"Builder Templates">>},
-        {<<"ao-connect-mainnet">>, <<Base/binary, "04-aoconnect-mainnet.md">>, <<"AO Connect Mainnet">>},
-        {<<"aos-lua-reference">>, <<Base/binary, "05-aos-lua-reference.md">>, <<"AOS Lua Reference">>},
-        {<<"migration-to-hyperbeam">>, <<Base/binary, "06-migration-to-hyperbeam.md">>, <<"Migration To HyperBEAM">>},
-        {<<"legacynet-appendix">>, <<Base/binary, "07-legacynet-appendix.md">>, <<"Legacynet Appendix">>}
+        {<<"overview">>, <<"docs/processes/overview.md">>, <<"Process Overview">>},
+        {<<"state-and-reads">>, <<"docs/processes/state-and-reads.md">>, <<"State And Reads">>},
+        {<<"builder-templates">>, <<"docs/processes/builder-templates.md">>, <<"Builder Templates">>},
+        {<<"ao-connect-mainnet">>, <<"docs/processes/ao-connect-mainnet.md">>, <<"AO Connect Mainnet">>},
+        {<<"aos-lua-reference">>, <<"docs/processes/aos-lua-reference.md">>, <<"AOS Lua Reference">>},
+        {<<"migration-to-hyperbeam">>, <<"docs/processes/migration-to-hyperbeam.md">>, <<"Migration To HyperBEAM">>},
+        {<<"legacynet-appendix">>, <<"docs/processes/legacynet-appendix.md">>, <<"Legacynet Appendix">>}
     ].
 
 extract_markdown_section(Markdown, SectionTitle) ->
@@ -4993,14 +4992,19 @@ resolve_markdown_link(Label, Href, Opts) ->
                 true ->
                     {link, Trim};
                 false ->
-                    RelPath =
-                        case maps:get(<<"source-relative">>, Opts, undefined) of
-                            undefined ->
-                                resolve_boilerplate_relpath_from_path(Trim);
-                            SourceRel ->
-                                resolve_doc_relpath(Trim, SourceRel)
-                        end,
-                    boilerplate_link_target(Label, RelPath)
+                    case is_direct_docs_href(Trim) of
+                        true ->
+                            {link, Trim};
+                        false ->
+                            RelPath =
+                                case maps:get(<<"source-relative">>, Opts, undefined) of
+                                    undefined ->
+                                        resolve_boilerplate_relpath_from_path(Trim);
+                                    SourceRel ->
+                                        resolve_doc_relpath(Trim, SourceRel)
+                                end,
+                            boilerplate_link_target(Label, RelPath)
+                    end
             end
     end.
 
@@ -5011,6 +5015,13 @@ is_external_href(<<"https://", _/binary>>) ->
 is_external_href(<<"mailto:", _/binary>>) ->
     true;
 is_external_href(_) ->
+    false.
+
+is_direct_docs_href(<<"/~", _/binary>>) ->
+    true;
+is_direct_docs_href(<<"/docs", _/binary>>) ->
+    true;
+is_direct_docs_href(_) ->
     false.
 
 resolve_boilerplate_relpath_from_path(<<"/", Rest/binary>>) ->
@@ -6163,6 +6174,10 @@ boilerplate_routes_test() ->
     ?assertNot(lists:member(<<"docs/recipes/index.md">>, RelPaths)),
     ?assertNot(lists:member(<<"docs/device-recipes/index.md">>, RelPaths)),
     ?assertNot(lists:member(<<"docs/reference/device-inventory.md">>, RelPaths)),
+    ?assert(lists:all(
+        fun(RelPath) -> binary:match(RelPath, <<"docs/devices/">>) =:= nomatch end,
+        RelPaths
+    )),
     ?assert(lists:member(<<"docs/reference/example-validation.md">>, RelPaths)),
     ?assert(lists:member(<<"docs/reference/process-fixture.md">>, RelPaths)),
     ?assert(lists:member(<<"docs/reference/recipe-standards.md">>, RelPaths)),
@@ -6225,9 +6240,10 @@ boilerplate_routes_test() ->
     PathingBody = maps:get(<<"body">>, PathingHTML),
     ?assert(binary:match(PathingBody, <<"Pathing in AO-Core">>) =/= nomatch),
     ?assertEqual(nomatch, binary:match(PathingBody, <<"Merged from the HyperBEAM">>)),
-    ?assertEqual(nomatch, binary:match(PathingBody, <<"href=\"/~message@1.0/docs\"">>)),
-    ?assert(binary:match(PathingBody, <<"<code>~process@1.0</code>">>) =/= nomatch),
-    ?assert(binary:match(PathingBody, <<"<code>~patch@1.0</code>">>) =/= nomatch),
+    ?assert(binary:match(PathingBody, <<"href=\"/~message@1.0/docs\"">>) =/= nomatch),
+    ?assert(binary:match(PathingBody, <<"href=\"/~process@1.0/docs\"">>) =/= nomatch),
+    ?assert(binary:match(PathingBody, <<"href=\"/~patch@1.0/docs\"">>) =/= nomatch),
+    ?assert(binary:match(PathingBody, <<"href=\"/~structured@1.0/docs\"">>) =/= nomatch),
     ?assertEqual(nomatch, binary:match(PathingBody, <<"/devices/">>)),
     ?assertEqual(nomatch, binary:match(PathingBody, <<"/recipes/">>)),
     ?assertEqual(nomatch, binary:match(PathingBody, <<"/docs/recipes/patch-process-state">>)),
@@ -6249,7 +6265,7 @@ boilerplate_routes_test() ->
     ProcessJSON = decoded_json_response(ProcessJSONResponse),
     ?assertEqual(<<"State And Reads">>, maps:get(<<"title">>, ProcessJSON)),
     ?assertEqual(
-        <<"docs/devices/compute-and-processes/process-at-1-0/02-state-and-reads.md">>,
+        <<"docs/processes/state-and-reads.md">>,
         maps:get(<<"source-relative">>, ProcessJSON)
     ),
     {ok, ProcessHTML} = node_info_route(

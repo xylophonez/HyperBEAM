@@ -20,7 +20,7 @@ Recommended order:
 
 1. Read [What is HyperBEAM?](/introduction/what-is-hyperbeam.md) and [What is AO-Core?](/introduction/what-is-ao-core.md) if you need the conceptual base.
 2. Read [Reading The Examples](example-style.md) to understand path syntax, typed query values, and shell quoting.
-3. Use [Devices](/devices/index.md) when you know which device you need.
+3. Use [Generated Device Docs](/docs#devices) when you know which device you need.
 4. Use [Recipes](/recipes/index.md) when you want a complete workflow that pipes devices together.
 5. Use [Device Forge](/forge/index.md) when you want to create, package, trust, or load your own devices.
 

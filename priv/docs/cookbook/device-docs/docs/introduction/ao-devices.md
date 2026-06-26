@@ -16,23 +16,23 @@ Think of Devices as specialized engines or services that can be plugged into the
 
 HyperBEAM includes many preloaded devices that provide core functionality. Some key examples include:
 
-*   **[`~meta@1.0`](/devices/foundations/meta-at-1-0.md):** Configures the node itself (hardware specs, supported devices, payment info).
-*   **[`~process@1.0`](/devices/compute-and-processes/process-at-1-0.md):** Manages persistent, shared computational states (like traditional smart contracts, but more flexible).
-*   **[`~scheduler@1.0`](/devices/compute-and-processes/scheduler-at-1-0.md):** Handles the ordering and execution of messages within a process.
-*   **[`~wasm-64@1.0`](/devices/compute-and-processes/wasm-64-at-1-0.md):** Executes WebAssembly (WASM) code, allowing for complex computations written in languages like Rust, C++, etc.
-*   **[`~lua@5.3a`](/devices/compute-and-processes/lua-at-5-3a.md):** Executes Lua scripts.
-*   **[`~relay@1.0`](/devices/foundations/relay-at-1-0.md):** Forwards messages between AO nodes or to external HTTP endpoints.
-*   **[`~json@1.0`](/devices/codecs-and-formats/json-at-1-0.md):** Provides access to JSON data structures using HyperPATHs.
-*   **[`~message@1.0`](/devices/foundations/message-at-1-0.md):** Manages message state and processing.
-*   **[`~patch@1.0`](/devices/compute-and-processes/patch-at-1-0.md):** Applies state updates directly to a process, often used for exposing or managing process data.
+*   **[`~meta@1.0`](/~meta@1.0/docs):** Configures the node itself (hardware specs, supported devices, payment info).
+*   **[`~process@1.0`](/~process@1.0/docs):** Manages persistent, shared computational states (like traditional smart contracts, but more flexible).
+*   **[`~scheduler@1.0`](/~scheduler@1.0/docs):** Handles the ordering and execution of messages within a process.
+*   **[`~wasm-64@1.0`](/~wasm-64@1.0/docs):** Executes WebAssembly (WASM) code, allowing for complex computations written in languages like Rust, C++, etc.
+*   **[`~lua@5.3a`](/~lua@5.3a/docs):** Executes Lua scripts.
+*   **[`~relay@1.0`](/~relay@1.0/docs):** Forwards messages between AO nodes or to external HTTP endpoints.
+*   **[`~json@1.0`](/~json@1.0/docs):** Provides access to JSON data structures using HyperPATHs.
+*   **[`~message@1.0`](/~message@1.0/docs):** Manages message state and processing.
+*   **[`~patch@1.0`](/~patch@1.0/docs):** Applies state updates directly to a process, often used for exposing or managing process data.
 
 ## Beyond the Basics
 
 Devices aren't limited to just computation or state management. They can represent more abstract concepts:
 
-*   **Security and verification devices ([`~httpsig@1.0`](/devices/codecs-and-formats/httpsig-at-1-0.md), TEE attestation material):** Handle HTTP message commitments and, on TEE-oriented deployments, attestation workflows.
-*   **Payment/Access Control Devices ([`~p4@1.0`](/devices/payment-and-metering/p4-at-1-0.md), [`~faff@1.0`](/devices/payment-and-metering/faff-at-1-0.md)):** Manage metering, billing, or access control for node services.
-*   **Workflow/Utility Devices ([`dev_cron`](/devices/compute-and-processes/cron-at-1-0.md), [`dev_stack`](/devices/compute-and-processes/stack-at-1-0.md)):** Coordinate complex execution flows or schedule tasks.
+*   **Security and verification devices ([`~httpsig@1.0`](/~httpsig@1.0/docs), TEE attestation material):** Handle HTTP message commitments and, on TEE-oriented deployments, attestation workflows.
+*   **Payment/Access Control Devices ([`~p4@1.0`](/~p4@1.0/docs), [`~faff@1.0`](/~faff@1.0/docs)):** Manage metering, billing, or access control for node services.
+*   **Workflow/Utility Devices ([`~cron@1.0`](/~cron@1.0/docs), [`~stack@1.0`](/~stack@1.0/docs)):** Coordinate complex execution flows or schedule tasks.
 
 ## Using Devices
 
@@ -46,7 +46,7 @@ Devices are typically invoked via [HyperPATHs](/introduction/pathing-in-ao-core.
 /~relay@1.0/call?method=GET&path=https://example.com
 ```
 
-The specific functions or 'keys' available for each Device are documented individually. See the [Devices section](/devices/index.md) for details on specific built-in devices.
+The specific functions or 'keys' available for each Device are documented individually. See the [generated Devices section](/docs#devices) for details on the devices loaded by the current node.
 
 ## The Potential of Devices
 

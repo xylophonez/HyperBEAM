@@ -50,286 +50,44 @@
       ]
     },
     {
-      "id": "devices",
-      "label": "Devices",
-      "home": "/devices/index.md",
+      "id": "processes",
+      "label": "Processes",
+      "home": "/processes/overview.md",
       "items": [
         {
-          "title": "Overview",
-          "href": "/devices/index.md",
-          "description": "Inventory of core HyperBEAM edge devices by purpose"
+          "title": "Intro to `process@1.0` & Processes",
+          "href": "/processes/overview.md",
+          "description": "Create and understand HyperBEAM process@1.0 processes"
         },
         {
-          "title": "Arweave And Data",
-          "href": "/devices/arweave-and-data/arweave-at-2-9.md",
-          "description": "Read, bundle, copy, and query Arweave data",
-          "children": [
-            {
-              "title": "~arweave@2.9",
-              "href": "/devices/arweave-and-data/arweave-at-2-9.md"
-            },
-            {
-              "title": "~bundler@1.0",
-              "href": "/devices/arweave-and-data/bundler-at-1-0.md"
-            },
-            {
-              "title": "~copycat@1.0",
-              "href": "/devices/arweave-and-data/copycat-at-1-0.md"
-            },
-            {
-              "title": "~match@1.0",
-              "href": "/devices/arweave-and-data/match-at-1-0.md"
-            },
-            {
-              "title": "~query@1.0",
-              "href": "/devices/arweave-and-data/query-at-1-0.md"
-            }
-          ]
+          "title": "State And Reads",
+          "href": "/processes/state-and-reads.md",
+          "description": "Expose process state and read it over HTTP"
         },
         {
-          "title": "Foundations",
-          "href": "/devices/foundations/b32-name-at-1-0.md",
-          "description": "Messages, meta, relay, naming, and debugging",
-          "children": [
-            {
-              "title": "~b32-name@1.0",
-              "href": "/devices/foundations/b32-name-at-1-0.md"
-            },
-            {
-              "title": "~hyperbuddy@1.0",
-              "href": "/devices/foundations/hyperbuddy-at-1-0.md"
-            },
-            {
-              "title": "~local-name@1.0",
-              "href": "/devices/foundations/local-name-at-1-0.md"
-            },
-            {
-              "title": "~message@1.0",
-              "href": "/devices/foundations/message-at-1-0.md"
-            },
-            {
-              "title": "~meta@1.0",
-              "href": "/devices/foundations/meta-at-1-0.md"
-            },
-            {
-              "title": "~name@1.0",
-              "href": "/devices/foundations/name-at-1-0.md"
-            },
-            {
-              "title": "~relay@1.0",
-              "href": "/devices/foundations/relay-at-1-0.md"
-            }
-          ]
+          "title": "Builder Templates",
+          "href": "/processes/builder-templates.md",
+          "description": "Practical Lua process templates for common state patterns"
         },
         {
-          "title": "Compute And Processes",
-          "href": "/devices/compute-and-processes/apply-at-1-0.md",
-          "description": "Processes, Lua, WASM, scheduling, and composition",
-          "children": [
-            {
-              "title": "~apply@1.0",
-              "href": "/devices/compute-and-processes/apply-at-1-0.md"
-            },
-            {
-              "title": "~cron@1.0",
-              "href": "/devices/compute-and-processes/cron-at-1-0.md"
-            },
-            {
-              "title": "~dedup@1.0",
-              "href": "/devices/compute-and-processes/dedup-at-1-0.md"
-            },
-            {
-              "title": "~delegated-compute@1.0",
-              "href": "/devices/compute-and-processes/delegated-compute-at-1-0.md"
-            },
-            {
-              "title": "~genesis-wasm@1.0",
-              "href": "/devices/compute-and-processes/genesis-wasm-at-1-0.md"
-            },
-            {
-              "title": "~lua@5.3a",
-              "href": "/devices/compute-and-processes/lua-at-5-3a.md"
-            },
-            {
-              "title": "~multipass@1.0",
-              "href": "/devices/compute-and-processes/multipass-at-1-0.md"
-            },
-            {
-              "title": "~node-process@1.0",
-              "href": "/devices/compute-and-processes/node-process-at-1-0.md"
-            },
-            {
-              "title": "~patch@1.0",
-              "href": "/devices/compute-and-processes/patch-at-1-0.md"
-            },
-            {
-              "title": "~push@1.0",
-              "href": "/devices/compute-and-processes/push-at-1-0.md"
-            },
-            {
-              "title": "~scheduler@1.0",
-              "href": "/devices/compute-and-processes/scheduler-at-1-0.md"
-            },
-            {
-              "title": "~stack@1.0",
-              "href": "/devices/compute-and-processes/stack-at-1-0.md"
-            },
-            {
-              "title": "~wasi@1.0",
-              "href": "/devices/compute-and-processes/wasi-at-1-0.md"
-            },
-            {
-              "title": "~wasm-64@1.0",
-              "href": "/devices/compute-and-processes/wasm-64-at-1-0.md"
-            }
-          ]
+          "title": "AO Connect Mainnet",
+          "href": "/processes/ao-connect-mainnet.md",
+          "description": "Use AO Connect JavaScript clients with HyperBEAM processes"
         },
         {
-          "title": "Codecs And Formats",
-          "href": "/devices/codecs-and-formats/ans104-at-1-0.md",
-          "description": "JSON, gzip, manifests, signatures, and codecs",
-          "children": [
-            {
-              "title": "~ans104@1.0",
-              "href": "/devices/codecs-and-formats/ans104-at-1-0.md"
-            },
-            {
-              "title": "~flat@1.0",
-              "href": "/devices/codecs-and-formats/flat-at-1-0.md"
-            },
-            {
-              "title": "~gzip@1.0",
-              "href": "/devices/codecs-and-formats/gzip-at-1-0.md"
-            },
-            {
-              "title": "~httpsig@1.0",
-              "href": "/devices/codecs-and-formats/httpsig-at-1-0.md"
-            },
-            {
-              "title": "~json@1.0",
-              "href": "/devices/codecs-and-formats/json-at-1-0.md"
-            },
-            {
-              "title": "~json-iface@1.0",
-              "href": "/devices/codecs-and-formats/json-iface-at-1-0.md"
-            },
-            {
-              "title": "~manifest@1.0",
-              "href": "/devices/codecs-and-formats/manifest-at-1-0.md"
-            },
-            {
-              "title": "~structured@1.0",
-              "href": "/devices/codecs-and-formats/structured-at-1-0.md"
-            },
-            {
-              "title": "~trie@1.0",
-              "href": "/devices/codecs-and-formats/trie-at-1-0.md"
-            },
-            {
-              "title": "~tx@1.0",
-              "href": "/devices/codecs-and-formats/tx-at-1-0.md"
-            }
-          ]
+          "title": "AOS Lua Reference",
+          "href": "/processes/aos-lua-reference.md",
+          "description": "AOS Lua commands, globals, handlers, and replies"
         },
         {
-          "title": "Node Operations",
-          "href": "/devices/node-operations/blacklist-at-1-0.md",
-          "description": "Routing, cache, profiles, and node policy",
-          "children": [
-            {
-              "title": "~blacklist@1.0",
-              "href": "/devices/node-operations/blacklist-at-1-0.md"
-            },
-            {
-              "title": "~cache@1.0",
-              "href": "/devices/node-operations/cache-at-1-0.md"
-            },
-            {
-              "title": "~cacheviz@1.0",
-              "href": "/devices/node-operations/cacheviz-at-1-0.md"
-            },
-            {
-              "title": "~location@1.0",
-              "href": "/devices/node-operations/location-at-1-0.md"
-            },
-            {
-              "title": "~profile@1.0",
-              "href": "/devices/node-operations/profile-at-1-0.md"
-            },
-            {
-              "title": "~rate-limit@1.0",
-              "href": "/devices/node-operations/rate-limit-at-1-0.md"
-            },
-            {
-              "title": "~router@1.0",
-              "href": "/devices/node-operations/router-at-1-0.md"
-            },
-            {
-              "title": "~whois@1.0",
-              "href": "/devices/node-operations/whois-at-1-0.md"
-            }
-          ]
+          "title": "Migration To HyperBEAM",
+          "href": "/processes/migration-to-hyperbeam.md",
+          "description": "Move legacy AO process patterns to HyperBEAM"
         },
         {
-          "title": "Auth And Access",
-          "href": "/devices/auth-and-access/auth-hook-at-1-0.md",
-          "description": "Secrets, cookies, HTTP auth, and hooks",
-          "children": [
-            {
-              "title": "~auth-hook@1.0",
-              "href": "/devices/auth-and-access/auth-hook-at-1-0.md"
-            },
-            {
-              "title": "~cookie@1.0",
-              "href": "/devices/auth-and-access/cookie-at-1-0.md"
-            },
-            {
-              "title": "~http-auth@1.0",
-              "href": "/devices/auth-and-access/http-auth-at-1-0.md"
-            },
-            {
-              "title": "~secret@1.0",
-              "href": "/devices/auth-and-access/secret-at-1-0.md"
-            }
-          ]
-        },
-        {
-          "title": "Payment And Metering",
-          "href": "/devices/payment-and-metering/faff-at-1-0.md",
-          "description": "Payments, metering, and paid device access",
-          "children": [
-            {
-              "title": "~faff@1.0",
-              "href": "/devices/payment-and-metering/faff-at-1-0.md"
-            },
-            {
-              "title": "~metering@1.0",
-              "href": "/devices/payment-and-metering/metering-at-1-0.md"
-            },
-            {
-              "title": "~p4@1.0",
-              "href": "/devices/payment-and-metering/p4-at-1-0.md"
-            },
-            {
-              "title": "~simple-pay@1.0",
-              "href": "/devices/payment-and-metering/simple-pay-at-1-0.md"
-            }
-          ]
-        },
-        {
-          "title": "Support And Test",
-          "href": "/devices/support-and-test/recorder-at-1-0.md",
-          "description": "Recording, debug flights, and test devices",
-          "children": [
-            {
-              "title": "~recorder@1.0",
-              "href": "/devices/support-and-test/recorder-at-1-0.md"
-            },
-            {
-              "title": "~test-device@1.0",
-              "href": "/devices/support-and-test/test-device-at-1-0.md"
-            }
-          ]
+          "title": "Legacynet Appendix",
+          "href": "/processes/legacynet-appendix.md",
+          "description": "Legacy AO patterns for existing process support"
         }
       ]
     },
@@ -472,11 +230,6 @@
       "label": "Reference",
       "home": "/reference/glossary.md",
       "items": [
-        {
-          "title": "Device Inventory",
-          "href": "/reference/device-inventory.md",
-          "description": "Canonical list of documented edge root devices"
-        },
         {
           "title": "Example Validation",
           "href": "/reference/example-validation.md",
