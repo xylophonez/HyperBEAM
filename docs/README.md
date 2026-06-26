@@ -112,4 +112,4 @@ To contribute documentation to HyperBEAM, follow these steps:
    - Be prepared to make adjustments based on feedback
    - Once approved, your documentation will be merged into the main repository
 
-For more detailed contribution guidelines, see the root [CONTRIBUTING.md](../CONTRIBUTING.md).
+For more detailed contribution guidelines, see the [Community Guidelines](./docs/misc/community/guidelines.md) and [Development Setup](./docs/misc/community/setup.md) documentation.

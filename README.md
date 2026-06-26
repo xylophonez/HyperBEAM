@@ -29,8 +29,9 @@ states and inputs to be calculated and committed to in a unified format.
 HyperBEAM is developed as an open source implementation of the AO-Core protocol 
 by [Forward Research](https://fwd.arweave.net). Pull Requests are always welcome!
 
-To get started building on HyperBEAM, check out the [contribution](./CONTRIBUTING.md)
-guide.
+To get started building on HyperBEAM, check out the 
+[hacking on HyperBEAM](./docs/misc/hacking-on-hyperbeam.md) and [contribution](./CONTRIBUTING.md)
+guides.
 
 # Building and Running HyperBEAM
 

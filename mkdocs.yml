@@ -145,6 +145,11 @@ nav:
         - rsa_pss: 'resources/source-code/rsa_pss.md'
     # - Troubleshooting: 'resources/reference/troubleshooting.md'
 
+  # - Community:
+  #   - Contribute Overview: 'community/guidelines.md'
+    # - Development Setup: 'community/setup.md'
+    # - Contributing Documentation: 'community/contributing-docs.md'
+
 markdown_extensions:
   - attr_list
   - md_in_html
