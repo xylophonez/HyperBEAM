@@ -8,10 +8,14 @@
 -include("include/hb.hrl").
 
 -define(DEFAULT_DEVICE, <<"message@1.0">>).
+-define(COMMON_MESSAGE_KEYS, [
+    <<"docs">>
+]).
 
 %%% All keys in the `message@1.0` device that are not resolved to underlying
 %%% data in the their Erlang map representations.
 -define(MESSAGE_KEYS, [
+    <<"docs">>,
     <<"get">>,
     <<"set">>,
     <<"remove">>,
@@ -70,6 +74,12 @@ message_to_fun(Dev, Msg, Key, Opts) ->
         },
 		Opts
     ),
+    case common_message_key_fun(Dev, Msg, Key, Opts) of
+        not_common -> do_message_to_fun(Dev, Msg, Key, Info, Exported, Opts);
+        CommonFun -> CommonFun
+    end.
+
+do_message_to_fun(Dev, Msg, Key, Info, Exported, Opts) ->
     % Does the device have an explicit handler function?
     case {hb_maps:find(handler, Info, Opts), Exported} of
         {{ok, Handler}, true} ->
@@ -125,6 +135,39 @@ message_to_fun(Dev, Msg, Key, Opts) ->
 					end
 			end
 	end.
+
+common_message_key_fun(Dev, Msg, Key, Opts) ->
+    case common_message_key(Key) of
+        not_common ->
+            not_common;
+        NormKey ->
+            case find_exported_function(Msg, Dev, NormKey, 3, 1, Opts) of
+                {ok, Func} ->
+                    {ok, Dev, Func};
+                not_found ->
+                    case hb_maps:get(<<"device">>, Msg, ?DEFAULT_DEVICE, Opts) of
+                        ?DEFAULT_DEVICE ->
+                            not_common;
+                        _ ->
+                            message_to_fun(
+                                Msg#{ <<"device">> => ?DEFAULT_DEVICE },
+                                NormKey,
+                                Opts
+                            )
+                    end
+            end
+    end.
+
+common_message_key(Key) ->
+    try hb_ao:normalize_key(Key) of
+        NormKey ->
+            case lists:member(NormKey, ?COMMON_MESSAGE_KEYS) of
+                true -> NormKey;
+                false -> not_common
+            end
+    catch _:_ ->
+        not_common
+    end.
 
 %% @doc Extract the runtime device module from a message. When the
 %% message has no `<<"device">>' key, we resolve the default

@@ -116,6 +116,9 @@
         <<"prefer">>
     ]
 ).
+-define(PATH_CONSUMING_KEYS, [
+    <<"docs">>
+]).
 
 %% @doc Get the value of a message's key by running its associated device
 %% function. Optionally, takes options that control the runtime environment. 
@@ -253,7 +256,16 @@ do_resolve_many([Res], Opts) ->
     hb_cache:ensure_loaded(maybe_force_message(Res, Opts), Opts);
 do_resolve_many([Base, Req | MsgList], Opts) ->
     ?event_debug(debug_ao_core, {stage, 0, resolve_many, {base, Base}, {req, Req}}),
-    case resolve_stage(1, Base, Req, Opts) of
+    UserOpts = hb_maps:without(?TEMP_OPTS, Opts, Opts),
+    Key = request_key(Req, UserOpts),
+    ConsumesPath = path_consuming_key(Key),
+    ReqWithRemaining =
+        case ConsumesPath of
+            true -> request_with_remaining(Req, MsgList, Opts);
+            false -> Req
+        end,
+    ResolveOpts = path_consuming_opts(ConsumesPath, Opts),
+    case resolve_stage(1, Base, ReqWithRemaining, ResolveOpts) of
         {ok, Res} ->
             ?event_debug(debug_ao_core,
                 {
@@ -265,12 +277,39 @@ do_resolve_many([Base, Req | MsgList], Opts) ->
                 },
 				Opts
             ),
-            do_resolve_many([Res | MsgList], Opts);
+            case ConsumesPath of
+                true -> do_resolve_many([Res], ResolveOpts);
+                false -> do_resolve_many([Res | MsgList], ResolveOpts)
+            end;
         Res ->
             % The result is not a resolvable message. Return it.
             ?event_debug(debug_ao_core, {stage, 13, resolve_many_terminating_early, Res}),
-            maybe_force_message(Res, Opts)
+            maybe_force_message(Res, ResolveOpts)
     end.
+
+request_key(Req, Opts) when is_map(Req) ->
+    hb_path:hd(Req, Opts);
+request_key(Req, Opts) ->
+    hb_path:hd(#{ <<"path">> => Req }, Opts).
+
+request_with_remaining(Req, MsgList, Opts) when is_map(Req) ->
+    hb_path:priv_store_remaining(Req, MsgList, Opts);
+request_with_remaining(Req, MsgList, Opts) ->
+    hb_path:priv_store_remaining(#{ <<"path">> => Req }, MsgList, Opts).
+
+path_consuming_key(Key) ->
+    try lists:member(hb_ao:normalize_key(Key), ?PATH_CONSUMING_KEYS)
+    catch _:_ -> false
+    end.
+
+path_consuming_opts(false, Opts) ->
+    Opts;
+path_consuming_opts(true, Opts) ->
+    Opts#{
+        <<"hashpath">> => ignore,
+        <<"cache-control">> => [<<"no-cache">>, <<"no-store">>],
+        <<"spawn-worker">> => false
+    }.
 
 resolve_stage(1, Link, Req, Opts) when ?IS_LINK(Link) ->
     % If the first message is a link, we should load the message and

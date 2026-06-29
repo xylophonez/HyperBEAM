@@ -60,6 +60,15 @@ test_suite() ->
         {device_with_default_handler_function,
             "device with default handler function",
             fun device_with_default_handler_function_test/1},
+        {docs_common_key_routes_node_docs,
+            "docs common key routes node docs",
+            fun docs_common_key_routes_node_docs_test/1},
+        {docs_common_key_bypasses_default_handler,
+            "docs common key bypasses default handler",
+            fun docs_common_key_bypasses_default_handler_test/1},
+        {explicit_docs_key_wins,
+            "explicit docs key wins",
+            fun explicit_docs_key_wins_test/1},
         {basic_get, "basic get",
             fun basic_get_test/1},
         {get_with_denormalized_key, "get with denormalized key",
@@ -532,6 +541,106 @@ device_with_default_handler_function_test(Opts) ->
         {ok, <<"DEFAULT">>},
         hb_ao:resolve(Msg, <<"any_random_key">>, Opts)
     ).
+
+docs_common_key_routes_node_docs_test() ->
+    docs_common_key_routes_node_docs_test(#{ <<"hashpath">> => ignore }).
+
+docs_common_key_routes_node_docs_test(Opts) ->
+    {ok, Res} =
+        hb_ao:resolve_many(
+            [
+                #{},
+                #{ <<"path">> => <<"docs">> },
+                #{ <<"path">> => <<"schema">> }
+            ],
+            docs_test_opts(Opts)
+        ),
+    ?assertEqual(<<"node">>, maps:get(<<"kind">>, Res)),
+    ?assertEqual(<<>>, maps:get(<<"device">>, Res)),
+    ?assertEqual([<<"schema">>], maps:get(<<"tail">>, Res)).
+
+docs_common_key_bypasses_default_handler_test() ->
+    docs_common_key_bypasses_default_handler_test(#{ <<"hashpath">> => ignore }).
+
+docs_common_key_bypasses_default_handler_test(Opts) ->
+    SwallowingDevice = #{
+        <<"info">> =>
+            fun(_) ->
+                #{
+                    default =>
+                        fun(_Key, _Base, _Req, _Opts) ->
+                            {ok, #{ <<"swallowed">> => true }}
+                        end
+                }
+            end
+    },
+    {ok, Res} =
+        hb_ao:resolve_many(
+            [
+                #{ <<"device">> => SwallowingDevice },
+                #{ <<"path">> => <<"docs">> },
+                #{ <<"path">> => <<"recipes">> }
+            ],
+            docs_test_opts(Opts)
+        ),
+    ?assertEqual(<<"device">>, maps:get(<<"kind">>, Res)),
+    ?assert(is_map(maps:get(<<"device">>, Res))),
+    ?assertEqual([<<"recipes">>], maps:get(<<"tail">>, Res)),
+    ?assertEqual(false, maps:is_key(<<"swallowed">>, Res)).
+
+explicit_docs_key_wins_test() ->
+    explicit_docs_key_wins_test(#{ <<"hashpath">> => ignore }).
+
+explicit_docs_key_wins_test(Opts) ->
+    ExplicitDevice = #{
+        <<"docs">> =>
+            fun(_Base, Req, InnerOpts) ->
+                {ok,
+                    #{
+                        <<"explicit">> => true,
+                        <<"tail">> =>
+                            [docs_tail_key(Msg, InnerOpts)
+                                || Msg <- hb_path:priv_remaining(Req, InnerOpts)]
+                    }}
+            end
+    },
+    {ok, Res} =
+        hb_ao:resolve_many(
+            [
+                #{ <<"device">> => ExplicitDevice },
+                #{ <<"path">> => <<"docs">> },
+                #{ <<"path">> => <<"ignored">> }
+            ],
+            docs_test_opts(Opts)
+        ),
+    ?assertEqual(true, maps:get(<<"explicit">>, Res)),
+    ?assertEqual([<<"ignored">>], maps:get(<<"tail">>, Res)).
+
+docs_test_opts(Opts) ->
+    Opts#{
+        <<"hashpath">> => ignore,
+        <<"docs-device">> => #{
+            route =>
+                fun(_Base, Req, _InnerOpts) ->
+                    {ok,
+                        #{
+                            <<"kind">> => maps:get(<<"docs-kind">>, Req),
+                            <<"device">> => maps:get(<<"docs-device">>, Req),
+                            <<"tail">> => maps:get(<<"docs-tail">>, Req)
+                        }}
+                end
+        }
+    }.
+
+docs_tail_key(Msg, Opts) when is_map(Msg) ->
+    case hb_path:from_message(request, Msg, Opts) of
+        [Key | _] -> hb_util:bin(Key);
+        _ -> <<>>
+    end;
+docs_tail_key(Msg, _Opts) when is_binary(Msg) ->
+    Msg;
+docs_tail_key(_, _Opts) ->
+    <<>>.
 
 basic_get_test(Opts) ->
     Msg = #{ <<"key1">> => <<"value1">>, <<"key2">> => <<"value2">> },

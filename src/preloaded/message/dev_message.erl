@@ -7,7 +7,7 @@
 -module(dev_message).
 %%% Base AO-Core reserved keys:
 -export([info/0, keys/1, keys/2]).
--export([set/3, set_path/3, remove/3, get/3, get/4]).
+-export([set/3, set_path/3, remove/3, get/3, get/4, docs/3]).
 %%% Commitment-specific keys:
 -export([id/1, id/2, id/3]).
 -export([commit/3, committed/3, committers/1, committers/2, committers/3, verify/3]).
@@ -17,12 +17,14 @@
 -include("include/hb.hrl").
 -define(DEFAULT_ID_DEVICE, <<"httpsig@1.0">>).
 -define(DEFAULT_ATT_DEVICE, <<"httpsig@1.0">>).
+-define(DEFAULT_DOCS_DEVICE, <<"hyperbeam-docs@1.0">>).
 
 %% The list of keys that are exported by this device.
 -define(DEVICE_KEYS, [
     <<"id">>,
     <<"commitments">>,
     <<"committers">>,
+    <<"docs">>,
     <<"keys">>,
     <<"path">>,
     <<"set">>,
@@ -68,6 +70,63 @@ index(Msg, Req, Opts) ->
                 Opts
             )
     end.
+
+%% @doc Delegate the common `docs' key to the configured docs device.
+docs(Base, Req, Opts) ->
+    DocsDevice = hb_opts:get(<<"docs-device">>, ?DEFAULT_DOCS_DEVICE, Opts),
+    DocsReq =
+        #{
+            <<"path">> => <<"route">>,
+            <<"docs-kind">> => docs_kind(Base, Req, Opts),
+            <<"docs-device">> => docs_target_device(Base, Req, Opts),
+            <<"docs-tail">> => docs_tail(Req, Opts),
+            <<"request">> => hb_private:reset(Req)
+        },
+    hb_ao:resolve(#{ <<"device">> => DocsDevice }, DocsReq, docs_resolve_opts(Opts)).
+
+docs_resolve_opts(Opts) ->
+    Opts#{
+        <<"hashpath">> => ignore,
+        <<"cache-control">> => [<<"no-cache">>, <<"no-store">>],
+        <<"spawn-worker">> => false
+    }.
+
+docs_kind(Base, Req, Opts) ->
+    case docs_target_device(Base, Req, Opts) of
+        <<>> -> <<"node">>;
+        _ -> <<"device">>
+    end.
+
+docs_target_device(Base, Req, Opts) ->
+    case hb_maps:get(<<"for">>, Req, undefined, Opts) of
+        undefined ->
+            hb_maps:get(<<"device">>, Base, <<>>, Opts);
+        Device ->
+            strip_device_prefix(Device)
+    end.
+
+strip_device_prefix(<<"~", Device/binary>>) ->
+    Device;
+strip_device_prefix(Device) ->
+    Device.
+
+docs_tail(Req, Opts) ->
+    case hb_path:priv_remaining(Req, Opts) of
+        undefined -> [];
+        Remaining when is_list(Remaining) ->
+            [Key || Msg <- Remaining, (Key = docs_tail_key(Msg, Opts)) =/= <<>>];
+        _ -> []
+    end.
+
+docs_tail_key(Msg, Opts) when is_map(Msg) ->
+    case hb_path:from_message(request, Msg, Opts) of
+        [Key | _] -> hb_util:bin(Key);
+        _ -> <<>>
+    end;
+docs_tail_key(Msg, _Opts) when is_binary(Msg) ->
+    Msg;
+docs_tail_key(_, _Opts) ->
+    <<>>.
 
 %% @doc Return the ID of a message, using the `committers' list if it exists.
 %% If the `committers' key is `all', return the ID including all known 
