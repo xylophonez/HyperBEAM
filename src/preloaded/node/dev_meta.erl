@@ -13,6 +13,11 @@
 -include("include/hb.hrl").
 -include_lib("eunit/include/eunit.hrl").
 
+%%% Resources the meta device meters through `metering@1.0'.
+-define(META_BYTES_IN, <<"meta-bytes-in">>).
+-define(META_BYTES_OUT, <<"meta-bytes-out">>).
+-define(META_REQUEST_MS, <<"meta-request-ms">>).
+
 %% @doc Ensure that the helper function `adopt_node_message/2' is not exported.
 %% The naming of this method carefully avoids a clash with the exported `info/3'
 %% function. We would like the node information to be easily accessible via the
@@ -247,6 +252,11 @@ handle_resolve(Req, Msgs, NodeMsg) ->
         }
     ),
     LoadedMsgs = hb_cache:ensure_all_loaded(Msgs, NodeMsg),
+    % Start the clock before the request hook, not after. A tunnel broker
+    % holds a relay open inside that hook, so a timer started after it returns
+    % measures everything except the wait -- which is the only part worth
+    % selling.
+    Start = erlang:monotonic_time(millisecond),
     case resolve_hook(<<"request">>, Req, LoadedMsgs, NodeMsg) of
         {ok, []} ->
             {ok,
@@ -262,6 +272,11 @@ handle_resolve(Req, Msgs, NodeMsg) ->
             };
         {ok, PreProcessedMsg} ->
             ?event(http_request, {request_after_preprocessing, PreProcessedMsg}),
+            % Meter the inbound request. This has to happen *after* the request
+            % hook has returned: the hook is where `p4@1.0' calls the pricing
+            % device's `estimate', and `metering@1.0' opens its process-local
+            % session there. A `consume' before that point is a silent no-op.
+            meta_meter_size(?META_BYTES_IN, LoadedMsgs, NodeMsg),
             AfterPreprocOpts = hb_http_server:get_opts(NodeMsg),
             % Resolve the request message.
             HTTPOpts = hb_maps:merge(
@@ -276,6 +291,16 @@ handle_resolve(Req, Msgs, NodeMsg) ->
                 ),
             {ok, StatusEmbeddedRes} = embed_status(Res, NodeMsg),
             AfterResolveOpts = hb_http_server:get_opts(NodeMsg),
+            % Meter the outbound result and the time spent resolving, before
+            % the response hook runs: `p4@1.0' calls the pricing device's
+            % `price' inside that hook, which closes the metering session.
+            meta_meter(
+                ?META_REQUEST_MS,
+                max(0, erlang:monotonic_time(millisecond) - Start),
+                AfterResolveOpts
+            ),
+            meta_meter_size(
+                ?META_BYTES_OUT, StatusEmbeddedRes, AfterResolveOpts),
             % Apply the post-processor to the result.
             Output = maybe_sign(
                 embed_status(
@@ -297,6 +322,86 @@ handle_resolve(Req, Msgs, NodeMsg) ->
             ),
             Output;
         Res -> embed_status(hb_ao:force_message(Res, NodeMsg), NodeMsg)
+    end.
+
+%%% Metering of the traffic this node handles.
+%%%
+%%% `meta-bytes-in', `meta-bytes-out' and `meta-request-ms' are ordinary
+%%% resource names: `dev_metering:consume/3' accepts any normalized key, so
+%%% pricing them needs only a rate in `metering-rates'.
+%%%
+%%% The meters are deliberately generic. Anything resolved through this device
+%%% is measured, whether it was served locally or relayed on behalf of another
+%%% node, which is what lets a tunnel broker charge for carried traffic without
+%%% the tunnel device knowing anything about pricing. The same generality is
+%%% the caveat: this is a node-wide toll and cannot single out one device's
+%%% traffic.
+%%%
+%%% Directions are named from this node's side. A broker metering a relay sees
+%%% the payload it serves to the public arrive as the tunnelled node's response
+%%% POST, so that payload counts against `meta-bytes-in'.
+%%%
+%%% `consume/3' is a no-op outside an active metering session, so an unpaid
+%%% node pays only for the sizing call -- which is why each meter is gated on
+%%% its rate below.
+
+%% @doc Size a message and meter it, but only when the resource is priced.
+%%
+%% The rate is checked first and the message is sized second. Sizing walks the
+%% whole message, so on a node with no `metering-rates' -- which is every node
+%% that is not selling anything -- this costs one map lookup per request and
+%% touches the payload not at all. Passing `meta_size/2' as an argument to
+%% `meta_meter/3' would not do: Erlang evaluates arguments eagerly, so the
+%% walk would happen on every request whether or not anything was priced.
+meta_meter_size(Resource, Msg, Opts) ->
+    case meta_rate(Resource, Opts) of
+        0 -> ok;
+        _ -> meta_meter(Resource, meta_size(Msg, Opts), Opts)
+    end.
+
+%% @doc Report a metered resource to `metering@1.0', if it is priced.
+meta_meter(Resource, Amount, Opts) when is_integer(Amount), Amount >= 0 ->
+    case meta_rate(Resource, Opts) of
+        0 ->
+            ok;
+        _ ->
+            case hb_device_load:reference(<<"metering@1.0">>, Opts) of
+                {ok, Metering} ->
+                    try Metering:consume(Resource, Amount, Opts)
+                    catch Class:Reason ->
+                        ?event(warning,
+                            {meta_meter_failed, Resource, Class, Reason}),
+                        ok
+                    end;
+                {error, Reason} ->
+                    ?event(warning, {meta_meter_unavailable, Reason}),
+                    ok
+            end
+    end;
+meta_meter(_Resource, _Amount, _Opts) ->
+    ok.
+
+%% @doc The configured rate for a metered resource, or zero.
+meta_rate(Resource, Opts) ->
+    case hb_opts:get(<<"metering-rates">>, #{}, Opts) of
+        Rates when is_map(Rates) ->
+            try hb_util:int(hb_maps:get(Resource, Rates, 0, Opts))
+            catch _:_ -> 0
+            end;
+        _ ->
+            0
+    end.
+
+%% @doc Size a message for metering. An ETF-encoded size, not wire octets:
+%% stable and monotone in payload size, but not reproducible by a payer from
+%% the wire.
+meta_size({as, _Device, Msg}, Opts) ->
+    meta_size(Msg, Opts);
+meta_size(Bin, _Opts) when is_binary(Bin) ->
+    byte_size(Bin);
+meta_size(Msg, _Opts) ->
+    try erlang:external_size(Msg)
+    catch _:_ -> 0
     end.
 
 %% @doc Execute a hook from the node message upon the user's request. The
