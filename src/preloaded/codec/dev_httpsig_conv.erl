@@ -158,9 +158,26 @@ body_to_parts(ContentType, Body, _Opts) ->
         case ContentType of
             undefined -> [];
             _ ->
-                {item, {_, _XT}, XParams} =
-                    hb_structured_fields:parse_item(ContentType),
-                XParams
+                % Only the `boundary' parameter is wanted here, but reaching it
+                % means parsing the whole content-type as a structured field.
+                % Real-world values are not always valid ones: Prometheus emits
+                % `text/plain; version=0.0.4', and `0.0.4' is not a structured
+                % field decimal, so `parse_item/1' badmatches on the leftover
+                % and takes down the whole request. A content-type that will
+                % not parse cannot carry a usable boundary either, so treat it
+                % as a non-multipart body rather than failing the request.
+                try hb_structured_fields:parse_item(ContentType) of
+                    {item, {_, _XT}, XParams} -> XParams;
+                    _ -> []
+                catch Class:Reason ->
+                    ?event(warning,
+                        {unparseable_content_type,
+                            {content_type, {explicit, ContentType}},
+                            {error, {Class, Reason}}
+                        }
+                    ),
+                    []
+                end
         end,
     case lists:keyfind(<<"boundary">>, 1, Params) of
         false ->
