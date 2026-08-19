@@ -673,9 +673,21 @@ fetch_retry_delay(Opts) ->
         )
     ).
 
-%% @doc Use the node's chain routes first and its configured gateway for the
-%% final attempt, covering historical objects absent from a bootstrap node.
-fetch_opts(1, Opts) ->
+%% @doc Use direct gateway reads for every attempt when an edge node explicitly
+%% asks for the lower-fanout bootstrap policy. Full nodes retain the chain-node
+%% race with a configured-gateway final attempt.
+fetch_opts(Attempts, Opts) ->
+    case hb_opts:get(arweave_scheduler_gateway_first, false, Opts) of
+        true -> gateway_fetch_opts(Opts);
+        false -> default_fetch_opts(Attempts, Opts)
+    end.
+
+default_fetch_opts(1, Opts) ->
+    gateway_fetch_opts(Opts);
+default_fetch_opts(_Attempts, Opts) ->
+    Opts#{ <<"arweave-index-blocks">> => false }.
+
+gateway_fetch_opts(Opts) ->
     Gateway = hb_opts:get(gateway, <<"https://arweave.net">>, Opts),
     Opts#{
         <<"arweave-index-blocks">> => false,
@@ -690,9 +702,7 @@ fetch_opts(1, Opts) ->
                         }
                 }
             ]
-    };
-fetch_opts(_Attempts, Opts) ->
-    Opts#{ <<"arweave-index-blocks">> => false }.
+    }.
 
 cache_header(TXID, Header, Opts) ->
     case validate_header(TXID, Header, Opts) of
@@ -1108,6 +1118,28 @@ public_process_path_test() ->
         {?MODULE, process, scheduler_store(Opts), ProcessID}
     ),
     ok = hb_store:stop(Store).
+
+fetch_opts_policy_test() ->
+    Gateway = <<"https://gateway.example">>,
+    Opts = #{ <<"gateway">> => Gateway },
+    Direct =
+        fetch_opts(
+            3,
+            Opts#{ <<"arweave-scheduler-gateway-first">> => true }
+        ),
+    ?assertEqual(false, maps:get(<<"arweave-index-blocks">>, Direct)),
+    ?assertMatch(
+        [#{ <<"node">> := #{ <<"with">> := Gateway } }],
+        maps:get(<<"routes">>, Direct)
+    ),
+    ChainFirst = fetch_opts(3, Opts),
+    ?assertEqual(false, maps:get(<<"arweave-index-blocks">>, ChainFirst)),
+    ?assertEqual(error, maps:find(<<"routes">>, ChainFirst)),
+    FinalAttempt = fetch_opts(1, Opts),
+    ?assertMatch(
+        [#{ <<"node">> := #{ <<"with">> := Gateway } }],
+        maps:get(<<"routes">>, FinalAttempt)
+    ).
 
 stop_test_runner(Name) ->
     case hb_name:lookup(Name) of
