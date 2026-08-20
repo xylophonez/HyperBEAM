@@ -293,7 +293,8 @@ initialize_process(
     maybe
         {ok, Height, Index, SpawnOrdinate} ?= spawn_ordinate(ProcessID, Opts),
         ok ?= require_covered_spawn(ProcessID, Height, From, To),
-        {ok, Header, #tx{}} ?= fetch_header(ProcessID, Opts),
+        {ok, Header, #tx{}} ?=
+            fetch_process_header(Height, ProcessID, Opts),
         {ok, _} ?=
             dev_arweave_scheduler_cache:write_header(Header, Opts),
         ok ?=
@@ -465,7 +466,12 @@ write_assignment(ProcessID, Slot, Height, Index, TXID, Opts) ->
 
 %% @doc Fetch and route one transaction at its canonical block ordinate.
 index_transaction(Height, Index, TXID, Opts) ->
-    case fetch_header(TXID, Opts) of
+    HeaderResult =
+        case prefilled(Opts) of
+            true -> fetch_prefilled_header(Height, TXID, Opts);
+            false -> fetch_header(TXID, Opts)
+        end,
+    case HeaderResult of
         {ok, _Header, TX} ->
             Ordinate = ordinate(Height, Index),
             {ok,
@@ -475,7 +481,35 @@ index_transaction(Height, Index, TXID, Opts) ->
                     Address <- transaction_targets(TX)
                 ]
             };
+        data_bearing -> {ok, []};
         Error -> Error
+    end.
+
+%% @doc A complete Copycat marker proves that every data-free header in the
+%% block was verified and cached. A local miss is therefore a data-bearing L1
+%% transaction, not permission to fall through to a remote gateway.
+fetch_prefilled_header(Height, TXID, Opts) ->
+    LocalOpts = prefilled_opts(Opts),
+    case prefilled_complete(Height, LocalOpts) of
+        false -> prefilled_missing(Height, <<"completion marker">>);
+        true ->
+            case hb_cache:read(TXID, LocalOpts) of
+                {ok, Header} -> validate_header(TXID, Header, LocalOpts);
+                not_found -> data_bearing;
+                {error, not_found} -> data_bearing;
+                Error -> Error
+            end
+    end.
+
+fetch_process_header(Height, TXID, Opts) ->
+    case prefilled(Opts) of
+        false -> fetch_header(TXID, Opts);
+        true ->
+            case fetch_prefilled_header(Height, TXID, Opts) of
+                data_bearing ->
+                    prefilled_missing(Height, <<"process header">>);
+                Result -> Result
+            end
     end.
 
 transaction_targets(TX = #tx{ data_size = 0 }) -> targets(TX);
@@ -521,8 +555,75 @@ confirmed_tip(Opts) ->
 fetch_block(Height, Opts) ->
     case dev_arweave_scheduler_cache:read_block(Height, Opts) of
         {ok, Block} -> {ok, Block};
-        _ -> fetch_block_remote(Height, Opts)
+        _ ->
+            case prefilled(Opts) of
+                true -> fetch_prefilled_block(Height, Opts);
+                false -> fetch_block_remote(Height, Opts)
+            end
     end.
+
+%% @doc Copycat owns the `~arweave@2.9/block/height' alias. Read that alias
+%% locally after its completion marker instead of calling the remote device.
+fetch_prefilled_block(Height, Opts) ->
+    LocalOpts = prefilled_opts(Opts),
+    case prefilled_complete(Height, LocalOpts) of
+        false -> prefilled_missing(Height, <<"completion marker">>);
+        true ->
+            Path = hb_path:to_binary([
+                ?ARWEAVE_DEVICE,
+                <<"block">>,
+                <<"height">>,
+                hb_util:bin(Height)
+            ]),
+            try hb_cache:read(Path, LocalOpts) of
+                {ok, Block} ->
+                    {ok, hb_cache:ensure_all_loaded(Block, LocalOpts)};
+                _ -> prefilled_missing(Height, <<"cached block">>)
+            catch
+                throw:{necessary_message_not_found, _, _} ->
+                    prefilled_missing(Height, <<"cached block">>);
+                throw:{could_not_read_lazy_link, _, _, _} ->
+                    prefilled_missing(Height, <<"cached block">>)
+            end
+    end.
+
+prefilled_missing(Height, Missing) ->
+    {error,
+        #{
+            <<"status">> => 502,
+            <<"reason">> => <<"Copycat prefill is incomplete.">>,
+            <<"missing">> => Missing,
+            <<"block-height">> => Height
+        }
+    }.
+
+prefilled(Opts) ->
+    hb_util:atom(
+        hb_opts:get(arweave_scheduler_prefilled, false, Opts)
+    ) =:= true.
+
+%% Packaged devices are Forge-renamed independently, so do not call Copycat's
+%% generated module from the scheduler package. The marker path is the small
+%% on-disk protocol between the two devices.
+prefilled_complete(Height, Opts) ->
+    case hb_store_arweave:store_from_opts(Opts) of
+        no_store -> false;
+        #{ <<"index-store">> := Store } ->
+            LocalStore = hb_store:scope(Store, local),
+            Path =
+                <<
+                    "block/", (hb_util:bin(Height))/binary, "/headers"
+                >>,
+            case hb_store:read(LocalStore, Path, Opts) of
+                {ok, <<"headers">>} -> true;
+                _ -> false
+            end
+    end.
+
+%% Scope both reads to the scheduler's local store. This is the no-escape
+%% boundary even when the node's ordinary store list contains a gateway.
+prefilled_opts(Opts) ->
+    hb_store:scope(dev_arweave_scheduler_cache:opts(Opts), local).
 
 fetch_block_remote(Height, Opts) ->
     fetch_block_remote(Height, fetch_attempts(Opts), Opts).
@@ -1161,6 +1262,127 @@ block_validation_test() ->
             State,
             #{}
         )
+    ).
+
+prefilled_cache_is_local_and_fail_closed_test() ->
+    Store = hb_test_utils:test_store(hb_store_volatile, <<"prefill-local">>),
+    ok = hb_store:start(Store),
+    Remote =
+        #{
+            <<"store-module">> => hb_store_gateway,
+            <<"access">> => [<<"read">>]
+        },
+    Opts =
+        #{
+            <<"store">> => [Store, Remote],
+            <<"scheduler-store">> => [Store],
+            <<"arweave-index-store">> =>
+                #{ <<"index-store">> => [Store] },
+            <<"arweave-scheduler-prefilled">> => true,
+            <<"gateway">> => <<"https://must-not-be-used.invalid">>
+        },
+    ?assert(prefilled(Opts)),
+    ?assertEqual([Store], hb_opts:get(store, [], prefilled_opts(Opts))),
+    ?assertMatch(
+        {error,
+            #{
+                <<"status">> := 502,
+                <<"missing">> := <<"completion marker">>
+            }},
+        fetch_prefilled_header(42, hb_util:human_id(<<0:256>>), Opts)
+    ),
+    ?assertMatch(
+        {error,
+            #{
+                <<"status">> := 502,
+                <<"missing">> := <<"completion marker">>
+            }},
+        fetch_block(42, Opts)
+    ),
+    ok = hb_store:stop(Store).
+
+prefilled_marker_makes_header_miss_data_bearing_test() ->
+    Store = hb_test_utils:test_store(hb_store_volatile, <<"prefill-miss">>),
+    ok = hb_store:start(Store),
+    Opts =
+        #{
+            <<"store">> => [Store],
+            <<"scheduler-store">> => [Store],
+            <<"arweave-index-store">> =>
+                #{ <<"index-store">> => [Store] },
+            <<"arweave-scheduler-prefilled">> => true
+        },
+    ok = write_headers_complete_test_marker(42, Store, Opts),
+    ?assertEqual(
+        data_bearing,
+        fetch_prefilled_header(42, hb_util:human_id(<<1:256>>), Opts)
+    ),
+    ?assertMatch(
+        {error,
+            #{
+                <<"status">> := 502,
+                <<"missing">> := <<"process header">>
+            }},
+        fetch_process_header(42, hb_util:human_id(<<1:256>>), Opts)
+    ),
+    CorruptTXID = hb_util:human_id(<<4:256>>),
+    {ok, CorruptID} =
+        hb_cache:write(#{ <<"not">> => <<"a signed tx">> }, Opts),
+    ok = hb_store:link([Store], #{ CorruptTXID => CorruptID }, Opts),
+    ?assertMatch(
+        {error, #{ <<"status">> := 502 }},
+        fetch_process_header(42, CorruptTXID, Opts)
+    ),
+    ?assertMatch(
+        {error,
+            #{
+                <<"status">> := 502,
+                <<"missing">> := <<"cached block">>
+            }},
+        fetch_block(42, Opts)
+    ),
+    ok = hb_store:stop(Store).
+
+prefilled_reads_copycat_block_alias_test() ->
+    Store = hb_test_utils:test_store(hb_store_volatile, <<"prefill-block">>),
+    ok = hb_store:start(Store),
+    Opts =
+        #{
+            <<"store">> => [Store],
+            <<"scheduler-store">> => [Store],
+            <<"arweave-index-store">> =>
+                #{ <<"index-store">> => [Store] },
+            <<"arweave-scheduler-prefilled">> => true
+        },
+    ok = write_headers_complete_test_marker(42, Store, Opts),
+    Block =
+        #{
+            <<"height">> => 42,
+            <<"indep_hash">> => hb_util:human_id(<<2:256>>),
+            <<"hash">> => hb_util:human_id(<<3:256>>),
+            <<"txs">> => []
+        },
+    LocalOpts = prefilled_opts(Opts),
+    {ok, BlockID} = hb_cache:write(Block, LocalOpts),
+    BlockPath = hb_path:to_binary([
+        ?ARWEAVE_DEVICE,
+        <<"block">>,
+        <<"height">>,
+        <<"42">>
+    ]),
+    ok = hb_cache:link(BlockID, BlockPath, LocalOpts),
+    ?assertEqual({ok, Block}, fetch_block(42, Opts)),
+    ok = hb_store:stop(Store).
+
+write_headers_complete_test_marker(Height, Store, Opts) ->
+    hb_store:write(
+        [Store],
+        #{
+            <<
+                "block/", (hb_util:bin(Height))/binary, "/headers"
+            >> => <<"headers">>
+        },
+        Opts
     ).
 
 format_one_data_verification_test_() ->
