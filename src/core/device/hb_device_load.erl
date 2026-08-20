@@ -78,12 +78,27 @@ get_resolved_device(Ref, Opts) ->
                         store_key(Ref),
                         Opts
                     ),
-                Mod = hb_util:atom(Bin),
+                {ok, Mod} ?= loaded_cached_module(Bin),
                 % We always stash in the process dictionary, despite the fact
                 % the reference was already in the global store.
                 erlang:put({?MODULE, Ref}, Mod),
                 {cached, Mod}
             end
+    end.
+
+%% @doc A persistent cache entry names a module; it does not persist the BEAM
+%% code loaded into the previous VM. Treat names absent from this VM's atom
+%% table, or modules whose code is not loaded, as cache misses so the trusted
+%% archive path can load them again.
+loaded_cached_module(Bin) ->
+    try hb_util:atom(Bin) of
+        Mod ->
+            case code:is_loaded(Mod) of
+                false -> {error, not_found};
+                _ -> {ok, Mod}
+            end
+    catch
+        error:badarg -> {error, not_found}
     end.
 
 %% @doc Memoise a resolved device in the process dictionary and the
@@ -412,3 +427,12 @@ compatible(Msg, Opts) ->
         [] -> ok;
         _ -> {error, {failed_requirements, Failed}}
     end.
+
+persistent_cache_requires_loaded_code_test() ->
+    ?assertEqual({ok, ?MODULE}, loaded_cached_module(atom_to_binary(?MODULE))),
+    ?assertEqual(
+        {error, not_found},
+        loaded_cached_module(
+            <<"_hb_device_stale_cache_entry_that_is_not_an_existing_atom">>
+        )
+    ).
