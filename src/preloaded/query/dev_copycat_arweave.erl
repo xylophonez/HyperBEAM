@@ -26,12 +26,13 @@ arweave(_Base, Request, Opts) ->
                     list_index(From, To, Opts)
             end;
         {ok, IndexMode} ->
-            case parse_range(Request, Opts) of
+            RunOpts = index_opts(IndexMode, Opts),
+            case parse_range(Request, RunOpts) of
                 {error, unavailable} ->
                     {error, unavailable};
                 {ok, {IncludePending, From, To}} ->
                     index_range(
-                        Request, IncludePending, From, To, IndexMode, Opts)
+                        Request, IncludePending, From, To, IndexMode, RunOpts)
             end;
         {error, Mode} ->
             {error, <<"Unsupported mode `", (hb_util:bin(Mode))/binary,
@@ -47,6 +48,22 @@ request_mode(Request, Opts) ->
         <<"list">> -> {ok, list};
         Mode -> {error, Mode}
     end.
+
+%% @doc Headers mode is a local-prefill protocol. Cache lookups must never
+%% escape through an hb_store_gateway on a miss: remote block/header transport
+%% is selected independently by the node's measured HTTP routes.
+index_opts(headers, Opts) ->
+    LocalOpts = hb_store:scope(Opts, local),
+    case hb_store_arweave:store_from_opts(Opts) of
+        no_store -> LocalOpts;
+        IndexOpts = #{ <<"index-store">> := Store } ->
+            LocalOpts#{
+                <<"arweave-index-store">> =>
+                    IndexOpts#{ <<"index-store">> => hb_store:scope(Store, local) }
+            }
+    end;
+index_opts(_Mode, Opts) ->
+    Opts.
 
 %% @doc Parse the range from the request.
 parse_range(Request, Opts) ->
@@ -254,20 +271,44 @@ fetch_blocks(Req, Current, undefined, IndexMode, Opts) ->
                 true ->
                     stop_at_indexed_block(Req, Current);
                 false ->
-                    observe_event(<<"block_indexed">>, fun() ->
+                    Result = observe_event(<<"block_indexed">>, fun() ->
                         process_block(BlockRes, Current, undefined, IndexMode, Opts)
                     end),
-                    fetch_blocks(Req, Current - 1, undefined, IndexMode, Opts)
+                    continue_blocks(
+                        Result,
+                        Req,
+                        Current - 1,
+                        undefined,
+                        IndexMode,
+                        Opts
+                    )
             end
     end;
 fetch_blocks(Req, Current, To, IndexMode, Opts) ->
     % Unless `reindex' is set (the default), skip blocks already indexed at
     % this mode, so overlapping ranges from different callers are not re-fetched.
-    (reindex(Req, Opts) orelse not is_block_indexed(Current, IndexMode, Opts))
-        andalso observe_event(<<"block_indexed">>, fun() ->
-            process_block(fetch_block_header(Current, Opts), Current, To, IndexMode, Opts)
-        end),
-    fetch_blocks(Req, Current - 1, To, IndexMode, Opts).
+    case reindex(Req, Opts) orelse
+            not is_block_indexed(Current, IndexMode, Opts) of
+        false ->
+            fetch_blocks(Req, Current - 1, To, IndexMode, Opts);
+        true ->
+            Result = observe_event(<<"block_indexed">>, fun() ->
+                process_block(
+                    fetch_block_header(Current, Opts),
+                    Current,
+                    To,
+                    IndexMode,
+                    Opts
+                )
+            end),
+            continue_blocks(
+                Result, Req, Current - 1, To, IndexMode, Opts)
+    end.
+
+continue_blocks({error, _} = Error, _Req, _Current, _To, headers, _Opts) ->
+    Error;
+continue_blocks(_Result, Req, Current, To, IndexMode, Opts) ->
+    fetch_blocks(Req, Current, To, IndexMode, Opts).
 
 %% @doc Whether a bounded index run should reprocess blocks that are already
 %% indexed. Defaults to `true' (`~copycat@1.0/arweave&reindex=false' opts out).
@@ -297,24 +338,31 @@ process_block(BlockRes, Current, To, IndexMode, Opts) ->
             case maybe_index_ids(Block, IndexMode, Opts) of
                 {block_skipped, Results} ->
                     TotalTXs = maps:get(total_txs, Results, 0),
-                    ?event(
+                    EventResult = ?event(
                         copycat_short,
                         {arweave_block_skipped,
                             {height, Current},
                             {total_txs, TotalTXs},
                             {target, To}
                         }
+                    ),
+                    mode_result(
+                        IndexMode,
+                        copycat_block_error(
+                            Current,
+                            <<"Arweave block headers were not completely resolved.">>,
+                            Results
+                        ),
+                        EventResult
                     );
                 {block_cached, Results} ->
                     ItemsIndexed = maps:get(items_count, Results, 0),
                     TotalTXs = maps:get(total_txs, Results, 0),
                     BundleTXs = maps:get(bundle_count, Results, 0),
                     SkippedTXs = maps:get(skipped_count, Results, 0),
-                    case SkippedTXs of
-                        0 -> ok = write_block_index(Current, IndexMode, Opts);
-                        _ -> ok
-                    end,
-                    ?event(
+                    Completion = complete_block(
+                        Current, IndexMode, SkippedTXs, Results, Opts),
+                    EventResult = ?event(
                         copycat_short,
                         {arweave_block_indexed,
                             {height, Current},
@@ -324,17 +372,72 @@ process_block(BlockRes, Current, To, IndexMode, Opts) ->
                             {skipped_txs, SkippedTXs},
                             {target, To}
                         }
-                    )
+                    ),
+                    mode_result(IndexMode, Completion, EventResult)
             end;
         {error, _} = Error ->
-            ?event(
+            EventResult = ?event(
                 copycat_short,
                 {arweave_block_not_found,
                     {height, Current},
                     {target, To},
-                    {reason, Error}} 
+                    {reason, Error}}
+            ),
+            mode_result(
+                IndexMode,
+                copycat_block_error(
+                    Current,
+                    <<"Arweave block is not retrievable.">>,
+                    #{ fetch_error => Error }
+                ),
+                EventResult
             )
     end.
+
+mode_result(headers, StrictResult, _LegacyResult) -> StrictResult;
+mode_result(_IndexMode, _StrictResult, LegacyResult) -> LegacyResult.
+
+complete_block(Current, headers, 0, Results, Opts) ->
+    case write_block_index(Current, headers, Opts) of
+        ok ->
+            case is_block_indexed(Current, headers, Opts) of
+                true -> {ok, Results};
+                false ->
+                    copycat_block_error(
+                        Current,
+                        <<"Arweave block completion marker was not persisted.">>,
+                        Results
+                    )
+            end;
+        WriteError ->
+            copycat_block_error(
+                Current,
+                <<"Arweave block completion marker could not be persisted.">>,
+                Results#{ marker_error => WriteError }
+            )
+    end;
+complete_block(Current, headers, _Skipped, Results, _Opts) ->
+    copycat_block_error(
+        Current,
+        <<"Arweave block headers were only partially cached.">>,
+        Results
+    );
+complete_block(Current, IndexMode, 0, _Results, Opts) ->
+    ok = write_block_index(Current, IndexMode, Opts);
+complete_block(_Current, _IndexMode, _Skipped, _Results, _Opts) ->
+    ok.
+
+copycat_block_error(Height, Reason, Details) ->
+    {error,
+        maps:merge(
+            #{
+                <<"status">> => 502,
+                <<"reason">> => Reason,
+                <<"block-height">> => Height
+            },
+            Details
+        )
+    }.
 
 block_indexed_path(Height) ->
     <<"block/", (hb_util:bin(Height))/binary, "/mode">>.
@@ -375,6 +478,11 @@ is_block_indexed(Height, IndexMode, Opts) ->
                     false
             end
     end.
+
+%% @doc True only after headers mode completed without a skipped transaction
+%% and persisted its independent completion marker.
+headers_complete(Height, Opts) ->
+    is_block_indexed(Height, headers, Opts).
 
 mode_name(headers) -> <<"headers">>;
 mode_name(shallow) -> <<"shallow">>;
@@ -633,7 +741,14 @@ cache_data_free_header(#tx{ data_size = 0 } = TX, Opts) ->
         true ->
             try
                 true = ar_tx:verify_tx_id(TX#tx.id, TX),
-                {ok, _} = cache_item(TX#tx{ data = <<>> }, <<"tx@1.0">>, Opts),
+                LocalOpts = hb_store:scope(Opts, local),
+                Msg = hb_message:convert(
+                    TX#tx{ data = <<>> },
+                    <<"structured@1.0">>,
+                    <<"tx@1.0">>,
+                    LocalOpts
+                ),
+                {ok, _} = hb_cache:write(Msg, LocalOpts),
                 counters(1, 0, 0)
             catch
                 Class:Reason ->
@@ -930,12 +1045,36 @@ fetch_block_tx_headers(Block, Opts) ->
             }
         )
     end),
-    case lib_arweave_common:best_response(Res) of
+    case best_response(Res) of
         {ok, #{ <<"body">> := Body }} ->
             decode_block_tx_headers(Body, Block, Opts);
         _ ->
             error
     end.
+
+%% The pinned `lib_arweave_common' predates a shared response selector. Keep
+%% this normalization inside the Copycat package so Forge device renaming does
+%% not create a call to a function absent from the pinned library archive.
+best_response({error, {no_viable_responses, Responses}}) ->
+    best_response(Responses);
+best_response([]) ->
+    {error, no_viable_responses};
+best_response(Responses) when is_list(Responses) ->
+    hd(
+        lists:sort(
+            fun({_, A}, {_, B}) ->
+                response_status(A) =< response_status(B)
+            end,
+            Responses
+        )
+    );
+best_response(Response) ->
+    Response.
+
+response_status(Response) when is_map(Response) ->
+    maps:get(<<"status">>, Response, 999);
+response_status(_) ->
+    999.
 
 decode_block_tx_headers(Body, Block, Opts) ->
     try parse_block2_transactions(Body) of
@@ -947,8 +1086,8 @@ decode_block_tx_headers(Body, Block, Opts) ->
             ||
                 TXID <- hb_maps:get(<<"txs">>, Block, [], Opts)
             ],
-            case BlockID =:= ExpectedBlockID
-                    andalso [block2_tx_id(TX) || TX <- TXs] =:= ExpectedTXIDs of
+            case block_tx_headers_match(
+                    ExpectedBlockID, ExpectedTXIDs, BlockID, TXs) of
                 true -> {ok, TXs};
                 false -> error
             end;
@@ -957,6 +1096,10 @@ decode_block_tx_headers(Body, Block, Opts) ->
     catch
         _:_ -> error
     end.
+
+block_tx_headers_match(ExpectedBlockID, ExpectedTXIDs, BlockID, TXs) ->
+    BlockID =:= ExpectedBlockID andalso
+        [block2_tx_id(TX) || TX <- TXs] =:= ExpectedTXIDs.
 
 block2_tx_id(#tx{ id = TXID }) -> TXID;
 block2_tx_id(TXID) when is_binary(TXID) -> TXID.
@@ -1241,19 +1384,111 @@ observe_event(MetricName, Fun) ->
 
 %%% Tests
 
+%% `/block2' writes transactions in reverse block order. The parser prepends
+%% each wire entry, restoring the canonical JSON `block.txs' order.
+block2_reverse_wire_restores_canonical_order_test() ->
+    First = crypto:strong_rand_bytes(32),
+    Second = crypto:strong_rand_bytes(32),
+    ReverseWire = <<
+        2:16,
+        32:24, Second/binary,
+        32:24, First/binary
+    >>,
+    ?assertEqual(
+        {ok, <<0:384>>, [First, Second]},
+        parse_block2_txs(ReverseWire, <<0:384>>)
+    ),
+    ?assertEqual(
+        error,
+        parse_block2_txs(<<1:16, 33:24, First/binary>>, <<0:384>>)
+    ).
+
+block2_canonical_layout_validation_test() ->
+    BlockID = crypto:strong_rand_bytes(48),
+    OtherBlockID = crypto:strong_rand_bytes(48),
+    First = crypto:strong_rand_bytes(32),
+    Second = crypto:strong_rand_bytes(32),
+    Expected = [First, Second],
+    ?assert(block_tx_headers_match(
+        BlockID, Expected, BlockID, [First, Second])),
+    ?assertNot(block_tx_headers_match(
+        BlockID, Expected, OtherBlockID, [First, Second])),
+    ?assertNot(block_tx_headers_match(
+        BlockID, Expected, BlockID, [Second, First])),
+    ?assertNot(block_tx_headers_match(
+        BlockID, Expected, BlockID, [First])).
+
+headers_completion_is_all_or_nothing_test() ->
+    TestStore = hb_test_utils:test_store(),
+    Opts = #{
+        <<"store">> => [TestStore],
+        <<"arweave-index-store">> => #{ <<"index-store">> => [TestStore] }
+    },
+    Height = 42,
+    ?assertNot(headers_complete(Height, Opts)),
+    ?assertMatch(
+        {error, #{ <<"status">> := 502 }},
+        complete_block(Height, headers, 1, counters(0, 0, 1), Opts)
+    ),
+    ?assertNot(headers_complete(Height, Opts)),
+    ?assertMatch(
+        {ok, _},
+        complete_block(Height, headers, 0, counters(1, 0, 0), Opts)
+    ),
+    ?assert(headers_complete(Height, Opts)).
+
+bounded_block_failure_is_not_reported_as_success_test() ->
+    ?assertMatch(
+        {error,
+            #{
+                <<"status">> := 502,
+                <<"block-height">> := 42
+            }},
+        process_block(
+            {error, unavailable}, 42, 40, headers, #{}
+        )
+    ).
+
+legacy_modes_keep_best_effort_block_failure_test() ->
+    lists:foreach(
+        fun(Mode) ->
+            case process_block(
+                    {error, unavailable}, 42, 40, Mode, #{}) of
+                {error, _} -> ?assert(false);
+                _ -> ok
+            end
+        end,
+        [shallow, deep, full]
+    ).
+
 headers_mode_test() ->
     Block = 1967269,
     BlockBin = hb_util:bin(Block),
     ZeroTXID = <<"enIzMI_6vVcY80ZqfiCdWq56chbft3HSZnXMj7X7BdE">>,
     DataTXID = <<"NEsEjfjjawZ_fqMEnIS9aURTIvgrZ5TqFwC9hcsE2nM">>,
     TestStore = hb_test_utils:test_store(),
-    StoreOpts = #{ <<"index-store">> => [TestStore] },
+    RemoteStore = #{
+        <<"store-module">> => hb_store_gateway,
+        <<"node">> => <<"https://must-not-be-used.invalid">>,
+        <<"local-store">> => false
+    },
+    StoreOpts = #{ <<"index-store">> => [TestStore, RemoteStore] },
     Opts = #{
-        <<"store">> => [TestStore],
+        <<"store">> => [TestStore, RemoteStore],
         <<"arweave-index-store">> => StoreOpts,
         <<"arweave-index-workers">> => 2
     },
-    LocalOpts = hb_store:scope(Opts, local),
+    LocalOpts = index_opts(headers, Opts),
+    ?assertEqual([TestStore], hb_opts:get(store, [], LocalOpts)),
+    ?assertEqual(
+        [TestStore],
+        hb_maps:get(
+            <<"index-store">>,
+            hb_opts:get(arweave_index_store, no_store, LocalOpts),
+            [],
+            LocalOpts
+        )
+    ),
     ?assertEqual({error, not_found}, hb_cache:read(ZeroTXID, LocalOpts)),
     {ok, Block} =
         hb_ao:resolve(
@@ -1287,6 +1522,89 @@ headers_mode_test() ->
     ),
     ?assert(is_block_indexed(Block, headers, Opts)),
     ?assertNot(is_block_indexed(Block, shallow, Opts)).
+
+headers_mode_scopes_stores_without_changing_routes_test() ->
+    Local = hb_test_utils:test_store(),
+    Remote = #{
+        <<"store-module">> => hb_store_gateway,
+        <<"node">> => <<"https://must-not-be-used.invalid">>,
+        <<"local-store">> => false
+    },
+    Route = #{ <<"template">> => <<"/arweave/*">> },
+    Opts = #{
+        <<"store">> => [Local, Remote],
+        <<"arweave-index-store">> =>
+            #{ <<"index-store">> => [Local, Remote] },
+        <<"routes">> => [Route]
+    },
+    LocalOpts = index_opts(headers, Opts),
+    ?assertEqual([Local], hb_opts:get(store, [], LocalOpts)),
+    ?assertEqual(
+        [Local],
+        hb_maps:get(
+            <<"index-store">>,
+            hb_opts:get(arweave_index_store, no_store, LocalOpts),
+            [],
+            LocalOpts
+        )
+    ),
+    ?assertEqual([Route], hb_opts:get(routes, [], LocalOpts)),
+    ?assertEqual(Opts, index_opts(shallow, Opts)).
+
+headers_mode_http_failure_is_non_2xx_test() ->
+    Height = 42,
+    BlockID = hb_util:encode(<<42:384>>),
+    TXID = hb_util:encode(<<7:256>>),
+    BlockBody = hb_json:encode(#{
+        <<"height">> => Height,
+        <<"indep_hash">> => BlockID,
+        <<"hash">> => hb_util:encode(<<43:384>>),
+        <<"txs">> => [TXID]
+    }),
+    {ok, MockNode, MockHandle} = hb_mock_server:start([
+        {"/block/height/:height", block, {200, BlockBody}},
+        {"/block2/hash/:id", block2, {200, <<0>>}}
+    ]),
+    Store = hb_test_utils:test_store(),
+    Remote = #{
+        <<"store-module">> => hb_store_gateway,
+        <<"node">> => <<"https://must-not-be-used.invalid">>,
+        <<"local-store">> => false
+    },
+    Routes = [#{
+        <<"template">> => <<"^/arweave">>,
+        <<"nodes">> => [#{
+            <<"match">> => <<"^/arweave">>,
+            <<"with">> => MockNode,
+            <<"opts">> => #{ <<"http-client">> => httpc }
+        }],
+        <<"stop-after">> => true
+    }],
+    Opts = #{
+        <<"store">> => [Store, Remote],
+        <<"arweave-index-store">> =>
+            #{ <<"index-store">> => [Store, Remote] },
+        <<"routes">> => Routes,
+        <<"priv-wallet">> => ar_wallet:new()
+    },
+    try
+        Node = hb_http_server:start_node(Opts),
+        Result = hb_http:get(
+            Node,
+            <<
+                "/~copycat@1.0/arweave?mode=headers&reindex=false&from=42&to=42"
+            >>,
+            #{}
+        ),
+        ?assertMatch({failure, #{ <<"status">> := 502 }}, Result),
+        ?assertEqual(1, length(hb_mock_server:get_requests(
+            block, 1, MockHandle))),
+        ?assertEqual(1, length(hb_mock_server:get_requests(
+            block2, 1, MockHandle))),
+        ?assertNot(headers_complete(Height, Opts))
+    after
+        hb_mock_server:stop(MockHandle)
+    end.
 
 index_ids_test_parallel() ->
     %% Test block: https://viewblock.io/arweave/block/1827942
