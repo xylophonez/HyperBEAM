@@ -1241,6 +1241,125 @@ stop_test_runner(Name) ->
             hb_name:unregister(Name)
     end.
 
+reorg_roundtrip_debug_test_() ->
+    case os:getenv("REORG_DEBUG") of
+        false -> {"debug disabled", fun() -> ok end};
+        _ ->
+            {timeout, 120, fun() ->
+                Store = hb_test_utils:test_store(
+                    hb_store_volatile, <<"ar-sched-dbg">>),
+                ok = hb_store:start(Store),
+                Opts = #{ <<"store">> => [Store],
+                          <<"scheduler-store">> => [Store],
+                          <<"gateway">> => <<"https://arweave.net">>,
+                          <<"arweave-scheduler-fetch-attempts">> => 3,
+                          <<"priv-wallet">> => ar_wallet:new() },
+                {ok, Tip} = confirmed_tip(Opts),
+                H = Tip - 30,
+                {ok, B1} = fetch_block_remote(H, Opts),
+                {ok, B2} = fetch_block_remote(H, Opts),
+                Hash1 = hb_maps:get(<<"indep_hash">>, B1, none, Opts),
+                Hash2 = hb_maps:get(<<"indep_hash">>, B2, none, Opts),
+                ?debugFmt("fetch determinism: ~p", [Hash1 =:= Hash2]),
+                ?debugFmt("hash1=~p", [Hash1]),
+                {ok, _} = dev_arweave_scheduler_cache:write_block(H, B1, Opts),
+                case dev_arweave_scheduler_cache:read_block(H, Opts) of
+                    {ok, B3} ->
+                        Hash3 =
+                            hb_maps:get(<<"indep_hash">>, B3, none, Opts),
+                        ?debugFmt("roundtrip write/read hash match: ~p",
+                            [Hash1 =:= Hash3]),
+                        ?debugFmt("hash3=~p", [Hash3]),
+                        ?debugFmt("B3 keys=~p",
+                            [lists:sort(hb_maps:keys(B3, Opts))]);
+                    Other ->
+                        ?debugFmt("read_block FAILED: ~p", [Other])
+                end,
+                ok = hb_store:stop(Store)
+            end}
+    end.
+
+reorg_soak_test_() ->
+    case os:getenv("REORG_SOAK") of
+        false -> {"soak disabled", fun() -> ok end};
+        Iters0 ->
+            Iters = list_to_integer(Iters0),
+            {timeout, 36000, fun() -> run_reorg_soak(Iters) end}
+    end.
+
+run_reorg_soak(Iters) ->
+    Store0 = hb_test_utils:test_store(hb_store_volatile, <<"ar-sched-soak">>),
+    ok = hb_store:start(Store0),
+    Opts0 = #{ <<"store">> => [Store0], <<"scheduler-store">> => [Store0],
+               <<"gateway">> => <<"https://arweave.net">>,
+               <<"arweave-scheduler-fetch-attempts">> => 3,
+               <<"priv-wallet">> => ar_wallet:new() },
+    {ok, Tip} = confirmed_tip(Opts0),
+    ok = hb_store:stop(Store0),
+    Pass = soak_loop(Iters, 0, Tip, undefined),
+    ?debugFmt("REORG SOAK: ~p/~p recoveries correct", [Pass, Iters]),
+    ?assertEqual(Iters, Pass).
+
+soak_loop(0, Pass, _Tip, _Opts) -> Pass;
+soak_loop(N, Pass, Tip, _Ignored) ->
+    %% Fresh store per iteration so cross-iteration canonical writes cannot
+    %% shift the fork point.
+    Store =
+        hb_test_utils:test_store(
+            hb_store_volatile,
+            <<"ar-sched-soak-", (hb_util:bin(N))/binary>>),
+    ok = hb_store:start(Store),
+    Opts = #{ <<"store">> => [Store], <<"scheduler-store">> => [Store],
+              <<"gateway">> => <<"https://arweave.net">>,
+              <<"arweave-scheduler-fetch-attempts">> => 3,
+              <<"priv-wallet">> => ar_wallet:new() },
+    %% Random fork depth 1..reorg_depth-1 below a live confirmed height.
+    Depth = 1 + (erlang:phash2({N, erlang:monotonic_time()}, 45)),
+    Head = Tip - (erlang:phash2(N, 20)),
+    Fork = Head - Depth,
+    OK =
+        case {fetch_block_remote(Fork, Opts), fetch_block_remote(Head, Opts)} of
+            {{ok, ForkBlk}, {ok, _}} ->
+                ForkHash =
+                    hb_maps:get(<<"indep_hash">>, ForkBlk, not_found, Opts),
+                %% Seed: indexed canonical up to Fork, then ORPHAN at Head.
+                {ok, _} = dev_arweave_scheduler_cache:write_block(
+                    Fork, ForkBlk, Opts),
+                Orphan = <<"orphan-", (hb_util:bin(N))/binary>>,
+                {ok, _} = dev_arweave_scheduler_cache:write_block(
+                    Head,
+                    #{ <<"height">> => Head, <<"indep_hash">> => Orphan,
+                       <<"previous_block">> => ForkHash },
+                    Opts),
+                State = #{ <<"from">> => 1968888, <<"to">> => Head,
+                          <<"block-hash">> => Orphan },
+                {ok, _} = dev_arweave_scheduler_cache:write_global(State, Opts),
+                case recover_from_reorg(State, Opts) of
+                    {ok, R} ->
+                        case hb_util:int(
+                            hb_maps:get(<<"to">>, R, -1, Opts)) =:= Fork
+                        of
+                            true -> true;
+                            false ->
+                                ?debugFmt("WRONG FORK: got ~p expected ~p",
+                                    [hb_maps:get(<<"to">>, R, -1, Opts), Fork]),
+                                false
+                        end;
+                    not_recovered -> skip  %% fail-closed (fetch error/floor)
+                end;
+            _ ->
+                %% Network hiccup: don't count against correctness.
+                skip
+        end,
+    ok = hb_store:stop(Store),
+    case OK of
+        true -> soak_loop(N - 1, Pass + 1, Tip, undefined);
+        skip -> timer:sleep(2000), soak_loop(N, Pass, Tip, undefined);
+        false ->
+            ?debugFmt("SOAK FAILURE at N=~p head=~p depth=~p", [N, Head, Depth]),
+            soak_loop(N - 1, Pass, Tip, undefined)
+    end.
+
 reorg_canonical_fetch_shape_test_() ->
     {timeout, 60, fun() ->
         Store = hb_test_utils:test_store(
