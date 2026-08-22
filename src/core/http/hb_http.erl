@@ -762,10 +762,12 @@ encode_reply(Status, TABMReq, Message, Opts) ->
                     <<"structured@1.0">>,
                     Opts#{ <<"topic">> => ao_internal }
                 ),
+            EncHeaders = hb_maps:without([<<"body">>], EncMessage, Opts),
+            EncBody = hb_maps:get(<<"body">>, EncMessage, <<>>, Opts),
             {
                 Status,
-                hb_maps:without([<<"body">>], EncMessage, Opts),
-                hb_maps:get(<<"body">>, EncMessage, <<>>, Opts)
+                ensure_content_type(EncHeaders, EncBody, BaseHdrs, Opts),
+                EncBody
             };
         {_, <<"ans104@1.0">>, _} ->
             % The `ans104@1.0' codec is a binary format, so we must serialize
@@ -907,6 +909,30 @@ codec_to_content_type(Codec, Opts) ->
     case hb_ao:get(<<"content-type">>, #{ <<"device">> => Codec }, FastOpts) of
         not_found -> undefined;
         CT -> CT
+    end.
+
+%% @doc Ensure that a reply carrying a non-empty body also declares the body's
+%% media type. Headers produced by the codec always take precedence: we only
+%% add the codec's default `content-type' (calculated in `encode_reply/4' as
+%% part of the base headers) when the encoded message does not declare one
+%% itself, falling back to `application/octet-stream' for codecs that do not
+%% define a default. Bodyless replies are returned unmodified, such that they
+%% do not advertise a media type for an entity that does not exist.
+ensure_content_type(Headers, <<>>, _BaseHdrs, _Opts) -> Headers;
+ensure_content_type(Headers, _Body, BaseHdrs, Opts) ->
+    case hb_maps:get(<<"content-type">>, Headers, undefined, Opts) of
+        undefined ->
+            Headers#{
+                <<"content-type">> =>
+                    hb_maps:get(
+                        <<"content-type">>,
+                        BaseHdrs,
+                        <<"application/octet-stream">>,
+                        Opts
+                    )
+            };
+        _ ->
+            Headers
     end.
 
 %% @doc Convert a cowboy request to a normalized message. We first parse the
@@ -1295,6 +1321,49 @@ paranoid_http_result_test() ->
         {paranoid_verification_failure, http_result, _, _, _},
         encode_reply(200, #{}, Valid#{ <<"body">> => <<"mangled">> }, Opts)
     ).
+
+%% @doc Every reply that carries a non-empty body must declare the body's
+%% media type. A device that sets an explicit `content-type' must see it
+%% preserved on the wire, a body-bearing message without one must receive
+%% the fallback media type, and a bodyless reply must not advertise a media
+%% type at all.
+reply_content_type_preserved_test() ->
+    Opts = test_opts(),
+    % A device-declared media type is forwarded to the wire unmodified.
+    {200, DeclaredHdrs, DeclaredBody} =
+        encode_reply(
+            200,
+            #{},
+            #{
+                <<"body">> => <<"{\"result\": 5514001}">>,
+                <<"content-type">> => <<"application/json">>
+            },
+            Opts
+        ),
+    ?assertEqual(<<"{\"result\": 5514001}">>, DeclaredBody),
+    ?assertEqual(
+        <<"application/json">>,
+        maps:get(<<"content-type">>, DeclaredHdrs, undefined)
+    ),
+    % A body-bearing reply without a declared media type receives the
+    % fallback, rather than omitting `content-type' entirely.
+    {200, FallbackHdrs, FallbackBody} =
+        encode_reply(200, #{}, #{ <<"body">> => <<"5514001">> }, Opts),
+    ?assertEqual(<<"5514001">>, FallbackBody),
+    ?assertEqual(
+        <<"application/octet-stream">>,
+        maps:get(<<"content-type">>, FallbackHdrs, undefined)
+    ),
+    % A bodyless reply does not gain a media type for a non-existent entity.
+    {200, BodylessHdrs, BodylessBody} =
+        encode_reply(
+            200,
+            #{ <<"accept-bundle">> => <<"true">> },
+            #{ <<"result">> => <<"ok">> },
+            Opts
+        ),
+    ?assertEqual(<<>>, BodylessBody),
+    ?assertNot(maps:is_key(<<"content-type">>, BodylessHdrs)).
 
 nested_ao_resolve_test() ->
     URL = hb_http_server:start_node(),
