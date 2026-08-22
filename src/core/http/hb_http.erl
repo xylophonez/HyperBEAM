@@ -461,6 +461,67 @@ prepare_request(Format, Method, Peer, Path, RawMessage, Opts) ->
     BinPeer = if is_binary(Peer) -> Peer; true -> list_to_binary(Peer) end,
     BinPath = hb_path:normalize(hb_path:to_binary(Path)),
     ReqBase = #{ peer => BinPeer, path => BinPath, method => Method },
+    MaybeBodyless =
+        case bodyless_request(Method, WithSelfPort, Opts) of
+            true ->
+                encode_bodyless_request(ReqBase, MaybeCookie, WithSelfPort, Opts);
+            false ->
+                request_has_body
+        end,
+    case MaybeBodyless of
+        request_has_body ->
+            encode_request(Format, ReqBase, Message, WithSelfPort, MaybeCookie, Opts);
+        BodylessReq ->
+            BodylessReq
+    end.
+
+%% @doc Determine whether an outbound request is a candidate for bodyless
+%% encoding: an uncommitted `GET' or `HEAD' request. Committed requests are
+%% excluded, as their wire form must continue to carry every committed field
+%% in order to remain verifiable by the recipient. See
+%% `encode_bodyless_request/4' for the encoding itself.
+bodyless_request(Method, Message, Opts) ->
+    NormMethod = string:uppercase(Method),
+    (NormMethod =:= <<"GET">> orelse NormMethod =:= <<"HEAD">>)
+        andalso hb_maps:get(<<"commitments">>, Message, #{}, Opts) =:= #{}.
+
+%% @doc Encode a genuinely bodyless `GET'/`HEAD' request as a header-only
+%% HTTP request. Such requests must not advertise entity representation
+%% metadata: there is no entity for `content-type' or `codec-device' to
+%% describe, and strict peers reject bodyless requests that carry either
+%% header, rather than ignoring them. If the message encodes to a non-empty
+%% body after all (for example, because it contains nested messages that must
+%% be transmitted as multipart parts), we return `request_has_body' such that
+%% the caller falls back to the format-specific encoder.
+encode_bodyless_request(ReqBase, MaybeCookie, Message, Opts) ->
+    Encoded =
+        hb_message:convert(
+            Message,
+            #{
+                <<"device">> => <<"httpsig@1.0">>,
+                <<"bundle">> => true
+            },
+            Opts
+        ),
+    case hb_maps:get(<<"body">>, Encoded, <<>>, Opts) of
+        <<>> ->
+            Headers =
+                hb_maps:without(
+                    [<<"body">>, <<"content-type">>, <<"codec-device">>],
+                    Encoded,
+                    Opts
+                ),
+            hb_maps:merge(
+                ReqBase,
+                #{ headers => maps:merge(MaybeCookie, Headers), body => <<>> },
+                Opts
+            );
+        _ ->
+            request_has_body
+    end.
+
+%% @doc Encode an outbound request message in the requested wire format.
+encode_request(Format, ReqBase, Message, WithSelfPort, MaybeCookie, Opts) ->
     case Format of
         <<"httpsig@1.0">> ->
             FullEncoding =
@@ -1294,6 +1355,80 @@ paranoid_http_result_test() ->
     ?assertThrow(
         {paranoid_verification_failure, http_result, _, _, _},
         encode_reply(200, #{}, Valid#{ <<"body">> => <<"mangled">> }, Opts)
+    ).
+
+%% @doc A genuinely bodyless `GET'/`HEAD' request must not advertise entity
+%% representation metadata: strict peers reject bodyless requests that carry
+%% `content-type' or `codec-device' headers. Requests that actually carry an
+%% entity body must continue to advertise their codec as before.
+bodyless_get_no_codec_headers_test() ->
+    Opts = test_opts(),
+    Peer = <<"http://localhost:10000">>,
+    BodylessMsg = #{
+        <<"accept">> => <<"application/json">>,
+        <<"codec-device">> => <<"json@1.0">>,
+        <<"content-type">> => <<"application/json">>
+    },
+    % Bodyless `GET'/`HEAD' requests are sent header-only, with the entity
+    % metadata stripped and the remaining fields (e.g. `accept') preserved.
+    lists:foreach(
+        fun(Method) ->
+            Req =
+                prepare_request(
+                    <<"json@1.0">>,
+                    Method,
+                    Peer,
+                    <<"/status">>,
+                    BodylessMsg,
+                    Opts
+                ),
+            #{ headers := Headers, body := Body, method := ReqMethod } = Req,
+            ?assertEqual(Method, ReqMethod),
+            ?assertEqual(<<>>, Body),
+            ?assertNot(maps:is_key(<<"content-type">>, Headers)),
+            ?assertNot(maps:is_key(<<"codec-device">>, Headers)),
+            ?assertEqual(
+                <<"application/json">>,
+                maps:get(<<"accept">>, Headers, undefined)
+            )
+        end,
+        [<<"GET">>, <<"HEAD">>]
+    ),
+    % A `GET' that carries an entity body is not rewritten: the body is
+    % transmitted as usual.
+    WithBody =
+        prepare_request(
+            <<"httpsig@1.0">>,
+            <<"GET">>,
+            Peer,
+            <<"/schedule">>,
+            #{ <<"body">> => <<"payload">> },
+            Opts
+        ),
+    ?assertEqual(<<"payload">>, maps:get(body, WithBody)),
+    % A `POST' carrying a body continues to advertise its codec.
+    PostReq =
+        prepare_request(
+            <<"json@1.0">>,
+            <<"POST">>,
+            Peer,
+            <<"/push">>,
+            #{
+                <<"codec-device">> => <<"json@1.0">>,
+                <<"content-type">> => <<"application/json">>,
+                <<"body">> => <<"{}">>
+            },
+            Opts
+        ),
+    #{ headers := PostHeaders, body := PostBody } = PostReq,
+    ?assertEqual(<<"{}">>, PostBody),
+    ?assertEqual(
+        <<"json@1.0">>,
+        maps:get(<<"codec-device">>, PostHeaders, undefined)
+    ),
+    ?assertEqual(
+        <<"application/json">>,
+        maps:get(<<"content-type">>, PostHeaders, undefined)
     ).
 
 nested_ao_resolve_test() ->
