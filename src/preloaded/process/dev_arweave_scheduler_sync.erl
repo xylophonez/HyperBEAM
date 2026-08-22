@@ -170,14 +170,76 @@ sync_blocks(State = #{ <<"to">> := To }, Upper, Opts, Recover) ->
 
 sync_batch(State = #{ <<"to">> := To }, BatchEnd, Opts) ->
     Heights = lists:seq(To + 1, BatchEnd),
+    case fetch_blocks(Heights, Opts) of
+        {ok, Blocks} ->
+            commit_batch(
+                Blocks,
+                State,
+                Opts,
+                fun(Height) ->
+                    fetch_block_remote(
+                        Height,
+                        recover_fetch_attempts(Opts),
+                        Opts
+                    )
+                end
+            );
+        Error -> Error
+    end.
+
+%% @doc Validate one fetched batch against the indexed frontier and commit
+%% it. The forward fetch path is cache-first, so a stale cached block above
+%% the frontier -- for example an orphan a previous runtime indexed and left
+%% behind in a preserved store -- would otherwise fail the previous-hash
+%% check on every pass, forever: reorg recovery cannot clear it, because it
+%% only repairs cached blocks at or below the indexed frontier. When the
+%% chain check fails, refetch the failing height from the network once, with
+%% the bounded recovery retry budget; if the canonical block differs from the
+%% batch's copy, the copy was stale: overwrite the poisoned cache entry and
+%% revalidate once. If the canonical block is identical to the batch's copy
+%% -- or cannot be fetched -- the conflict is real (or undecidable) and
+%% surfaces unchanged for reorg recovery to handle.
+commit_batch(Blocks, State, Opts, FetchFresh) ->
+    case validate_blocks(Blocks, State, Opts) of
+        {ok, NewState} ->
+            maybe
+                ok ?= index_blocks(Blocks, Opts),
+                ok ?= write_blocks(Blocks, Opts),
+                {ok, _} ?=
+                    dev_arweave_scheduler_cache:write_global(NewState, Opts),
+                {ok, NewState}
+            end;
+        {error, #{
+            <<"status">> := 409,
+            <<"reason">> :=
+                <<"Arweave block does not extend the indexed chain.">>,
+            <<"block-height">> := Height
+        }} = Conflict when FetchFresh =/= none ->
+            case heal_stale_block(Height, Blocks, FetchFresh, Opts) of
+                {ok, Healed} -> commit_batch(Healed, State, Opts, none);
+                unchanged -> Conflict
+            end;
+        Error -> Error
+    end.
+
+%% @doc Replace a batch block that failed the chain check with its freshly
+%% fetched canonical counterpart when the two differ, overwriting the
+%% poisoned cache entry so the next pass cannot re-read it. Returns
+%% `unchanged' when the canonical block matches the batch's copy -- a real
+%% conflict, which reorg recovery owns -- or when it cannot be established,
+%% failing closed on the original conflict.
+heal_stale_block(Height, Blocks, FetchFresh, Opts) ->
     maybe
-        {ok, Blocks} ?= fetch_blocks(Heights, Opts),
-        {ok, NewState} ?= validate_blocks(Blocks, State, Opts),
-        ok ?= index_blocks(Blocks, Opts),
-        ok ?= write_blocks(Blocks, Opts),
+        {Height, Stale} ?= lists:keyfind(Height, 1, Blocks),
+        {ok, Fresh} ?= FetchFresh(Height),
+        FreshHash = hb_maps:get(<<"indep_hash">>, Fresh, not_found, Opts),
+        StaleHash = hb_maps:get(<<"indep_hash">>, Stale, not_found, Opts),
+        true ?= is_binary(FreshHash) andalso FreshHash =/= StaleHash,
         {ok, _} ?=
-            dev_arweave_scheduler_cache:write_global(NewState, Opts),
-        {ok, NewState}
+            dev_arweave_scheduler_cache:write_block(Height, Fresh, Opts),
+        {ok, lists:keyreplace(Height, 1, Blocks, {Height, Fresh})}
+    else
+        _ -> unchanged
     end.
 
 %% @doc The indexed tip no longer matches the canonical chain: the node
@@ -1454,6 +1516,74 @@ reorg_canonical_fetch_shape_test_() ->
         end,
         ok = hb_store:stop(Store)
     end}.
+
+%% @doc Field regression: a preserved store holds a STALE cached block just
+%% above the frontier (an orphan indexed by an earlier runtime), while the
+%% indexed chain itself is canonical. The cache-first forward fetch serves
+%% the stale block on every pass and the previous-hash check fails forever;
+%% reorg recovery cannot clear it because the divergence is above the
+%% frontier and the indexed chain already matches canonical (fork = To,
+%% nothing to replace). The batch commit must refetch the failing height,
+%% overwrite the poisoned cache entry, revalidate, and advance -- without
+%% invoking reorg recovery.
+stale_cache_heal_test() ->
+    Store = hb_test_utils:test_store(hb_store_volatile, <<"ar-sched-heal">>),
+    ok = hb_store:start(Store),
+    Opts = #{ <<"store">> => [Store], <<"scheduler-store">> => [Store] },
+    Mk = fun(H, Hash, Prev) ->
+        #{ <<"height">> => H, <<"indep_hash">> => Hash,
+           <<"previous_block">> => Prev }
+    end,
+    Canon = fun(H) -> <<"canon-", (hb_util:bin(H))/binary>> end,
+    %% Freshly re-indexed canonical chain up to the frontier (To = 101)...
+    {ok, _} = dev_arweave_scheduler_cache:write_block(
+        101, Mk(101, Canon(101), Canon(100)), Opts),
+    %% ...but the cache still holds a stale orphan ABOVE the frontier whose
+    %% previous-hash does not extend the indexed chain.
+    {ok, _} = dev_arweave_scheduler_cache:write_block(
+        102, Mk(102, <<"stale-102">>, <<"stale-101">>), Opts),
+    State0 = #{ <<"from">> => 100, <<"to">> => 101,
+                <<"block-hash">> => Canon(101) },
+    {ok, _} = dev_arweave_scheduler_cache:write_global(State0, Opts),
+    %% The forward path serves the poison from the cache.
+    {ok, Blocks} = fetch_blocks([102], Opts),
+    [{102, Cached}] = Blocks,
+    ?assertEqual(<<"stale-102">>,
+        hb_maps:get(<<"indep_hash">>, Cached, not_found, Opts)),
+    %% The canonical network block (as a fresh refetch would return it).
+    Fresh = fun(102) -> {ok, Mk(102, Canon(102), Canon(101))} end,
+    {ok, NewState} = commit_batch(Blocks, State0, Opts, Fresh),
+    %% The batch healed, validated, and advanced past the poisoned height.
+    ?assertEqual(102, hb_util:int(hb_maps:get(<<"to">>, NewState, -1, Opts))),
+    ?assertEqual(Canon(102),
+        hb_maps:get(<<"block-hash">>, NewState, not_found, Opts)),
+    %% The poisoned cache entry was overwritten with the canonical block.
+    {ok, Healed} = dev_arweave_scheduler_cache:read_block(102, Opts),
+    ?assertEqual(Canon(102),
+        hb_maps:get(<<"indep_hash">>, Healed, not_found, Opts)),
+    %% The advance was committed to the global record.
+    {ok, Persisted} = dev_arweave_scheduler_cache:read_global(Opts),
+    ?assertEqual(102,
+        hb_util:int(hb_maps:get(<<"to">>, Persisted, -1, Opts))),
+    %% A REAL conflict is untouched: when the fresh fetch returns the same
+    %% block the batch already had, the 409 surfaces for reorg recovery and
+    %% nothing is written.
+    {ok, _} = dev_arweave_scheduler_cache:write_block(
+        103, Mk(103, <<"orphan-103">>, <<"other-102">>), Opts),
+    {ok, Blocks2} = fetch_blocks([103], Opts),
+    Same = fun(103) -> {ok, Mk(103, <<"orphan-103">>, <<"other-102">>)} end,
+    ?assertMatch(
+        {error, #{ <<"status">> := 409, <<"block-height">> := 103 }},
+        commit_batch(Blocks2, NewState, Opts, Same)),
+    {ok, Persisted2} = dev_arweave_scheduler_cache:read_global(Opts),
+    ?assertEqual(102,
+        hb_util:int(hb_maps:get(<<"to">>, Persisted2, -1, Opts))),
+    %% An unfetchable fresh block also fails closed on the original conflict.
+    Failing = fun(_) -> {error, #{ <<"status">> => 503 }} end,
+    ?assertMatch(
+        {error, #{ <<"status">> := 409 }},
+        commit_batch(Blocks2, NewState, Opts, Failing)),
+    ok = hb_store:stop(Store).
 
 reorg_recovery_integration_test() ->
     Store = hb_test_utils:test_store(hb_store_volatile, <<"ar-sched-reorg">>),
