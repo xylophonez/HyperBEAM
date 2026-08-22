@@ -19,6 +19,8 @@
 -define(DEFAULT_FETCH_RETRY_MS, 250).
 -define(DEFAULT_SYNC_INTERVAL_MS, 1000).
 -define(DEFAULT_REORG_DEPTH, 50).
+-define(RECOVERY_FETCH_ATTEMPTS, 3).
+-define(RECOVERY_MAX_WORKERS, 64).
 -define(PROCESS_IDLE_MS, 1000).
 
 %% @doc Bring the global target index to the confirmed chain frontier. The
@@ -180,91 +182,155 @@ sync_batch(State = #{ <<"to">> := To }, BatchEnd, Opts) ->
 
 %% @doc The indexed tip no longer matches the canonical chain: the node
 %% indexed a block that the network later orphaned in a reorganization, so
-%% every canonical successor fails the previous-hash check forever. Walk the
-%% canonical chain downward -- a bounded number of heights, fetched from the
-%% network rather than the local cache -- until a canonical block hash matches
-%% the indexed block at the same height. Replace each orphaned cached block
-%% with its canonical counterpart on the way down so the forward resync
-%% cannot re-index the orphan, rewind the global record to the fork point,
-%% and let the ordinary forward path re-index the tail. If no indexed block
-%% within the bound matches the canonical chain, leave the record untouched
-%% and surface the original conflict.
+%% every canonical successor fails the previous-hash check forever. Fetch the
+%% bounded recovery window (a reorg-depth slice ending at the indexed tip) in
+%% one parallel round-trip, always from the network rather than the local
+%% cache -- which may still hold the orphans -- then find the deepest height
+%% whose canonical block matches the indexed block. Overwrite each orphaned
+%% cached block above that fork with its canonical counterpart so the forward
+%% resync cannot re-index the orphan, rewind the global record to the fork
+%% point, and let the ordinary forward path re-index the tail. If the window
+%% cannot be fetched, or no indexed block within the bound matches the
+%% canonical chain, leave the record untouched (no partial write) and surface
+%% the original conflict. The recovery fetch uses a small retry budget so a
+%% stalled or failing gateway fails recovery fast instead of blocking the
+%% synchronous sync path for minutes.
 recover_from_reorg(State, Opts) ->
     recover_from_reorg(
         State,
         Opts,
-        fun(Height) -> fetch_block_remote(Height, Opts) end
+        fun(Heights) -> fetch_canonical_window(Heights, Opts) end
     ).
 
-recover_from_reorg(State = #{ <<"to">> := To, <<"from">> := From }, Opts, FetchBlock) ->
+recover_from_reorg(State = #{ <<"to">> := To, <<"from">> := From }, Opts, FetchWindow) ->
     Floor = max(From, To - reorg_depth(Opts)),
-    Result =
-        fork_point(
-            To,
-            Floor,
-            fun(Height) ->
-                maybe
-                    {ok, Canonical} ?= FetchBlock(Height),
-                    CanonicalHash =
-                        hb_maps:get(
-                            <<"indep_hash">>, Canonical, not_found, Opts
-                        ),
-                    true ?= is_binary(CanonicalHash),
-                    {ok, CanonicalHash, Canonical}
-                else
-                    _ -> error
-                end
-            end,
-            fun(Height) ->
-                case dev_arweave_scheduler_cache:read_block(Height, Opts) of
-                    {ok, Indexed} ->
-                        case
-                            hb_maps:get(
-                                <<"indep_hash">>, Indexed, not_found, Opts
-                            )
-                        of
-                            Hash when is_binary(Hash) -> {ok, Hash};
-                            _ -> not_found
-                        end;
-                    _ -> not_found
-                end
-            end,
-            fun(Height, Canonical) ->
-                dev_arweave_scheduler_cache:write_block(
-                    Height, Canonical, Opts
+    case FetchWindow(lists:seq(Floor, To)) of
+        {ok, Canonical} ->
+            case
+                fork_point(
+                    lists:reverse(Canonical),
+                    Floor,
+                    fun(Height) -> indexed_hash(Height, Opts) end,
+                    Opts
                 )
-            end
-        ),
-    case Result of
-        {ok, ForkHeight, ForkHash} ->
-            Rewound =
-                State#{
-                    <<"to">> => ForkHeight,
-                    <<"block-hash">> => ForkHash
-                },
-            case dev_arweave_scheduler_cache:write_global(Rewound, Opts) of
-                {ok, _} -> {ok, Rewound};
-                _ -> not_recovered
+            of
+                {ok, ForkHeight, ForkHash, Orphans} ->
+                    case replace_orphans(Orphans, Opts) of
+                        ok ->
+                            Rewound =
+                                State#{
+                                    <<"to">> => ForkHeight,
+                                    <<"block-hash">> => ForkHash
+                                },
+                            case
+                                dev_arweave_scheduler_cache:write_global(
+                                    Rewound, Opts
+                                )
+                            of
+                                {ok, _} -> {ok, Rewound};
+                                _ -> not_recovered
+                            end;
+                        error -> not_recovered
+                    end;
+                not_recovered -> not_recovered
             end;
-        not_recovered -> not_recovered
+        _ -> not_recovered
     end.
 
-%% @doc Find the deepest height, no lower than `Floor', whose canonical
-%% network block matches the locally indexed block. Orphaned cached blocks
-%% encountered above the fork point are replaced with their canonical
-%% counterparts as the walk descends.
-fork_point(Height, Floor, _Canonical, _Indexed, _Replace) when Height < Floor ->
-    not_recovered;
-fork_point(Height, Floor, Canonical, Indexed, Replace) ->
-    case Canonical(Height) of
-        {ok, CanonicalHash, CanonicalBlock} ->
-            case Indexed(Height) of
-                {ok, CanonicalHash} -> {ok, Height, CanonicalHash};
-                _ ->
-                    Replace(Height, CanonicalBlock),
-                    fork_point(Height - 1, Floor, Canonical, Indexed, Replace)
+%% @doc Fetch the recovery window concurrently, always from the network (never
+%% the local cache, which may still hold the orphans recovery must replace) and
+%% with a reduced per-height retry budget so an unreachable gateway fails the
+%% whole window closed in one bounded round-trip -- rather than stalling the
+%% synchronous sync path, and every caller waiting on it, for minutes. A single
+%% unresolved height fails the window closed, leaving the record untouched.
+fetch_canonical_window(Heights, Opts) ->
+    Attempts = recover_fetch_attempts(Opts),
+    Results =
+        hb_pmap:parallel_map(
+            Heights,
+            fun(Height) -> fetch_block_remote(Height, Attempts, Opts) end,
+            recover_window_workers(Heights, Opts)
+        ),
+    collect_blocks(Heights, Results, []).
+
+%% @doc Give the bounded recovery window enough workers to fetch in a single
+%% concurrent round-trip -- so a stalled gateway fails the whole window in one
+%% attempt-budget rather than in `window / block-workers' sequential waves --
+%% while capping the fan-out so a misconfigured reorg depth cannot open an
+%% unbounded number of connections.
+recover_window_workers(Heights, Opts) ->
+    Configured =
+        max(
+            1,
+            hb_util:int(
+                hb_opts:get(
+                    arweave_scheduler_block_workers,
+                    ?DEFAULT_BLOCK_WORKERS,
+                    Opts
+                )
+            )
+        ),
+    max(Configured, min(length(Heights), ?RECOVERY_MAX_WORKERS)).
+
+%% @doc The per-height retry budget for recovery's canonical probes, capped
+%% well below the forward-sync budget so a flaky network surfaces in seconds
+%% rather than stalling recovery for minutes.
+recover_fetch_attempts(Opts) ->
+    max(1, min(?RECOVERY_FETCH_ATTEMPTS, fetch_attempts(Opts))).
+
+%% @doc Read the locally indexed block's canonical hash at a height, if any.
+indexed_hash(Height, Opts) ->
+    case dev_arweave_scheduler_cache:read_block(Height, Opts) of
+        {ok, Indexed} ->
+            case hb_maps:get(<<"indep_hash">>, Indexed, not_found, Opts) of
+                Hash when is_binary(Hash) -> {ok, Hash};
+                _ -> not_found
             end;
-        error -> not_recovered
+        _ -> not_found
+    end.
+
+%% @doc Find the deepest height, no lower than `Floor', whose canonical block
+%% (from the pre-fetched, descending `Batch') matches the locally indexed
+%% block. This is read-only: it returns the fork height, its canonical hash,
+%% and the orphaned heights above it (each paired with its canonical
+%% replacement, ascending) so the caller overwrites orphans only once a valid
+%% fork is known -- no writes happen on the failure path. Fails closed when a
+%% canonical block lacks a hash or no match exists within the window.
+fork_point(Batch, Floor, Indexed, Opts) ->
+    fork_point(Batch, Floor, Indexed, Opts, []).
+
+fork_point([], _Floor, _Indexed, _Opts, _Orphans) ->
+    not_recovered;
+fork_point([{Height, _} | _], Floor, _Indexed, _Opts, _Orphans)
+        when Height < Floor ->
+    not_recovered;
+fork_point([{Height, CanonicalBlock} | Rest], Floor, Indexed, Opts, Orphans) ->
+    case hb_maps:get(<<"indep_hash">>, CanonicalBlock, not_found, Opts) of
+        CanonicalHash when is_binary(CanonicalHash) ->
+            case Indexed(Height) of
+                {ok, CanonicalHash} ->
+                    {ok, Height, CanonicalHash, Orphans};
+                _ ->
+                    fork_point(
+                        Rest,
+                        Floor,
+                        Indexed,
+                        Opts,
+                        [{Height, CanonicalBlock} | Orphans]
+                    )
+            end;
+        _ ->
+            not_recovered
+    end.
+
+%% @doc Overwrite each orphaned cached block above the fork with its canonical
+%% counterpart before the record is rewound, so the forward resync cannot
+%% re-index an orphan. A failed write fails recovery closed.
+replace_orphans([], _Opts) -> ok;
+replace_orphans([{Height, Block} | Rest], Opts) ->
+    case dev_arweave_scheduler_cache:write_block(Height, Block, Opts) of
+        {ok, _} -> replace_orphans(Rest, Opts);
+        _ -> error
     end.
 
 %% @doc Return the bounded number of blocks a reorganization recovery may
@@ -1409,9 +1475,11 @@ reorg_recovery_integration_test() ->
     State0 = #{ <<"from">> => 100, <<"to">> => 102,
                 <<"block-hash">> => <<"orphan-102">> },
     {ok, _} = dev_arweave_scheduler_cache:write_global(State0, Opts),
-    %% Canonical fetcher returns the true chain (as the network would).
-    Fetch = fun(H) -> {ok, Mk(H, Canon(H),
-        case H of 100 -> <<"canon-99">>; _ -> Canon(H - 1) end)} end,
+    %% Canonical window fetcher returns the true chain (as the network would)
+    %% for the whole requested window in one parallel round-trip.
+    MkBlock = fun(H) -> Mk(H, Canon(H),
+        case H of 100 -> <<"canon-99">>; _ -> Canon(H - 1) end) end,
+    Fetch = fun(Heights) -> {ok, [ {H, MkBlock(H)} || H <- Heights ]} end,
     {ok, Rewound} = recover_from_reorg(State0, Opts, Fetch),
     %% Fork point is 101 (deepest indexed block matching canonical).
     ?assertEqual(101, hb_util:int(hb_maps:get(<<"to">>, Rewound, -1, Opts))),
@@ -1426,46 +1494,51 @@ reorg_recovery_integration_test() ->
     ?assertEqual(Canon(102),
         hb_maps:get(<<"indep_hash">>, Fixed102, not_found, Opts)),
     %% A divergence deeper than the bound fails closed, untouched.
-    Deep = #{ <<"from">> => 100, <<"to">> => 102,
+    Deep = #{ <<"from">> => 102, <<"to">> => 102,
               <<"block-hash">> => <<"orphan-102">> },
-    NeverMatch = fun(H) -> {ok, Mk(H, <<"x-", (hb_util:bin(H))/binary>>,
-        <<"y">>)} end,
+    NeverMatch = fun(Heights) -> {ok, [ {H, Mk(H,
+        <<"x-", (hb_util:bin(H))/binary>>, <<"y">>)} || H <- Heights ]} end,
     ?assertEqual(not_recovered,
-        recover_from_reorg(Deep#{ <<"from">> => 102 }, Opts, NeverMatch)),
+        recover_from_reorg(Deep, Opts, NeverMatch)),
+    %% A window whose canonical fetch cannot be established fails closed fast,
+    %% without touching the record.
+    FailWindow = fun(_Heights) ->
+        {error, #{ <<"status">> => 503,
+                   <<"reason">> => <<"Arweave block is not retrievable.">> }}
+    end,
+    ?assertEqual(not_recovered,
+        recover_from_reorg(State0, Opts, FailWindow)),
     ok = hb_store:stop(Store).
 
 reorg_fork_point_test() ->
-    Canonical =
-        fun(Height) ->
-            {ok, <<"canonical-", (hb_util:bin(Height))/binary>>, #{
-                <<"height">> => Height
-            }}
-        end,
-    Replace = fun(Height, _Block) -> put({replaced, Height}, true) end,
+    Opts = #{},
+    Mk = fun(H) -> #{ <<"height">> => H,
+        <<"indep_hash">> => <<"canonical-", (hb_util:bin(H))/binary>> } end,
+    %% Pre-fetched canonical window, descending (highest height first).
+    Descend = fun(Hi, Lo) -> [ {H, Mk(H)} || H <- lists:seq(Hi, Lo, -1) ] end,
     %% Orphans at 100 and 99; indexed matches canonical at 98.
     Indexed =
         fun
             (98) -> {ok, <<"canonical-98">>};
             (Height) -> {ok, <<"orphan-", (hb_util:bin(Height))/binary>>}
         end,
+    %% Deepest match at 98; the orphaned heights above it (99, 100) are
+    %% reported ascending for replacement, and the fork block itself is not.
+    %% fork_point is read-only, so it performs no writes.
     ?assertEqual(
-        {ok, 98, <<"canonical-98">>},
-        fork_point(100, 95, Canonical, Indexed, Replace)
+        {ok, 98, <<"canonical-98">>, [{99, Mk(99)}, {100, Mk(100)}]},
+        fork_point(Descend(100, 95), 95, Indexed, Opts)
     ),
-    ?assertEqual(true, get({replaced, 100})),
-    ?assertEqual(true, get({replaced, 99})),
-    ?assertEqual(undefined, get({replaced, 98})),
     %% No agreement within the floor: fail closed.
     NeverMatches = fun(_) -> {ok, <<"different">>} end,
     ?assertEqual(
         not_recovered,
-        fork_point(100, 97, Canonical, NeverMatches, Replace)
+        fork_point(Descend(100, 97), 97, NeverMatches, Opts)
     ),
-    %% A canonical fetch failure aborts recovery rather than guessing.
-    Failing = fun(_) -> error end,
+    %% A canonical block missing its hash fails closed rather than guessing.
     ?assertEqual(
         not_recovered,
-        fork_point(100, 95, Failing, Indexed, Replace)
+        fork_point([{100, #{ <<"height">> => 100 }}], 100, Indexed, Opts)
     ).
 
 block_validation_test() ->
