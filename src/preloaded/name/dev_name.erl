@@ -337,7 +337,10 @@ multiple_resolvers_test_parallel() ->
 http_miss_test_parallel() ->
     Opts = #{ <<"name-resolvers">> => [#{ <<"hello">> => <<"world">> }] },
     Node = hb_http_server:start_node(Opts),
-    ?assertMatch(
+    ?assertEqual(
+        {error, not_found},
+        hb_http:get(Node, <<"/~name@1.0/missing">>, Opts)
+    ),
         {error, #{ <<"status">> := 404 }},
         hb_http:get(Node, <<"/~name@1.0/missing">>, Opts)
     ),
