@@ -31,9 +31,17 @@
     ]
 ).
 
-%% @doc Returns the complete GraphQL schema.
+%% @doc Returns the complete GraphQL schema, from the files of the device's
+%% package.
 schema() ->
-    hb_util:ok(file:read_file("scripts/schema.gql")).
+    hb_util:ok(
+        file:read_file(
+            filename:join(
+                hb_device_archive:implementation_dir(?MODULE),
+                "schema.gql"
+            )
+        )
+    ).
 
 %% @doc Ensure that the GraphQL schema and context are initialized. Safe to
 %% call many times, including concurrently. `hb_name:singleton/2' guarantees
@@ -509,6 +517,27 @@ test_query(Node, Query, Variables, OperationName, Opts) ->
     hb_json:decode(hb_maps:get(<<"body">>, Res, <<>>, Opts)).
 
 %%% Tests
+
+%% @doc The schema is read from the files of the device's package, so that it
+%% loads when the node runs in a directory that holds no copy of it. The
+%% controller loads the schema once per VM, so the read is tested directly.
+schema_independent_of_working_directory_test() ->
+    {ok, Cwd} = file:get_cwd(),
+    Dir =
+        filename:join(
+            [
+                Cwd,
+                "cache-TEST",
+                "graphql-cwd-" ++ integer_to_list(erlang:unique_integer([positive]))
+            ]
+        ),
+    ok = filelib:ensure_path(Dir),
+    ok = file:set_cwd(Dir),
+    try
+        ?assertMatch({_, _}, binary:match(schema(), <<"type Query {">>))
+    after
+        file:set_cwd(Cwd)
+    end.
 
 graphql_request_errors_test() ->
     Opts = #{ <<"store">> => [hb_test_utils:test_store()],
