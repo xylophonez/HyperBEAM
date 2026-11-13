@@ -230,52 +230,94 @@ load_modules([Module|Rest], Opts, Acc) when is_map(Module) ->
 
 %% @doc Initialize a new Lua state with a given base message and module.
 initialize(Base, Modules, Opts) ->
-    % Apply the node's minimum sandbox and install the disk-free `require'
-    % before loading any modules, such that code run while a module loads
-    % cannot escape them. If the base sets `requires-determinism', also
-    % sandbox the functions whose results depend on the node, with or without
-    % the minimum sandbox. The message may add further restrictions via
-    % `sandbox', but cannot lift these.
-    State0 = create_state(Base, Opts),
-    % Load each script into the Lua state.
-    State1 =
-        lists:foldl(
-            fun({ModuleID, ModuleBin}, StateIn) ->
-                ?event(
-                    debug_lua,
-                    {loading_module,
-                        {module_id, ModuleID},
-                        {module_bin, ModuleBin}
-                    },
-                    Opts
-                ),
-                {ok, _, StateOut} =
-                    luerl:do_dec(
-                        ModuleBin,
-                        [
-                            {name, hb_util:list(ModuleID)},
-                            {file, hb_util:list(ModuleID)}
-                        ],
-                        StateIn
-                    ),
-                StateOut
+    maybe
+        % Apply the node's minimum sandbox and install the disk-free `require'
+        % before loading any modules, such that code run while a module loads
+        % cannot escape them. If the base sets `requires-determinism', also
+        % sandbox the functions whose results depend on the node, with or
+        % without the minimum sandbox. The message may add further
+        % restrictions via `sandbox', but cannot lift these.
+        State0 = create_state(Base, Opts),
+        % Load each script into the Lua state.
+        {ok, State1} ?= load_into_state(Modules, State0, Opts),
+        % Apply any additional sandboxing requested by the message after
+        % module load.
+        State2 =
+            case hb_maps:get(<<"sandbox">>, Base, false, Opts) of
+                false -> State1;
+                true ->
+                    % Default sandbox has already been applied, so no-op.
+                    State1;
+                Spec -> sandbox(State1, Spec, Opts)
             end,
-            State0,
-            Modules
+        % Install the AO-Core Lua library into the state.
+        {ok, State3} = dev_lua_lib:install(Base, State2, Opts),
+        % Return the base message with the state added to it.
+        {ok, hb_private:set(Base, <<"state">>, State3, Opts)}
+    end.
+
+%% @doc Run each module in the Lua state, in order. A module that does not
+%% compile is an error that gives the messages of the Lua compiler. A module
+%% that raises an error while it runs is a failure, as a function that raises
+%% one is.
+load_into_state([], State, _Opts) ->
+    {ok, State};
+load_into_state([{ModuleID, ModuleBin} | Rest], StateIn, Opts) ->
+    ?event(
+        debug_lua,
+        {loading_module,
+            {module_id, ModuleID},
+            {module_bin, ModuleBin}
+        },
+        Opts
+    ),
+    LoadRes =
+        luerl:do_dec(
+            ModuleBin,
+            [
+                return,
+                {name, hb_util:list(ModuleID)},
+                {file, hb_util:list(ModuleID)}
+            ],
+            StateIn
         ),
-    % Apply any additional sandboxing requested by the message after module load.
-    State2 =
-        case hb_maps:get(<<"sandbox">>, Base, false, Opts) of
-            false -> State1;
-            true ->
-                % Default sandbox has already been applied, so no-op.
-                State1;
-            Spec -> sandbox(State1, Spec, Opts)
-        end,
-    % Install the AO-Core Lua library into the state.
-    {ok, State3} = dev_lua_lib:install(Base, State2, Opts),
-    % Return the base message with the state added to it.
-    {ok, hb_private:set(Base, <<"state">>, State3, Opts)}.
+    case LoadRes of
+        {ok, _, StateOut} ->
+            load_into_state(Rest, StateOut, Opts);
+        {error, Errors, _Warnings} ->
+            {error, #{
+                <<"status">> => 400,
+                <<"body">> =>
+                    <<
+                        "Lua module '",
+                        (hb_util:bin(ModuleID))/binary,
+                        "' failed to compile: ",
+                        (compile_errors(Errors))/binary
+                    >>
+            }};
+        {lua_error, _, _} ->
+            process_response(LoadRes, #{}, Opts)
+    end.
+
+%% @doc Render the errors that the Lua compiler gives for a module, each with
+%% its line when the compiler gives one.
+compile_errors(Errors) ->
+    unicode:characters_to_binary(
+        lists:join(
+            "; ",
+            lists:map(
+                fun({Line, Mod, Reason}) ->
+                    io_lib:format(
+                        "line ~w: ~ts",
+                        [Line, Mod:format_error(Reason)]
+                    );
+                   ({Mod, Reason}) ->
+                        io_lib:format("~ts", [Mod:format_error(Reason)])
+                end,
+                Errors
+            )
+        )
+    ).
 
 %% @doc Create a Lua state with no modules, in the node's minimum sandbox and
 %% the sandbox that `requires-determinism' asks for.
@@ -872,6 +914,56 @@ error_response_test() ->
     ?assertMatch(
         {failure, _},
         hb_ao:resolve(Base, <<"float_key_result">>, #{})
+    ).
+
+%% @doc A module that does not compile is an error that names the module and
+%% gives the line and the message of the Lua compiler. A module that raises an
+%% error while it loads is a failure, as a function that raises one is.
+module_load_error_test() ->
+    Base =
+        fun(Script) ->
+            #{
+                <<"device">> => <<"lua@5.3a">>,
+                <<"module">> => #{
+                    <<"content-type">> => <<"application/lua">>,
+                    <<"name">> => <<"broken">>,
+                    <<"body">> => Script
+                }
+            }
+        end,
+    ?assertMatch(
+        {error,
+            #{
+                <<"status">> := 400,
+                <<"body">> :=
+                    <<
+                        "Lua module 'broken' failed to compile: "
+                        "line 4: syntax error before: 'end'"
+                    >>
+            }
+        },
+        hb_ao:resolve(
+            Base(
+                <<
+                    """
+                    function compute(base, req, opts)
+                      local x = 1
+                      return base +
+                    end
+                    """
+                >>
+            ),
+            <<"init">>,
+            #{}
+        )
+    ),
+    ?assertMatch(
+        {failure, #{ <<"status">> := 500 }},
+        hb_ao:resolve(
+            Base(<<"error(\"Raised while loading.\")">>),
+            <<"init">>,
+            #{}
+        )
     ).
 
 sandboxed_failure_test() ->
