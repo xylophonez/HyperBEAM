@@ -25,13 +25,13 @@ device_info(_) ->
 %% `hello'. If the `load' key is set to `true', the value is treated as a
 %% pointer and its contents is loaded from the cache. For example,
 %% `GET /~name@1.0/reference' yields the message at the path specified by the
-%% `reference' key.
+%% `reference' key. A name that no resolver matches is a 404 error.
 -spec resolve(
     binary(),
     #{ _ => _ },
     #{ load => boolean(), _ => _ },
     #{ _ => _ }
-) -> {ok, _} | not_found.
+) -> {ok, _} | {error, #{ status := 404, body := binary() }}.
 resolve(Key, _, Req, Opts) ->
     Resolvers = hb_opts:get(name_resolvers, [], Opts),
     ?event({resolvers, Resolvers}),
@@ -43,7 +43,8 @@ resolve(Key, _, Req, Opts) ->
                 true ->
                     maybe_load_resolved(Resolved, Opts)
             end;
-        not_found -> not_found
+        not_found ->
+            {error, #{<<"status">> => 404, <<"body">> => <<"Not Found">>}}
     end.
 
 %% @doc Load a resolved name target if it is a cache reference, otherwise
@@ -256,7 +257,7 @@ reserved_host_label(Name, Opts) ->
 
 no_resolvers_test_parallel() ->
     ?assertEqual(
-        not_found,
+        {error, #{<<"status">> => 404, <<"body">> => <<"Not Found">>}},
         resolve(<<"hello">>, #{}, #{}, #{ <<"only">> => local })
     ).
 
@@ -329,6 +330,20 @@ multiple_resolvers_test_parallel() ->
                 ]
             }
         )
+    ).
+
+%% @doc A name that no resolver matches is a 404 over HTTP, as a name that the
+%% `request' hook cannot resolve is. A name that a resolver matches is its value.
+http_miss_test_parallel() ->
+    Opts = #{ <<"name-resolvers">> => [#{ <<"hello">> => <<"world">> }] },
+    Node = hb_http_server:start_node(Opts),
+    ?assertMatch(
+        {error, #{ <<"status">> := 404 }},
+        hb_http:get(Node, <<"/~name@1.0/missing">>, Opts)
+    ),
+    ?assertEqual(
+        {ok, <<"world">>},
+        hb_http:get(Node, <<"/~name@1.0/hello">>, Opts)
     ).
 
 %% @doc Test that we can resolve messages from a name loaded with the device.
