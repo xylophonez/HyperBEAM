@@ -150,7 +150,9 @@ rules are normative.
      its top-level definitions (functions, globals) take effect. Each module is
      loaded under its **module reference** as the chunk name (used in stack
      traces, §8). A later module's globals override an earlier module's globals of
-     the same name (standard Lua last-definition-wins).
+     the same name (standard Lua last-definition-wins). A module that does not
+     compile, or whose top-level code raises an error, ends initialisation with
+     the error of §8; later modules are not loaded.
   5. **Apply the sandbox** (§7.1) per the `sandbox` field.
   6. **Install the host library** (§4.6) into the global `ao` table, honouring
      `device-sandbox` (§7.2).
@@ -614,6 +616,8 @@ device-load allow-list hook; tracked as a found defect, not fixed here.)
 | `init`/`compute` finds **no** modules (no `module` field and no inline Lua body) | `init`: `{error, <<"No Lua modules found when preparing environment for call.">>}`. `compute` raises it as `error:{badmatch, {error, _}}`. |
 | Module **id not found** in the store | Error message with `status => 404` and a body naming the missing module id. |
 | Module **message not loadable** (no `body`/`data` source) | Error message with `status => 404` and a body explaining a module must carry a `body` of code; the offending module is echoed. `compute` raises it as `error:{badmatch, {error, _}}`. |
+| Module **does not compile** (for example a Lua syntax error) | `init`: `{error, #{ status => 400, body => <<"Lua module '<reference>' failed to compile: line <n>: <compiler message>">> }}`, one `line <n>: <message>` per compiler error, separated by `; `. `compute` raises it as `error:{badmatch, {error, _}}`. |
+| **Lua runtime error while a module loads** (its top-level code raises) | `init`: the failure of the **Lua runtime error** row below. `compute` raises it as `error:{badmatch, {failure, _}}`. |
 | A key with **no function** in the script (its global is `nil`) | `{error, not_found}`. The script is not called. |
 | **Lua runtime error** while calling the function (a `lua_error`) that the script does not catch | `{failure, #{ status => 500, body => <the script's error value>, trace => <decoded stack trace> }}`. `body` is the object the script passed to `error(...)`, **unwrapped** from the engine's structured error: a Lua engine reports `error(X)` as a wrapper (e.g. `{error_call, [X]}`), so `body` is the decoded `X`, **not** the whole wrapper (decoding the wrapper as a value is wrong and may itself crash). For an engine-internal fault that carries no user value (e.g. an illegal-index error), `body` is a readable rendering of that error. The `trace` is a normalised list of frames, each a message with `function`, `parameters` (a numbered message of the frame's decoded arguments), and a `line` (`"<file>:<n>"` when available). |
 | **Status string with no existing atom** returned by the script (§4.3 rule 3) | The status coercion (`list_to_existing_atom`) faults → a failure (a `status => 500` Erlang/host error, as the row below), **not** a success carrying the novel tag. |
