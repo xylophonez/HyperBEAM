@@ -43,7 +43,7 @@ resolve(Key, _, Req, Opts) ->
                 true ->
                     maybe_load_resolved(Resolved, Opts)
             end;
-        not_found ->
+        not_found -> {error, not_found}
             {error, #{<<"status">> => 404, <<"body">> => <<"Not Found">>}}
     end.
 
