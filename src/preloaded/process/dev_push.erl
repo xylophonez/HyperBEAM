@@ -205,11 +205,27 @@ do_push(PrimaryProcess, Assignment, Opts) ->
     ?event(push, {push_computing_outbox, {process_id, ID}, {slot, Slot}}),
     {Status, Result} =
         try
-            hb_ao:resolve(
-                {as, <<"process@1.0">>, PrimaryProcess},
-                    #{ <<"path">> => <<"compute/results">>, <<"slot">> => Slot },
+            ComputeRes =
+                hb_ao:resolve(
+                    {as, <<"process@1.0">>, PrimaryProcess},
+                    #{ <<"path">> => <<"compute">>, <<"slot">> => Slot },
                     Opts#{ <<"hashpath">> => ignore }
-                )
+                ),
+            case ComputeRes of
+                {ok, State} ->
+                    % A state without `results' sent no messages, so there is
+                    % nothing to push.
+                    {ok,
+                        hb_ao:get(
+                            <<"results">>,
+                            State,
+                            #{},
+                            Opts#{ <<"hashpath">> => ignore }
+                        )
+                    };
+                ComputeError ->
+                    ComputeError
+            end
         catch
             Class:Reason:Trace ->
                 ?event(
@@ -1262,7 +1278,8 @@ core_push_test_cases() ->
         {timeout, 90, fun test_push_as_identity/0},
         {timeout, 30, fun test_multi_process_push/0},
         {timeout, 60, fun test_remote_routed_push/0},
-        {timeout, 30, fun test_oracle_push/0}
+        {timeout, 30, fun test_oracle_push/0},
+        {timeout, 30, fun test_push_message_without_results/0}
     ].
 
 max_depth_test_cases() ->
@@ -1960,6 +1977,71 @@ test_oracle_push() ->
         ),
     ?event({compute_res, ComputeRes}),
     ?assertMatch({ok, _}, ComputeRes).
+
+%% @doc Pushing a new message to a process whose state has no `results' after
+%% the message schedules and computes it, and answers with its slot: there is
+%% nothing to push. A Lua process whose `compute' returns its base is such a
+%% process.
+test_push_message_without_results() ->
+    Opts =
+        #{
+            <<"priv-wallet">> => hb:wallet(),
+            <<"store">> => [hb_test_utils:test_store(hb_store_lmdb)]
+        },
+    Process =
+        hb_message:commit(
+            #{
+                <<"device">> => <<"process@1.0">>,
+                <<"type">> => <<"Process">>,
+                <<"scheduler-device">> => <<"scheduler@1.0">>,
+                <<"scheduler-location">> => hb:address(),
+                <<"execution-device">> => <<"lua@5.3a">>,
+                <<"module">> => #{
+                    <<"content-type">> => <<"application/lua">>,
+                    <<"body">> =>
+                        <<
+                            """
+                            function compute(base)
+                                base.ticks = (base.ticks or 0) + 1
+                                return base
+                            end
+                            """
+                        >>
+                },
+                <<"test-random-seed">> => rand:uniform(1337)
+            },
+            Opts
+        ),
+    ProcessID = hb_message:id(Process, all, Opts),
+    {ok, _} = hb_cache:write(Process, Opts),
+    {ok, _} =
+        hb_ao:resolve(
+            Process,
+            #{
+                <<"method">> => <<"POST">>,
+                <<"path">> => <<"schedule">>,
+                <<"body">> => Process
+            },
+            Opts
+        ),
+    Msg =
+        hb_message:commit(
+            #{
+                <<"target">> => ProcessID,
+                <<"type">> => <<"Message">>,
+                <<"action">> => <<"Tick">>
+            },
+            Opts
+        ),
+    ?assertMatch(
+        {ok, #{ <<"slot">> := 1, <<"process">> := ProcessID }},
+        hb_ao:resolve(
+            Process,
+            #{ <<"path">> => <<"push">>, <<"body">> => Msg },
+            Opts
+        )
+    ),
+    ?assertEqual({ok, 1}, hb_ao:resolve(Process, <<"slot/current">>, Opts)).
 
 %% @doc `parse_max_depth/1' contract: accept non-negative integers verbatim
 %% or as binaries; read everything else as `infinity'.
