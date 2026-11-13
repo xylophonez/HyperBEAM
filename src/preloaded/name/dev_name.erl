@@ -44,7 +44,6 @@ resolve(Key, _, Req, Opts) ->
                     maybe_load_resolved(Resolved, Opts)
             end;
         not_found -> {error, not_found}
-            {error, #{<<"status">> => 404, <<"body">> => <<"Not Found">>}}
     end.
 
 %% @doc Load a resolved name target if it is a cache reference, otherwise
@@ -257,8 +256,12 @@ reserved_host_label(Name, Opts) ->
 
 no_resolvers_test_parallel() ->
     ?assertEqual(
-        {error, #{<<"status">> => 404, <<"body">> => <<"Not Found">>}},
-        resolve(<<"hello">>, #{}, #{}, #{ <<"only">> => local })
+        {error, not_found},
+        hb_ao:resolve(
+            #{ <<"device">> => <<"name@1.0">> },
+            <<"hello">>,
+            #{ <<"name-resolvers">> => [], <<"only">> => local }
+        )
     ).
 
 device_resolver(Msg) ->
@@ -339,9 +342,6 @@ http_miss_test_parallel() ->
     Node = hb_http_server:start_node(Opts),
     ?assertEqual(
         {error, not_found},
-        hb_http:get(Node, <<"/~name@1.0/missing">>, Opts)
-    ),
-        {error, #{ <<"status">> := 404 }},
         hb_http:get(Node, <<"/~name@1.0/missing">>, Opts)
     ),
     ?assertEqual(

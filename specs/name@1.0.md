@@ -150,8 +150,7 @@ and JSON name snapshots can all be stacked behind one uniform lookup surface.
          message;
        - else (a map or any other value) return `{ok, Value}` unchanged.
 - **Returns:** `{ok, Resolved}` — the resolver's value, loaded per `load`; or
-  `{error, #{ <<"status">> => 404, <<"body">> => <<"Not Found">> }}` when no
-  resolver matches. The shape of `Resolved` is
+  `{error, not_found}` when no resolver matches. The shape of `Resolved` is
   whatever the matching resolver produced (after optional loading): commonly a
   message, but MAY be a bare identifier/binary when `load = false`.
 - **Side effects:** **none of its own** — no cache write, no store write, no
@@ -323,13 +322,10 @@ current execution `body` (the list of messages to be resolved). It rewrites the
 
 ## 8. Errors
 
-- **HTTP 404 (`status => 404`, `body => <<"Not Found">>`)** — the
-  resolved-key facet's result when **no** resolver in `name-resolvers` claims
-  the name (including the empty-list case), returned as `{error, #{...}}`. It is
-  the same structured error as the hook facet's root-path not-found below, so
-  a name that does not resolve is a 404 over HTTP through either facet, and a
-  caller can tell it apart from a value. A resolver declining, erroring, or
-  crashing contributes to this outcome but is **not** itself surfaced.
+- **`{error, not_found}`** — the resolved-key facet's result when **no**
+  resolver in `name-resolvers` claims the name (including the empty-list case).
+  The HTTP layer maps this error to status 404. A resolver declining, erroring,
+  or crashing contributes to this outcome but is **not** itself surfaced.
 - **HTTP 404 (`status => 404`, `body => <<"Not Found">>`)** — the hook facet's
   result when a host **subdomain is present**, its resolution is not-found,
   **and** the execution body is empty (root path), or when the subdomain is
@@ -377,8 +373,7 @@ current execution `body` (the list of messages to be resolved). It rewrites the
    treating it as a name to resolve, and it **excludes** exactly `committers`,
    `keys` and `set` (those forward to the base identity device).
 2. With `name-resolvers` set to `[]`, resolving any name yields
-   `{error, #{ <<"status">> => 404, <<"body">> => <<"Not Found">> }}`, with no
-   side effect; over HTTP the reply has status 404.
+   `{error, not_found}`, with no side effect; over HTTP the reply has status 404.
 3. Resolution scans `name-resolvers` **in order** and returns the value of the
    **first** resolver that yields `{ok, _}`; a later resolver that would also
    match is **not** consulted once an earlier one matches (first-match wins,
