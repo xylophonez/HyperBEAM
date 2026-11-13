@@ -31,7 +31,7 @@ device_info(_) ->
     #{ _ => _ },
     #{ load => boolean(), _ => _ },
     #{ _ => _ }
-) -> {ok, _} | {error, #{ status := 404, body := binary() }}.
+) -> {ok, _} | {error, not_found}.
 resolve(Key, _, Req, Opts) ->
     Resolvers = hb_opts:get(name_resolvers, [], Opts),
     ?event({resolvers, Resolvers}),
