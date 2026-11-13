@@ -521,23 +521,16 @@ test_query(Node, Query, Variables, OperationName, Opts) ->
 %% @doc The schema is read from the files of the device's package, so that it
 %% loads when the node runs in a directory that holds no copy of it. The
 %% controller loads the schema once per VM, so the read is tested directly.
-schema_independent_of_working_directory_test() ->
-    {ok, Cwd} = file:get_cwd(),
-    Dir =
-        filename:join(
-            [
-                Cwd,
-                "cache-TEST",
-                "graphql-cwd-" ++ integer_to_list(erlang:unique_integer([positive]))
-            ]
+schema_from_device_package_test() ->
+    {ok, Expected} =
+        file:read_file(
+            filename:join(
+                hb_device_archive:implementation_dir(?MODULE),
+                "schema.gql"
+            )
         ),
-    ok = filelib:ensure_path(Dir),
-    ok = file:set_cwd(Dir),
-    try
-        ?assertMatch({_, _}, binary:match(schema(), <<"type Query {">>))
-    after
-        file:set_cwd(Cwd)
-    end.
+    ?assertEqual(Expected, schema()),
+    ?assertMatch({_, _}, binary:match(Expected, <<"type Query {">>)).
 
 graphql_request_errors_test() ->
     Opts = #{ <<"store">> => [hb_test_utils:test_store()],
