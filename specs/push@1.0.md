@@ -179,13 +179,16 @@ Given a source process `P` and source slot `S`, with inherited `result-depth`
    target as a `process@1.0` message — §4.5, §9 — so every downstream source is
    re-authenticated the same way when its id is derived.)
 
-2. **Compute the slot's outbox.** Resolve `compute/results` on `P` (as a
-   `process@1.0` message) for slot `S`, with hashpath updating disabled. This
-   yields the slot's **results** message. Read its `outbox` (key `outbox`,
-   default empty message). Computation MUST be resilient: if the compute step
-   **raises**, the loop MUST NOT crash — it returns a structured error result
-   for this slot (§8, `compute-failed`) carrying the process id, slot, and the
-   failure reason, and the loop terminates at this level with that error.
+2. **Compute the slot's outbox.** Resolve `compute` on `P` (as a
+   `process@1.0` message) for slot `S`, with hashpath updating disabled, and
+   read the **results** message from the computed state (key `results`,
+   default empty message: a state without `results` sent no messages). Read
+   its `outbox` (key `outbox`, default empty message). An error that `compute`
+   returns is the result of the push. Computation MUST be resilient: if the
+   compute step **raises**, the loop MUST NOT crash — it returns a structured
+   error result for this slot (§8, `compute-failed`) carrying the process id,
+   slot, and the failure reason, and the loop terminates at this level with
+   that error.
 
 3. **Empty outbox ⇒ leaf.** If the outbox is **empty** (an empty message, or a
    message carrying only a private section), the slot produced no further
@@ -314,8 +317,9 @@ backfill older computed slots or start a background delivery loop.
 ## 5. Data formats & encodings
 
 ### 5.1 Slot results and the outbox
-- A slot's **results** are obtained by resolving `compute/results` on the
-  process for that `slot`. The results message contains (among other keys
+- A slot's **results** are the `results` key of the state that resolving
+  `compute` on the process for that `slot` gives; a state without `results`
+  has an empty outbox. The results message contains (among other keys
   defined by the execution device) an `outbox` map.
 - The `outbox` is a map of **1-based decimal-string keys** (`1`, `2`, …) to
   **outbox messages**, ordered by emission. Each outbox message is an ordinary
