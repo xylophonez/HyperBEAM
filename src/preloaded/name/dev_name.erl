@@ -25,7 +25,7 @@ device_info(_) ->
 %% `hello'. If the `load' key is set to `true', the value is treated as a
 %% pointer and its contents is loaded from the cache. For example,
 %% `GET /~name@1.0/reference' yields the message at the path specified by the
-%% `reference' key. A name that no resolver matches is a 404 error.
+%% `reference' key. A name that no resolver matches is `{error, not_found}'.
 -spec resolve(
     binary(),
     #{ _ => _ },
