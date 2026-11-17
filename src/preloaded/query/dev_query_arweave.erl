@@ -1,6 +1,6 @@
 %%% @doc Arweave-shaped GraphQL queries over AO-Core messages, called by
 %%% `dev_query_graphql' within `query@1.0'. This is a subset of the API declared
-%%% in `scripts/schema.gql', not a separate device or a transaction codec.
+%%% in the device's `schema.gql', not a separate device or a transaction codec.
 %%%
 %%% `transaction(id: ...)' reads one message by ID. `transactions' returns
 %%% `edges' containing `node' and `cursor', `pageInfo.hasNextPage', and an
