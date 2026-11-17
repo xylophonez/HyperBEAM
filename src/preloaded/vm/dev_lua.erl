@@ -253,6 +253,7 @@ initialize(Base, Modules, Opts) ->
                     luerl:do_dec(
                         ModuleBin,
                         [
+                            return,
                             {name, hb_util:list(ModuleID)},
                             {file, hb_util:list(ModuleID)}
                         ],
@@ -872,6 +873,32 @@ error_response_test() ->
     ?assertMatch(
         {failure, _},
         hb_ao:resolve(Base, <<"float_key_result">>, #{})
+    ).
+
+%% @doc Module syntax errors preserve the compiler's line and diagnostic.
+module_load_error_test() ->
+    Base = #{
+        <<"device">> => <<"lua@5.3a">>,
+        <<"module">> => #{
+            <<"content-type">> => <<"application/lua">>,
+            <<"name">> => <<"broken">>,
+            <<"body">> =>
+                <<
+                    """
+                    function compute(base, req, opts)
+                      local x = 1
+                      return base +
+                    end
+                    """
+                >>
+        }
+    },
+    ?assertException(
+        error,
+        {badmatch,
+            {error, [{4, luerl_parse, ["syntax error before: ", "'end'"]}], []}
+        },
+        hb_ao:resolve(Base, <<"init">>, #{})
     ).
 
 sandboxed_failure_test() ->
